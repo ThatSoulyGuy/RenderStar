@@ -47,7 +47,7 @@ namespace RenderStar
 
 				DXGI_SWAP_CHAIN_DESC1 swapChainDescription = {};
 
-				swapChainDescription.BufferCount = 2;
+				swapChainDescription.BufferCount = 3;
 				swapChainDescription.Width = 0;
 				swapChainDescription.Height = 0;
 				swapChainDescription.Format = DXGI_FORMAT_R8G8B8A8_UNORM;

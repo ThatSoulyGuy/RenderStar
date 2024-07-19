@@ -57,6 +57,16 @@ namespace RenderStar
 {
 	namespace Render
 	{
+		enum class ShaderType
+		{
+			VERTEX,
+			PIXEL,
+			COMPUTE,
+			DOMAIN,
+			GEOMETRY,
+			HULL
+		};
+
 		class Shader
 		{
 
@@ -88,6 +98,143 @@ namespace RenderStar
 					context->HSSetShader(hullShader.Get(), nullptr, 0);
 
 				context->IASetInputLayout(inputLayout.Get());
+			}
+
+			template <typename T>
+			void SetConstantBuffer(UINT slot, T data, ShaderType shaderType)
+			{
+				ComPtr<ID3D11DeviceContext> context = Renderer::GetInstance()->GetContext();
+
+				if (!constantBuffers.Contains(slot))
+				{
+					D3D11_BUFFER_DESC bufferDescription = {};
+
+					bufferDescription.Usage = D3D11_USAGE_DYNAMIC;
+					bufferDescription.ByteWidth = sizeof(T);
+					bufferDescription.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+					bufferDescription.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+					HRESULT result = Renderer::GetInstance()->GetDevice()->CreateBuffer(&bufferDescription, nullptr, &constantBuffers[slot]);
+
+					if (FAILED(result))
+					{
+						Logger_ThrowException("Failed to create constant buffer.", false);
+						return;
+					}
+				}
+
+				D3D11_MAPPED_SUBRESOURCE mappedResource;
+				HRESULT result = context->Map(constantBuffers[slot].Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+
+				if (FAILED(result))
+				{
+					Logger_ThrowException("Failed to map constant buffer.", false);
+					return;
+				}
+
+				memcpy(mappedResource.pData, &data, sizeof(T));
+				context->Unmap(constantBuffers[slot].Get(), 0);
+
+				SetConstantBuffer(slot, constantBuffers[slot], shaderType);
+			}
+
+			void SetConstantBuffer(UINT slot, ComPtr<ID3D11Buffer> constantBuffer, ShaderType shaderType)
+			{
+				ComPtr<ID3D11DeviceContext> context = Renderer::GetInstance()->GetContext();
+
+				switch (shaderType)
+				{
+
+				case ShaderType::VERTEX:
+					context->VSSetConstantBuffers(slot, 1, constantBuffer.GetAddressOf());
+					break;
+
+				case ShaderType::PIXEL:
+					context->PSSetConstantBuffers(slot, 1, constantBuffer.GetAddressOf());
+					break;
+
+				case ShaderType::COMPUTE:
+					context->CSSetConstantBuffers(slot, 1, constantBuffer.GetAddressOf());
+					break;
+
+				case ShaderType::DOMAIN:
+					context->DSSetConstantBuffers(slot, 1, constantBuffer.GetAddressOf());
+					break;
+
+				case ShaderType::GEOMETRY:
+					context->GSSetConstantBuffers(slot, 1, constantBuffer.GetAddressOf());
+					break;
+
+				case ShaderType::HULL:
+					context->HSSetConstantBuffers(slot, 1, constantBuffer.GetAddressOf());
+					break;
+
+				default:
+					throw std::invalid_argument("Unknown shader type");
+				}
+			}
+
+			void SetSamplerState(UINT slot, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE mode, ShaderType shaderType)
+			{
+				ComPtr<ID3D11SamplerState> samplerState;
+
+				D3D11_SAMPLER_DESC samplerDescription = {};
+
+				samplerDescription.Filter = filter;
+
+				samplerDescription.AddressU = mode;
+				samplerDescription.AddressV = mode;
+				samplerDescription.AddressW = mode;
+
+				samplerDescription.ComparisonFunc = D3D11_COMPARISON_NEVER;
+				samplerDescription.MinLOD = 0;
+				samplerDescription.MaxLOD = D3D11_FLOAT32_MAX;
+
+				HRESULT result = Renderer::GetInstance()->GetDevice()->CreateSamplerState(&samplerDescription, samplerState.GetAddressOf());
+
+				if (FAILED(result))
+				{
+					Logger_ThrowException("Failed to create sampler state.", false);
+					return;
+				}
+
+				SetSamplerState(slot, samplerState, shaderType);
+			}
+
+			void SetSamplerState(UINT slot, ComPtr<ID3D11SamplerState> samplerState, ShaderType shaderType)
+			{
+				ComPtr<ID3D11DeviceContext> context = Renderer::GetInstance()->GetContext();
+
+				switch (shaderType)
+				{
+
+				case ShaderType::VERTEX:
+					context->VSSetSamplers(slot, 1, samplerState.GetAddressOf());
+					break;
+
+				case ShaderType::PIXEL:
+					context->PSSetSamplers(slot, 1, samplerState.GetAddressOf());
+					break;
+
+				case ShaderType::COMPUTE:
+					context->CSSetSamplers(slot, 1, samplerState.GetAddressOf());
+					break;
+
+				case ShaderType::DOMAIN:
+					context->DSSetSamplers(slot, 1, samplerState.GetAddressOf());
+					break;
+
+				case ShaderType::GEOMETRY:
+					context->GSSetSamplers(slot, 1, samplerState.GetAddressOf());
+					break;
+
+				case ShaderType::HULL:
+					context->HSSetSamplers(slot, 1, samplerState.GetAddressOf());
+					break;
+
+				default:
+					throw std::invalid_argument("Unknown shader type");
+				}
 			}
 
 			String GetName() const
@@ -213,6 +360,8 @@ namespace RenderStar
 			ComPtr<ID3D11HullShader> hullShader;
 
 			ComPtr<ID3D11InputLayout> inputLayout;
+
+			Map<uint32, ComPtr<ID3D11Buffer>> constantBuffers;
 		};
 	}
 }

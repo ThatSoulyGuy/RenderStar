@@ -57,6 +57,7 @@
 
 #undef ERROR
 #undef WriteConsole
+#undef DOMAIN
 
 namespace RenderStar
 {

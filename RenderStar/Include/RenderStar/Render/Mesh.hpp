@@ -1,6 +1,7 @@
 #pragma once
 
 #include "RenderStar/Core/Logger.hpp"
+#include "RenderStar/Math/Transform.hpp"
 #include "RenderStar/Render/Renderer.hpp"
 #include "RenderStar/Render/Shader.hpp"
 #include "RenderStar/Render/Vertex.hpp"
@@ -15,6 +16,11 @@ namespace RenderStar
 {
 	namespace Render
 	{
+		struct DefaultMatrixBuffer
+		{
+			DirectX::XMMATRIX worldMatrix;
+		};
+
 		class Mesh
 		{
 
@@ -73,11 +79,17 @@ namespace RenderStar
 			void Render()
 			{
 				ComPtr<ID3D11DeviceContext> context = Renderer::GetInstance()->GetContext();
+				ComPtr<ID3D11Device> device = Renderer::GetInstance()->GetDevice();
 
 				UINT stride = sizeof(Vertex);
 				UINT offset = 0;
 
 				shader->Bind();
+				
+				shader->SetConstantBuffer(0, DefaultMatrixBuffer
+				{
+					transform->GetWorldMatrix(true),
+				}, ShaderType::VERTEX);
 
 				context->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
 				context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
@@ -112,6 +124,7 @@ namespace RenderStar
 			String name;
 
 			Shared<Shader> shader;	
+			Shared<Transform> transform = Transform::Create();
 
 			Vector<Vertex> vertices;
 			Vector<uint32> indices;

@@ -95,6 +95,9 @@
     <ClInclude Include="RenderStar\Include\RenderStar\Render\ShaderManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\Math\Transform.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\RenderStar\EngineSettings.xxml" />

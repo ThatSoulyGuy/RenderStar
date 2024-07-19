@@ -201,7 +201,7 @@ namespace RenderStar
 
         public:
 
-            Quaternionf() : x(0.0f), y(0.0f), z(0.0f), w(0.0f) {}
+            Quaternionf() : x(0.0f), y(0.0f), z(0.0f), w(1.0f) {}
             Quaternionf(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
             Quaternionf(float scalar) : x(scalar), y(scalar), z(scalar), w(scalar) {}
             Quaternionf(const Quaternionf& other) : x(other.x), y(other.y), z(other.z), w(other.w) {}

@@ -159,6 +159,7 @@
     <ClInclude Include="RenderStar\Include\RenderStar\Core\Window.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Engine.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Quaternion.hpp" />
+    <ClInclude Include="RenderStar\Include\RenderStar\Math\Transform.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Vector2.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Vector3.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Vector4.hpp" />
