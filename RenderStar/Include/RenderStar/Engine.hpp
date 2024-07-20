@@ -1,5 +1,7 @@
 #pragma once
 
+#define SILENCE_QUATERNION
+
 #include "RenderStar/Core/Logger.hpp"
 #include "RenderStar/Render/Mesh.hpp"
 #include "RenderStar/Render/Renderer.hpp"
@@ -107,7 +109,7 @@ namespace RenderStar
 
 		void Update()
 		{
-
+			mesh->transform->SetRotation(Vector3f{ 0.0f, 0.0f, 28.0f });
 		}
 
 		void Render()

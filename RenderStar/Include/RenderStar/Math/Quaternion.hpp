@@ -1,8 +1,13 @@
 #pragma once
 
 #include <DirectXMath.h>
+#include "RenderStar/Core/Logger.hpp"
+#include "RenderStar/Math/Vector3.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
+#define PI 3.141592653589793
+
+using namespace RenderStar::Core;
 using namespace RenderStar::Util;
 
 namespace RenderStar
@@ -18,6 +23,29 @@ namespace RenderStar
             Quaternioni(int x, int y, int z, int w) : x(x), y(y), z(z), w(w) {}
             Quaternioni(int scalar) : x(scalar), y(scalar), z(scalar), w(scalar) {}
             Quaternioni(const Quaternioni& other) : x(other.x), y(other.y), z(other.z), w(other.w) {}
+
+            Quaternioni(Vector3i vector)
+            {
+                double pitch = static_cast<double>(vector.x) * PI / 180.0;
+                double yaw = static_cast<double>(vector.y) * PI / 180.0; 
+                double roll = static_cast<double>(vector.z) * PI / 180.0;
+
+                double cr = cos(pitch * 0.5);
+                double sr = sin(pitch * 0.5);
+                double cp = cos(yaw * 0.5);
+                double sp = sin(yaw * 0.5);
+                double cy = cos(roll * 0.5);
+                double sy = sin(roll * 0.5);
+
+                w = static_cast<int>(cr * cp * cy + sr * sp * sy);
+                x = static_cast<int>(sr * cp * cy - cr * sp * sy);
+                y = static_cast<int>(cr * sp * cy + sr * cp * sy);
+                z = static_cast<int>(cr * cp * sy - sr * sp * cy);
+
+#ifndef SILENCE_QUATERNION
+                Logger_WriteConsole("Deriving a Quaternioni from a Vector3i is not supported and is only included for compatability reasons. Expect precision issues. We recommend using the double-precision Quaterniond.\n#SILENCE_QUATERNION", LogLevel::WARNING);
+#endif // SILENCE_QUATERNION
+            }
 
             Quaternioni(DirectX::XMVECTOR vector)
             {
@@ -211,6 +239,29 @@ namespace RenderStar
                 DirectX::XMStoreFloat4(reinterpret_cast<DirectX::XMFLOAT4*>(this), vector);
             }
 
+            Quaternionf(Vector3f vector)
+            {
+                double pitch = static_cast<double>(vector.x) * PI / 180.0;
+                double yaw = static_cast<double>(vector.y) * PI / 180.0;
+                double roll = static_cast<double>(vector.z) * PI / 180.0;
+
+                double cr = cos(pitch * 0.5);
+                double sr = sin(pitch * 0.5);
+                double cp = cos(yaw * 0.5);
+                double sp = sin(yaw * 0.5);
+                double cy = cos(roll * 0.5);
+                double sy = sin(roll * 0.5);
+
+                w = static_cast<float>(cr * cp * cy + sr * sp * sy);
+                x = static_cast<float>(sr * cp * cy - cr * sp * sy);
+                y = static_cast<float>(cr * sp * cy + sr * cp * sy);
+                z = static_cast<float>(cr * cp * sy - sr * sp * cy);
+
+#ifndef SILENCE_QUATERNION
+                Logger_WriteConsole("Deriving a Quaternionf from a Vector3f is semi-supported and is only included for compatability reasons. Expect minimal precision issues. We recommend using the double-precision Quaterniond.\n#SILENCE_QUATERNION", LogLevel::WARNING);
+#endif // !SILENCE_QUATERNION
+            }
+
             Quaternionf& operator=(const Quaternionf& other)
             {
                 if (this != &other)
@@ -395,6 +446,29 @@ namespace RenderStar
             Quaterniond(DirectX::XMVECTOR vector)
             {
                 DirectX::XMStoreFloat4(reinterpret_cast<DirectX::XMFLOAT4*>(this), vector);
+            }
+
+            Quaterniond(Vector3d vector)
+            {
+                double pitch = static_cast<double>(vector.x) * PI / 180.0;
+                double yaw = static_cast<double>(vector.y) * PI / 180.0;
+                double roll = static_cast<double>(vector.z) * PI / 180.0;
+
+                double cr = cos(pitch * 0.5);
+                double sr = sin(pitch * 0.5);
+                double cp = cos(yaw * 0.5);
+                double sp = sin(yaw * 0.5);
+                double cy = cos(roll * 0.5);
+                double sy = sin(roll * 0.5);
+
+                w = cr * cp * cy + sr * sp * sy;
+                x = sr * cp * cy - cr * sp * sy;
+                y = cr * sp * cy + sr * cp * sy;
+                z = cr * cp * sy - sr * sp * cy;
+
+#ifndef SILENCE_QUATERNION
+                Logger_WriteConsole("While Quaterniond is the recommended for Quaternions, double-precision is not universially supported in DirectX 11, and by extension RenderStar. Expect compatability issues when integrating into DirectX.\n#SILENCE_QUATERNION", LogLevel::WARNING);
+#endif // !SILENCE_QUATERNION
             }
 
             Quaterniond& operator=(const Quaterniond& other)
