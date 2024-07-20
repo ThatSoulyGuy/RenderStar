@@ -124,7 +124,6 @@ namespace RenderStar
 			String name;
 
 			Shared<Shader> shader;	
-			Shared<Transform> transform = Transform::Create();
 
 			Vector<Vertex> vertices;
 			Vector<uint32> indices;
