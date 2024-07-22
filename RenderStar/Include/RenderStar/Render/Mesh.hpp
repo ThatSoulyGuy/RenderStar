@@ -110,15 +110,12 @@ namespace RenderStar
 				Shared<Mesh> mesh = std::make_shared<Enabled>();
 
 				mesh->name = name;
-				mesh->shader = shader;
 				mesh->vertices = vertices;
 				mesh->indices = indices;
 
 				return mesh;
 			}
 			
-			Shared<Transform> transform = Transform::Create();
-
 		private:
 
 			Mesh() = default;

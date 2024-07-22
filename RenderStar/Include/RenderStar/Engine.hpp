@@ -141,8 +141,5 @@ namespace RenderStar
 	private:
 
 		Engine() = default;
-
-		Shared<Mesh> mesh;
-
 	};
 }
