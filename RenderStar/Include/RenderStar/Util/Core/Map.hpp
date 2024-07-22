@@ -7,273 +7,276 @@ namespace RenderStar
 {
 	namespace Util
 	{
-		template <typename Key, typename Value>
-		class Map
+		namespace Core
 		{
-
-		public:
-		
-			Map() = default;
-
-			Map(const Map& other)
+			template <typename Key, typename Value>
+			class Map
 			{
-				*this = other;
-			}
 
-			Map(Map&& other) noexcept
-			{
-				*this = std::move(other);
-			}
+			public:
 
-			Map(const std::unordered_map<Key, Value>& other)
-			{
-				*this = other;
-			}
+				Map() = default;
 
-			Map(std::unordered_map<Key, Value>&& other) noexcept
-			{
-				*this = std::move(other);
-			}
-
-			Map(std::initializer_list<std::pair<const Key, Value>> list)
-			{
-				*this = list;
-			}
-
-			Map(const std::map<Key, Value>& other)
-			{
-				for (const auto& pair : other)
-					data[pair.first] = pair.second;
-			}
-
-			Map& operator=(const Map& other)
-			{
-				if (this != &other)
+				Map(const Map& other)
 				{
-					data = other.data;
+					*this = other;
 				}
 
-				return *this;
-			}
-
-			Map& operator=(Map&& other) noexcept
-			{
-				if (this != &other)
+				Map(Map&& other) noexcept
 				{
-					data = std::move(other.data);
+					*this = std::move(other);
 				}
 
-				return *this;
-			}
+				Map(const std::unordered_map<Key, Value>& other)
+				{
+					*this = other;
+				}
 
-			Map& operator=(const std::unordered_map<Key, Value>& other)
-			{
-				data = other;
-				return *this;
-			}
+				Map(std::unordered_map<Key, Value>&& other) noexcept
+				{
+					*this = std::move(other);
+				}
 
-			Map& operator=(std::unordered_map<Key, Value>&& other) noexcept
-			{
-				data = std::move(other);
-				return *this;
-			}
+				Map(std::initializer_list<std::pair<const Key, Value>> list)
+				{
+					*this = list;
+				}
 
-			Map& operator=(std::initializer_list<std::pair<const Key, Value>> list)
-			{
-				data = list;
-				return *this;
-			}
+				Map(const std::map<Key, Value>& other)
+				{
+					for (const auto& pair : other)
+						data[pair.first] = pair.second;
+				}
 
-			Map& operator+=(const Map& other)
-			{
-				for (const auto& pair : other.data)
-					data[pair.first] = pair.second;
+				Map& operator=(const Map& other)
+				{
+					if (this != &other)
+					{
+						data = other.data;
+					}
 
-				return *this;
-			}
+					return *this;
+				}
 
-			Map& operator+=(const std::unordered_map<Key, Value>& other)
-			{
-				for (const auto& pair : other)
-					data[pair.first] = pair.second;
+				Map& operator=(Map&& other) noexcept
+				{
+					if (this != &other)
+					{
+						data = std::move(other.data);
+					}
 
-				return *this;
-			}
+					return *this;
+				}
 
-			Map& operator+=(std::unordered_map<Key, Value>&& other)
-			{
-				for (auto& pair : other)
-					data[pair.first] = std::move(pair.second);
+				Map& operator=(const std::unordered_map<Key, Value>& other)
+				{
+					data = other;
+					return *this;
+				}
 
-				return *this;
-			}
+				Map& operator=(std::unordered_map<Key, Value>&& other) noexcept
+				{
+					data = std::move(other);
+					return *this;
+				}
 
-			Map& operator+=(std::pair<const Key, Value> list)
-			{
-				data[list.first] = list.second;
+				Map& operator=(std::initializer_list<std::pair<const Key, Value>> list)
+				{
+					data = list;
+					return *this;
+				}
 
-				return *this;
-			}
+				Map& operator+=(const Map& other)
+				{
+					for (const auto& pair : other.data)
+						data[pair.first] = pair.second;
 
-			Map& operator+=(std::initializer_list<std::pair<const Key, Value>> list)
-			{
-				for (const auto& pair : list)
-					data[pair.first] = pair.second;
+					return *this;
+				}
 
-				return *this;
-			}
+				Map& operator+=(const std::unordered_map<Key, Value>& other)
+				{
+					for (const auto& pair : other)
+						data[pair.first] = pair.second;
 
-			Map operator+(const Map& other) const
-			{
-				Map result = *this;
-				result += other;
-				return result;
-			}
+					return *this;
+				}
 
-			Map operator+(const std::unordered_map<Key, Value>& other) const
-			{
-				Map result = *this;
-				result += other;
-				return result;
-			}
+				Map& operator+=(std::unordered_map<Key, Value>&& other)
+				{
+					for (auto& pair : other)
+						data[pair.first] = std::move(pair.second);
 
-			Map operator+(std::unordered_map<Key, Value>&& other) const
-			{
-				Map result = *this;
-				result += std::move(other);
-				return result;
-			}
+					return *this;
+				}
 
-			Map operator+(std::initializer_list<std::pair<const Key, Value>> list) const
-			{
-				Map result = *this;
-				result += list;
-				return result;
-			}
+				Map& operator+=(std::pair<const Key, Value> list)
+				{
+					data[list.first] = list.second;
 
-			Map& operator-=(const Map& other)
-			{
-				for (const auto& pair : other.data)
-					data.erase(pair.first);
+					return *this;
+				}
 
-				return *this;
-			}
+				Map& operator+=(std::initializer_list<std::pair<const Key, Value>> list)
+				{
+					for (const auto& pair : list)
+						data[pair.first] = pair.second;
 
-			Map& operator-=(const std::unordered_map<Key, Value>& other)
-			{
-				for (const auto& pair : other)
-					data.erase(pair.first);
+					return *this;
+				}
 
-				return *this;
-			}
+				Map operator+(const Map& other) const
+				{
+					Map result = *this;
+					result += other;
+					return result;
+				}
 
-			Map& operator-=(std::unordered_map<Key, Value>&& other)
-			{
-				for (auto& pair : other)
-					data.erase(pair.first);
+				Map operator+(const std::unordered_map<Key, Value>& other) const
+				{
+					Map result = *this;
+					result += other;
+					return result;
+				}
 
-				return *this;
-			}
+				Map operator+(std::unordered_map<Key, Value>&& other) const
+				{
+					Map result = *this;
+					result += std::move(other);
+					return result;
+				}
 
-			Map& operator-=(std::pair<const Key, Value> list)
-			{
-				data.erase(list.first);
+				Map operator+(std::initializer_list<std::pair<const Key, Value>> list) const
+				{
+					Map result = *this;
+					result += list;
+					return result;
+				}
 
-				return *this;
-			}
+				Map& operator-=(const Map& other)
+				{
+					for (const auto& pair : other.data)
+						data.erase(pair.first);
 
-			Map& operator-=(std::initializer_list<std::pair<const Key, Value>> list)
-			{
-				for (const auto& pair : list)
-					data.erase(pair.first);
+					return *this;
+				}
 
-				return *this;
-			}
+				Map& operator-=(const std::unordered_map<Key, Value>& other)
+				{
+					for (const auto& pair : other)
+						data.erase(pair.first);
 
-			Map& operator-=(const Key& key)
-			{
-				data.erase(key);
+					return *this;
+				}
 
-				return *this;
-			}
+				Map& operator-=(std::unordered_map<Key, Value>&& other)
+				{
+					for (auto& pair : other)
+						data.erase(pair.first);
 
-			Map operator-(const Map& other) const
-			{
-				Map result = *this;
-				result -= other;
-				return result;
-			}
+					return *this;
+				}
 
-			Map operator-(const std::unordered_map<Key, Value>& other) const
-			{
-				Map result = *this;
-				result -= other;
-				return result;
-			}
+				Map& operator-=(std::pair<const Key, Value> list)
+				{
+					data.erase(list.first);
 
-			Map operator-(std::unordered_map<Key, Value>&& other) const
-			{
-				Map result = *this;
-				result -= std::move(other);
-				return result;
-			}
+					return *this;
+				}
 
-			Map operator-(std::initializer_list<std::pair<const Key, Value>> list) const
-			{
-				Map result = *this;
-				result -= list;
-				return result;
-			}
+				Map& operator-=(std::initializer_list<std::pair<const Key, Value>> list)
+				{
+					for (const auto& pair : list)
+						data.erase(pair.first);
 
-			Value& operator[](const Key& key)
-			{
-				return data[key];
-			}
+					return *this;
+				}
 
-			const Value& operator[](const Key& key) const
-			{
-				return data.at(key);
-			}
+				Map& operator-=(const Key& key)
+				{
+					data.erase(key);
 
-			bool Contains(const Key& key) const
-			{
-				return data.contains(key);
-			}
+					return *this;
+				}
 
-			Size Length() const
-			{
-				return data.size();
-			}
+				Map operator-(const Map& other) const
+				{
+					Map result = *this;
+					result -= other;
+					return result;
+				}
 
-			auto begin() const
-			{
-				return data.begin();
-			}
+				Map operator-(const std::unordered_map<Key, Value>& other) const
+				{
+					Map result = *this;
+					result -= other;
+					return result;
+				}
 
-			auto end() const
-			{
-				return data.end();
-			}
+				Map operator-(std::unordered_map<Key, Value>&& other) const
+				{
+					Map result = *this;
+					result -= std::move(other);
+					return result;
+				}
 
-			bool Empty() const
-			{
-				return data.empty();
-			}
+				Map operator-(std::initializer_list<std::pair<const Key, Value>> list) const
+				{
+					Map result = *this;
+					result -= list;
+					return result;
+				}
 
-			void Remove(const Key& key)
-			{
-				data.erase(key);
-			}
+				Value& operator[](const Key& key)
+				{
+					return data[key];
+				}
 
-			void Clear()
-			{
-				data.clear();
-			}
+				const Value& operator[](const Key& key) const
+				{
+					return data.at(key);
+				}
 
-		private:
+				bool Contains(const Key& key) const
+				{
+					return data.contains(key);
+				}
 
-			std::unordered_map<Key, Value> data;
+				Size Length() const
+				{
+					return data.size();
+				}
 
-		};
+				auto begin()
+				{
+					return data.begin();
+				}
+
+				auto end() 
+				{
+					return data.end();
+				}
+
+				bool Empty() const
+				{
+					return data.empty();
+				}
+
+				void Remove(const Key& key)
+				{
+					data.erase(key);
+				}
+
+				void Clear()
+				{
+					data.clear();
+				}
+
+			private:
+
+				std::unordered_map<Key, Value> data;
+
+			};
+		}
 	}
 }

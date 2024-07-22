@@ -12,6 +12,10 @@
 
 using namespace RenderStar::Core;
 using namespace RenderStar::Render;
+using namespace RenderStar::ECS;
+using namespace RenderStar::Util::Core;
+using namespace RenderStar::Util::General;
+using namespace RenderStar::Util::Other;
 
 namespace RenderStar
 {

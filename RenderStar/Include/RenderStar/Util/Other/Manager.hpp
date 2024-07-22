@@ -5,6 +5,7 @@
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Util;
+using namespace RenderStar::Util::Core;
 
 #define MakeManager(managementType, managedType) \
 	class managementType \

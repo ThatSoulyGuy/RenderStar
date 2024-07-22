@@ -80,7 +80,7 @@ namespace RenderStar
 				}
 			}
 
-			void Render()
+			void Render() override
 			{
 				Shared<Shader> shader = gameObject->GetComponent<Shader>();
 
@@ -104,7 +104,7 @@ namespace RenderStar
 				context->DrawIndexed(indices.Length(), 0, 0);
 			}
 
-			void CleanUp()
+			void CleanUp() override
 			{
 				vertexBuffer.Reset();
 				indexBuffer.Reset();

@@ -100,14 +100,14 @@ namespace RenderStar
 
 			void Update()
 			{
-				for (auto& component : components)
-					component.second->Update();
+				for (auto& [type, component] : components)
+					component->Update();
 			}
 
 			void Render()
 			{
-				for (auto& component : components)
-					component.second->Render();
+				for (auto& [type, component] : components)
+					component->Render();
 			}
 
 			void SetActive(bool value)
@@ -127,8 +127,8 @@ namespace RenderStar
 
 			void CleanUp()
 			{
-				for (auto& component : components)
-					component.second->CleanUp();
+				for (auto& [type, component] : components)
+					component->CleanUp();
 			}
 
 			static Shared<GameObject> Create(const String& name)

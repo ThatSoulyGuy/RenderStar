@@ -6,127 +6,130 @@ namespace RenderStar
 {
 	namespace Util
 	{
-		template<typename T, Size A>
-		class Array
+		namespace Core
 		{
-
-		public:
-
-			Array()
+			template<typename T, Size A>
+			class Array
 			{
-				data = std::array<T, A>();
-			}
 
-			Array(const std::array<T, A>& input)
-			{
-				data = input;
-			}
+			public:
 
-			Array(const Array& other)
-			{
-				data = other.data;
-			}
-
-			Array(Array&& other)
-			{
-				data = std::move(other.data);
-			}
-
-			Array(std::initializer_list<T> list)
-			{
-				if (list.size() != A)
-					throw std::invalid_argument("Initializer list size does not match array size.");
-
-				std::copy(list.begin(), list.end(), data.begin());
-			}
-
-			Array& operator=(const Array& other)
-			{
-				data = other.data;
-
-				return *this;
-			}
-
-			Array& operator=(Array&& other)
-			{
-				data = std::move(other.data);
-
-				return *this;
-			}
-
-			Array& operator=(const std::array<T, A>& input)
-			{
-				data = input;
-
-				return *this;
-			}
-
-			Array& operator=(std::array<T, A>&& input)
-			{
-				data = std::move(input);
-
-				return *this;
-			}
-
-			T& operator[](Size index) const
-			{
-				return data[index];
-			}
-
-			bool operator==(const Array<T, A>& other) const
-			{
-				for (Size i = 0; i < A; i++)
+				Array()
 				{
-					if (data[i] != other.data[i])
-						return false;
+					data = std::array<T, A>();
 				}
 
-				return true;
-			}
-
-			bool operator==(const std::array<T, A>& other) const
-			{
-				for (Size i = 0; i < A; i++)
+				Array(const std::array<T, A>& input)
 				{
-					if (data[i] != other[i])
-						return false;
+					data = input;
 				}
 
-				return true;
-			}
-
-			bool operator==(const Array&& other)
-			{
-				Array temp = std::move(other);
-
-				for (Size i = 0; i < A; i++)
+				Array(const Array& other)
 				{
-					if (data[i] != temp.data[i])
-						return false;
+					data = other.data;
 				}
 
-				return true;
-			}
+				Array(Array&& other)
+				{
+					data = std::move(other.data);
+				}
 
-			operator std::array<T, A>() const
-			{
-				return data;
-			}
+				Array(std::initializer_list<T> list)
+				{
+					if (list.size() != A)
+						throw std::invalid_argument("Initializer list size does not match array size.");
 
-			operator const T*() const
-			{
-				return data.data();
-			}
+					std::copy(list.begin(), list.end(), data.begin());
+				}
 
-			Size Length() const
-			{
-				return A;
-			}
+				Array& operator=(const Array& other)
+				{
+					data = other.data;
 
-		private:
+					return *this;
+				}
 
-			std::array<T, A> data;
+				Array& operator=(Array&& other)
+				{
+					data = std::move(other.data);
 
-		};
+					return *this;
+				}
+
+				Array& operator=(const std::array<T, A>& input)
+				{
+					data = input;
+
+					return *this;
+				}
+
+				Array& operator=(std::array<T, A>&& input)
+				{
+					data = std::move(input);
+
+					return *this;
+				}
+
+				T& operator[](Size index) const
+				{
+					return data[index];
+				}
+
+				bool operator==(const Array<T, A>& other) const
+				{
+					for (Size i = 0; i < A; i++)
+					{
+						if (data[i] != other.data[i])
+							return false;
+					}
+
+					return true;
+				}
+
+				bool operator==(const std::array<T, A>& other) const
+				{
+					for (Size i = 0; i < A; i++)
+					{
+						if (data[i] != other[i])
+							return false;
+					}
+
+					return true;
+				}
+
+				bool operator==(const Array&& other)
+				{
+					Array temp = std::move(other);
+
+					for (Size i = 0; i < A; i++)
+					{
+						if (data[i] != temp.data[i])
+							return false;
+					}
+
+					return true;
+				}
+
+				operator std::array<T, A>() const
+				{
+					return data;
+				}
+
+				operator const T*() const
+				{
+					return data.data();
+				}
+
+				Size Length() const
+				{
+					return A;
+				}
+
+			private:
+
+				std::array<T, A> data;
+
+			};
+		}
 	}
 }

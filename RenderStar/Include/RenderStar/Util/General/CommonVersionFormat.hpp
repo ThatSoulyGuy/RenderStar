@@ -5,58 +5,63 @@
 
 #undef NULL
 
+using namespace RenderStar::Util::Core;
+
 namespace RenderStar
 {
 	namespace Util
 	{
-		class CommonVersionFormat
+		namespace General
 		{
-
-		public:
-
-			operator String() const
+			class CommonVersionFormat
 			{
-				return std::to_string(first) + "." + std::to_string(second) + "." + std::to_string(third);
-			}
 
-			int GetFirst() const
-			{
-				return first;
-			}
+			public:
 
-			int GetSecond() const
-			{
-				return second;
-			}
+				operator String() const
+				{
+					return std::to_string(first) + "." + std::to_string(second) + "." + std::to_string(third);
+				}
 
-			int GetThird() const
-			{
-				return third;
-			}
+				int GetFirst() const
+				{
+					return first;
+				}
 
-			static CommonVersionFormat Create(int first, int second, int third)
-			{
-				CommonVersionFormat out = {};
+				int GetSecond() const
+				{
+					return second;
+				}
 
-				out.first = first;
-				out.second = second;
-				out.third = third;
+				int GetThird() const
+				{
+					return third;
+				}
 
-				return out;
-			}
+				static CommonVersionFormat Create(int first, int second, int third)
+				{
+					CommonVersionFormat out = {};
 
-			static const CommonVersionFormat DEFAULT;
-			static const CommonVersionFormat NULL;
+					out.first = first;
+					out.second = second;
+					out.third = third;
 
-		private:
+					return out;
+				}
 
-			int first = 0;
-			int second = 0;
-			int third = 0;
+				static const CommonVersionFormat DEFAULT;
+				static const CommonVersionFormat NULL;
 
-		};
+			private:
 
-		const CommonVersionFormat CommonVersionFormat::DEFAULT = CommonVersionFormat::Create(0, 0, 1);
-		const CommonVersionFormat CommonVersionFormat::NULL = CommonVersionFormat::Create(0, 0, 0);
+				int first = 0;
+				int second = 0;
+				int third = 0;
+
+			};
+
+			const CommonVersionFormat CommonVersionFormat::DEFAULT = CommonVersionFormat::Create(0, 0, 1);
+			const CommonVersionFormat CommonVersionFormat::NULL = CommonVersionFormat::Create(0, 0, 0);
+		}
 	}
 }

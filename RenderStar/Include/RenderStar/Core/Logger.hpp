@@ -8,6 +8,7 @@
 #define Logger_ThrowIfFailed(message, result) if (FAILED(result)) _Logger::ThrowException(F("{} with result: '{}'", message, #result), __FUNCTION__, __LINE__, false)
 
 using namespace RenderStar::Util;
+using namespace RenderStar::Util::General;
 
 namespace RenderStar
 {

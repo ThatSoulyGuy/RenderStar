@@ -16,9 +16,11 @@ namespace RenderStar
 
 			Shared<GameObject> Register(Shared<GameObject> gameObject)
 			{
-				gameObjects += { gameObject->GetName(), gameObject };
+				String name = gameObject->GetName();
 
-				return gameObject;
+				gameObjects += { name, std::move(gameObject) };
+
+				return gameObjects[name];
 			}
 
 			Shared<GameObject> Get(const String& name)

@@ -3,46 +3,51 @@
 #include "RenderStar/Util/Core/String.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
+using namespace RenderStar::Util::Core;
+
 namespace RenderStar
 {
     namespace Util
     {
-        class DateTime
+        namespace General
         {
-
-        public:
-
-            static String Get(const String& format)
+            class DateTime
             {
-                Time now = std::time(nullptr);
-                TimeInformation information;
 
-                localtime_s(&information, &now);
+            public:
 
-                OutputStringStream buffer{};
-
-                char dateTime[100];
-
-                Size length = format.Length();
-
-                for (Size i = 0; i < length; ++i)
+                static String Get(const String& format)
                 {
-                    if (format[i] == '%' && i + 1 < length)
+                    Time now = std::time(nullptr);
+                    TimeInformation information;
+
+                    localtime_s(&information, &now);
+
+                    OutputStringStream buffer{};
+
+                    char dateTime[100];
+
+                    Size length = format.Length();
+
+                    for (Size i = 0; i < length; ++i)
                     {
-                        char specifier = format[i + 1];
-                        String specifierFormat = '%' + String(specifier);
+                        if (format[i] == '%' && i + 1 < length)
+                        {
+                            char specifier = format[i + 1];
+                            String specifierFormat = '%' + String(specifier);
 
-                        std::strftime(dateTime, sizeof(dateTime), specifierFormat, &information);
-                        buffer << dateTime;
+                            std::strftime(dateTime, sizeof(dateTime), specifierFormat, &information);
+                            buffer << dateTime;
 
-                        ++i;
+                            ++i;
+                        }
+                        else
+                            buffer << format[i];
                     }
-                    else
-                        buffer << format[i];
-                }
 
-                return buffer.str();
-            }
-        };
+                    return buffer.str();
+                }
+            };
+        }
     }
 }

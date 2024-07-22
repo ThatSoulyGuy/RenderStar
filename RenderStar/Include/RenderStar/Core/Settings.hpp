@@ -7,6 +7,7 @@
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Util;
+using namespace RenderStar::Util::Core;
 
 namespace std 
 {

@@ -17,6 +17,9 @@
 using namespace RenderStar::Core;
 using namespace RenderStar::ECS;
 using namespace RenderStar::Util;
+using namespace RenderStar::Util::Core;
+using namespace RenderStar::Util::General;
+using namespace RenderStar::Util::Helper;
 
 #define CompileAndCreateShader(device, path, target, shader) \
 { \
@@ -287,6 +290,12 @@ namespace RenderStar
 
 				if (hullShader)
 					hullShader.Reset();
+
+				if (inputLayout)
+					inputLayout.Reset();
+
+				for (auto& [slot, buffer] : constantBuffers)
+					buffer.Reset();
 			}
 
 			static Shared<Shader> Create(const String& localPath, const String& name, const String& domain = Settings::GetInstance()->Get<String>("defaultDomain"))
