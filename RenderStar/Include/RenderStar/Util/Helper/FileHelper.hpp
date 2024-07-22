@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RenderStar/Util/String.hpp"
+#include "RenderStar/Util/Core/String.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
 #undef CreateDirectory

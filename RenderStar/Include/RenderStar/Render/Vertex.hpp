@@ -4,7 +4,7 @@
 #include <dxgi1_6.h>
 #include "RenderStar/Math/Vector2.hpp"
 #include "RenderStar/Math/Vector3.hpp"
-#include "RenderStar/Util/Array.hpp"
+#include "RenderStar/Util/Core/Array.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Math;

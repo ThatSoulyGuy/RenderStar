@@ -1,15 +1,17 @@
 #pragma once
 
 #include "RenderStar/Core/Logger.hpp"
+#include "RenderStar/ECS/GameObject.hpp"
 #include "RenderStar/Math/Transform.hpp"
 #include "RenderStar/Render/Renderer.hpp"
 #include "RenderStar/Render/Shader.hpp"
 #include "RenderStar/Render/Vertex.hpp"
-#include "RenderStar/Util/String.hpp"
-#include "RenderStar/Util/Vector.hpp"
+#include "RenderStar/Util/Core/String.hpp"
+#include "RenderStar/Util/Core/Vector.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Core;
+using namespace RenderStar::ECS;
 using namespace RenderStar::Util;
 
 namespace RenderStar
@@ -18,10 +20,12 @@ namespace RenderStar
 	{
 		struct DefaultMatrixBuffer
 		{
+			DirectX::XMMATRIX projectionMatrix;
+			DirectX::XMMATRIX viewMatrix;
 			DirectX::XMMATRIX worldMatrix;
 		};
 
-		class Mesh
+		class Mesh : public Component
 		{
 
 		public:
@@ -78,6 +82,8 @@ namespace RenderStar
 
 			void Render()
 			{
+				Shared<Shader> shader = gameObject->GetComponent<Shader>();
+
 				ComPtr<ID3D11DeviceContext> context = Renderer::GetInstance()->GetContext();
 				ComPtr<ID3D11Device> device = Renderer::GetInstance()->GetDevice();
 
@@ -104,7 +110,7 @@ namespace RenderStar
 				indexBuffer.Reset();
 			}
 
-			static Shared<Mesh> Create(const String& name, const Shared<Shader>& shader, const Vector<Vertex>& vertices, const Vector<uint32>& indices)
+			static Shared<Mesh> Create(const String& name, const Vector<Vertex>& vertices, const Vector<uint32>& indices)
 			{
 				class Enabled : public Mesh { };
 				Shared<Mesh> mesh = std::make_shared<Enabled>();

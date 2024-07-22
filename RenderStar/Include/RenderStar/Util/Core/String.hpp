@@ -1,7 +1,7 @@
 #pragma once
 
 #include "RenderStar/Util/Typedefs.hpp"
-#include "RenderStar/Util/Vector.hpp"
+#include "RenderStar/Util/Core/Vector.hpp"
 #include <algorithm>
 #include <cstring>
 #include <iostream>

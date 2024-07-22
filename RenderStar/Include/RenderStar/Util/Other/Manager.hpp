@@ -1,7 +1,7 @@
 #pragma once
 
-#include "RenderStar/Util/Map.hpp"
-#include "RenderStar/Util/String.hpp"
+#include "RenderStar/Util/Core/Map.hpp"
+#include "RenderStar/Util/Core/String.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Util;

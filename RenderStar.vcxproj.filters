@@ -23,22 +23,22 @@
     <ClInclude Include="RenderStar\Include\RenderStar\Util\Typedefs.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\String.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\Core\String.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\Vector.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\Core\Vector.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\Array.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\Core\Array.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\DateTime.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\General\DateTime.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\Formatter.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\General\Formatter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\Map.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\Core\Map.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RenderStar\Include\RenderStar\Core\Logger.hpp">
@@ -65,16 +65,16 @@
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Quaternion.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\CommonVersionFormat.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\General\CommonVersionFormat.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RenderStar\Include\RenderStar\Render\Renderer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\XXMLParser.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\Other\XXMLParser.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\FileHelper.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\Helper\FileHelper.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RenderStar\Include\RenderStar\Render\Vertex.hpp">
@@ -86,16 +86,31 @@
     <ClInclude Include="RenderStar\Include\RenderStar\Render\Shader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\WString.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\Core\WString.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStar\Include\RenderStar\Util\Manager.hpp">
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\Other\Manager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RenderStar\Include\RenderStar\Render\ShaderManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Transform.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\Render\Camera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\Entity\Entity.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\ECS\GameObject.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\ECS\Component.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\ECS\GameObjectManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

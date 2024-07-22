@@ -96,6 +96,9 @@ namespace RenderStar
 		typedef std::condition_variable ConditionVariable;
 		typedef std::thread Thread;	
 
+		typedef std::type_index TypeIndex;
+		typedef std::type_info TypeInformation;
+
 		typedef std::chrono::system_clock SystemClock;
 
 		typedef std::chrono::high_resolution_clock HighResolutionClock;

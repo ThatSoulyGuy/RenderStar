@@ -5,15 +5,17 @@
 #include <d3dcompiler.h>
 #include "RenderStar/Core/Logger.hpp"
 #include "RenderStar/Core/Settings.hpp"
+#include "RenderStar/ECS/Component.hpp"
 #include "RenderStar/Render/Renderer.hpp"
 #include "RenderStar/Render/Vertex.hpp"
-#include "RenderStar/Util/FileHelper.hpp"
-#include "RenderStar/Util/Formatter.hpp"
-#include "RenderStar/Util/String.hpp"
-#include "RenderStar/Util/WString.hpp"
+#include "RenderStar/Util/Helper/FileHelper.hpp"
+#include "RenderStar/Util/General/Formatter.hpp"
+#include "RenderStar/Util/Core/String.hpp"
+#include "RenderStar/Util/Core/WString.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Core;
+using namespace RenderStar::ECS;
 using namespace RenderStar::Util;
 
 #define CompileAndCreateShader(device, path, target, shader) \
@@ -67,7 +69,7 @@ namespace RenderStar
 			HULL
 		};
 
-		class Shader
+		class Shader : public Component
 		{
 
 		public:
@@ -289,7 +291,8 @@ namespace RenderStar
 
 			static Shared<Shader> Create(const String& localPath, const String& name, const String& domain = Settings::GetInstance()->Get<String>("defaultDomain"))
 			{
-				Shared<Shader> shader = Shared<Shader>(new Shader());
+				class Enabled : public Shader { };
+				Shared<Shader> shader = std::make_shared<Enabled>();
 
 				shader->name = name;
 				shader->localPath = localPath;

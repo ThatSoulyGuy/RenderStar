@@ -3,7 +3,7 @@
 #include "RenderStar/Core/Logger.hpp"
 #include "RenderStar/Core/Settings.hpp"
 #include "RenderStar/Math/Vector2.hpp"
-#include "RenderStar/Util/CommonVersionFormat.hpp"
+#include "RenderStar/Util/General/CommonVersionFormat.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Core;

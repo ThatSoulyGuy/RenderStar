@@ -1,6 +1,6 @@
 #pragma once
 
-#include "RenderStar/Util/String.hpp"
+#include "RenderStar/Util/Core/String.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
 namespace RenderStar
@@ -108,6 +108,13 @@ namespace RenderStar
 				return *this;
 			}
 
+			Map& operator+=(std::pair<const Key, Value> list)
+			{
+				data[list.first] = list.second;
+
+				return *this;
+			}
+
 			Map& operator+=(std::initializer_list<std::pair<const Key, Value>> list)
 			{
 				for (const auto& pair : list)
@@ -168,10 +175,24 @@ namespace RenderStar
 				return *this;
 			}
 
+			Map& operator-=(std::pair<const Key, Value> list)
+			{
+				data.erase(list.first);
+
+				return *this;
+			}
+
 			Map& operator-=(std::initializer_list<std::pair<const Key, Value>> list)
 			{
 				for (const auto& pair : list)
 					data.erase(pair.first);
+
+				return *this;
+			}
+
+			Map& operator-=(const Key& key)
+			{
+				data.erase(key);
 
 				return *this;
 			}
@@ -234,7 +255,7 @@ namespace RenderStar
 				return data.end();
 			}
 
-			bool IsEmpty() const
+			bool Empty() const
 			{
 				return data.empty();
 			}

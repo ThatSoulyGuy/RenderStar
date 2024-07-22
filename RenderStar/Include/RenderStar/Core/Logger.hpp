@@ -1,7 +1,7 @@
 #pragma once
 
-#include "RenderStar/Util/DateTime.hpp"
-#include "RenderStar/Util/Formatter.hpp"
+#include "RenderStar/Util/General/DateTime.hpp"
+#include "RenderStar/Util/General/Formatter.hpp"
 
 #define Logger_WriteConsole(message, level) _Logger::WriteConsole(message, __FUNCTION__, level)
 #define Logger_ThrowException(message, fatal) _Logger::ThrowException(message, __FUNCTION__, __LINE__, fatal)

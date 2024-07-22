@@ -1,14 +1,17 @@
 #pragma once
 
+#include "RenderStar/ECS/Component.hpp"
 #include "RenderStar/Math/Vector3.hpp"
 #include "RenderStar/Math/Quaternion.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
+
+using namespace RenderStar::ECS;
 
 namespace RenderStar
 {
 	namespace Math
 	{
-        class Transform
+        class Transform : public Component
         {
 
         public:
@@ -65,6 +68,26 @@ namespace RenderStar
                 DirectX::XMStoreFloat3(&scaleVector, scale);
 
                 return Vector3f(scaleVector.x, scaleVector.y, scaleVector.z);
+            }
+
+            Vector3f GetForward() const
+			{
+				auto worldMatrix = GetWorldMatrix(false);
+
+				DirectX::XMFLOAT3 forward;
+				DirectX::XMStoreFloat3(&forward, worldMatrix.r[2]);
+
+				return Vector3f(forward.x, forward.y, forward.z);
+			}
+
+            Vector3f GetRight() const
+            {
+                auto worldMatrix = GetWorldMatrix(false);
+
+                DirectX::XMFLOAT3 right;
+                DirectX::XMStoreFloat3(&right, worldMatrix.r[0]);
+
+                return Vector3f(right.x, right.y, right.z);
             }
 
             void SetPosition(const Vector3f& position)

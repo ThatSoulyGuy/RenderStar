@@ -3,11 +3,12 @@
 #define SILENCE_QUATERNION
 
 #include "RenderStar/Core/Logger.hpp"
+#include "RenderStar/ECS/GameObjectManager.hpp"
 #include "RenderStar/Render/Mesh.hpp"
 #include "RenderStar/Render/Renderer.hpp"
 #include "RenderStar/Render/ShaderManager.hpp"
-#include "RenderStar/Util/CommonVersionFormat.hpp"
-#include "RenderStar/Util/XXMLParser.hpp"
+#include "RenderStar/Util/General/CommonVersionFormat.hpp"
+#include "RenderStar/Util/Other/XXMLParser.hpp"
 
 using namespace RenderStar::Core;
 using namespace RenderStar::Render;
@@ -92,7 +93,10 @@ namespace RenderStar
 
 			ShaderManager::GetInstance()->Register(Shader::Create("Shader/Default", "default"));
 
-			mesh = Mesh::Create("default", ShaderManager::GetInstance()->Get("default"), 
+			Shared<GameObject> mesh = GameObjectManager::GetInstance()->Register(GameObject::Create("Mesh"));
+				
+			mesh->AddComponent(ShaderManager::GetInstance()->Get("default"));
+			mesh->AddComponent(Mesh::Create("default",
 			{
 				{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
 				{ {  0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
@@ -102,21 +106,22 @@ namespace RenderStar
 			{ 
 				0, 2, 1,
 				2, 0, 3
-			});
+			}));
 
-			mesh->Generate();
+			mesh->GetComponent<Mesh>()->Generate();
 		}
 
 		void Update()
 		{
-			mesh->transform->SetRotation(Vector3f{ 0.0f, 0.0f, 28.0f });
+
+			GameObjectManager::GetInstance()->Update();
 		}
 
 		void Render()
 		{
 			Renderer::GetInstance()->PreRender();
 
-			mesh->Render();
+			GameObjectManager::GetInstance()->Render();
 
 			Renderer::GetInstance()->PostRender();
 		}
@@ -125,7 +130,7 @@ namespace RenderStar
 		{
 			Logger_WriteConsole("Cleaning up engine...", LogLevel::INFORMATION);
 
-			mesh->CleanUp();
+			GameObjectManager::GetInstance()->CleanUp();
 			ShaderManager::GetInstance()->CleanUp();
 			Renderer::GetInstance()->CleanUp();
 		}

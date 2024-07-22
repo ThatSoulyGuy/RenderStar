@@ -5,11 +5,11 @@
 #include "RenderStar/Math/Vector2.hpp"
 #include "RenderStar/Math/Vector3.hpp"
 #include "RenderStar/Math/Vector4.hpp"
-#include "RenderStar/Util/CommonVersionFormat.hpp"
-#include "RenderStar/Util/FileHelper.hpp"
-#include "RenderStar/Util/Formatter.hpp"
-#include "RenderStar/Util/Map.hpp"
-#include "RenderStar/Util/String.hpp"
+#include "RenderStar/Util/General/CommonVersionFormat.hpp"
+#include "RenderStar/Util/Helper/FileHelper.hpp"
+#include "RenderStar/Util/General/Formatter.hpp"
+#include "RenderStar/Util/Core/Map.hpp"
+#include "RenderStar/Util/Core/String.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Core;

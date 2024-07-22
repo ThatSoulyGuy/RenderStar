@@ -279,12 +279,12 @@ namespace RenderStar
 				return data.end();
 			}
 
-			void Erase(Size index)
+			void Remove(Size index)
 			{
 				data.erase(data.begin() + index);
 			}
 
-			void Erase(Size start, Size end)
+			void Remove(Size start, Size end)
 			{
 				data.erase(data.begin() + start, data.begin() + end);
 			}
