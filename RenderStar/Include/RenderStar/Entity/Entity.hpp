@@ -30,7 +30,7 @@ namespace RenderStar
 
 				result->transform = Transform::Create();
 
-				return result;
+				return std::move(result);
 			}
 
 		protected:

@@ -5,6 +5,7 @@
 #include "RenderStar/Math/Transform.hpp"
 #include "RenderStar/Render/Renderer.hpp"
 #include "RenderStar/Render/Shader.hpp"
+#include "RenderStar/Render/Texture.hpp"
 #include "RenderStar/Render/Vertex.hpp"
 #include "RenderStar/Util/Core/String.hpp"
 #include "RenderStar/Util/Core/Vector.hpp"
@@ -83,6 +84,7 @@ namespace RenderStar
 			void Render() override
 			{
 				Shared<Shader> shader = gameObject->GetComponent<Shader>();
+				Shared<Texture> texture = gameObject->GetComponent<Texture>();
 
 				ComPtr<ID3D11DeviceContext> context = Renderer::GetInstance()->GetContext();
 				ComPtr<ID3D11Device> device = Renderer::GetInstance()->GetDevice();
@@ -91,11 +93,15 @@ namespace RenderStar
 				UINT offset = 0;
 
 				shader->Bind();
-				
+
 				shader->SetConstantBuffer(0, DefaultMatrixBuffer
 				{
 					transform->GetWorldMatrix(true),
 				}, ShaderType::VERTEX);
+
+				shader->SetShaderResourceView(0, texture->GetTextureView(), ShaderType::PIXEL);
+				
+				shader->SetSamplerState(0, texture->GetFilter(), texture->GetAddressMode(), ShaderType::PIXEL);
 
 				context->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
 				context->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
@@ -119,7 +125,7 @@ namespace RenderStar
 				mesh->vertices = vertices;
 				mesh->indices = indices;
 
-				return mesh;
+				return std::move(mesh);
 			}
 			
 		private:

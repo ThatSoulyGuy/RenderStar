@@ -95,7 +95,7 @@ namespace RenderStar
 					return;
 
 				components[TypeIndex(typeid(T))]->CleanUp();
-				components.Remove(TypeIndex(typeid(T)));
+				components -= TypeIndex(typeid(T));
 			}
 
 			void Update()
@@ -139,7 +139,7 @@ namespace RenderStar
 				result->name = name;
 				result->AddComponent(Transform::Create());
 
-				return result;
+				return std::move(result);
 			}
 
 		private:

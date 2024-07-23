@@ -2,11 +2,13 @@
 
 #define SILENCE_QUATERNION
 
+#include "RenderStar/Core/InputManager.hpp"
 #include "RenderStar/Core/Logger.hpp"
 #include "RenderStar/ECS/GameObjectManager.hpp"
 #include "RenderStar/Render/Mesh.hpp"
 #include "RenderStar/Render/Renderer.hpp"
 #include "RenderStar/Render/ShaderManager.hpp"
+#include "RenderStar/Render/TextureManager.hpp"
 #include "RenderStar/Util/General/CommonVersionFormat.hpp"
 #include "RenderStar/Util/Other/XXMLParser.hpp"
 
@@ -80,6 +82,45 @@ namespace RenderStar
 					PostQuitMessage(0);
 					return 0;
 
+				case WM_KEYDOWN:
+					InputManager::GetInstance()->SetKeyState(static_cast<KeyCode>(wParam), KeyState::PRESSED);
+					return 0;
+
+				case WM_KEYUP:
+					InputManager::GetInstance()->SetKeyState(static_cast<KeyCode>(wParam), KeyState::RELEASED);
+					return 0;
+
+				case WM_LBUTTONDOWN:
+					InputManager::GetInstance()->SetMouseButtonState(MouseCode::LEFT, MouseState::PRESSED);
+					return 0;
+
+				case WM_LBUTTONUP:
+					InputManager::GetInstance()->SetMouseButtonState(MouseCode::LEFT, MouseState::RELEASED);
+					return 0;
+
+				case WM_RBUTTONDOWN:
+					InputManager::GetInstance()->SetMouseButtonState(MouseCode::RIGHT, MouseState::PRESSED);
+					return 0;
+
+				case WM_RBUTTONUP:
+					InputManager::GetInstance()->SetMouseButtonState(MouseCode::RIGHT, MouseState::RELEASED);
+					return 0;
+
+				case WM_MBUTTONDOWN:
+					InputManager::GetInstance()->SetMouseButtonState(MouseCode::MIDDLE, MouseState::PRESSED);
+					return 0;
+
+				case WM_MBUTTONUP:
+					InputManager::GetInstance()->SetMouseButtonState(MouseCode::MIDDLE, MouseState::RELEASED);
+					return 0;
+
+				case WM_MOUSEMOVE:
+				{
+					POINTS points = MAKEPOINTS(lParam);
+					InputManager::GetInstance()->SetMousePosition({ points.x, points.y });
+				}
+				return 0;
+
 				default:
 
 					return DefWindowProc(handle, message, wParam, lParam);
@@ -96,16 +137,18 @@ namespace RenderStar
 			Renderer::GetInstance()->Initialize();
 
 			ShaderManager::GetInstance()->Register(Shader::Create("Shader/Default", "default"));
+			TextureManager::GetInstance()->Register(Texture::Create("Texture/Debug.dds", "debug", D3D11_FILTER_MIN_MAG_MIP_POINT));
 
 			Shared<GameObject> mesh = GameObjectManager::GetInstance()->Register(GameObject::Create("Mesh"));
 				
 			mesh->AddComponent(ShaderManager::GetInstance()->Get("default"));
+			mesh->AddComponent(TextureManager::GetInstance()->Get("debug"));
 			mesh->AddComponent(Mesh::Create("default",
 			{
-				{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
-				{ {  0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
-				{ {  0.5f,  0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-				{ { -0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } }
+				{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
+				{ {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+				{ {  0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
+				{ { -0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } }
 			}, 
 			{ 
 				0, 2, 1,
@@ -136,6 +179,7 @@ namespace RenderStar
 
 			GameObjectManager::GetInstance()->CleanUp();
 			ShaderManager::GetInstance()->CleanUp();
+			TextureManager::GetInstance()->CleanUp();
 			Renderer::GetInstance()->CleanUp();
 		}
 

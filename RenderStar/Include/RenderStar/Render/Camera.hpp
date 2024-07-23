@@ -60,7 +60,7 @@ namespace RenderStar
 				result->farPlane = farPlane;
 				result->fieldOfView = fieldOfView;
 
-				return result;
+				return std::move(result);
 			}
 
 		private:

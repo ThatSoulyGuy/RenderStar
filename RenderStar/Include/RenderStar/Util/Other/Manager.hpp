@@ -23,7 +23,7 @@ using namespace RenderStar::Util::Core;
  \
 		void Unregister(const String& name) \
 		{ \
-			registeredTypes.Remove(name); \
+			registeredTypes -= name; \
 		} \
  \
 		Shared<managedType> Get(const String& name) \
@@ -47,8 +47,8 @@ using namespace RenderStar::Util::Core;
  \
 	private: \
  \
-		ShaderManager() = default; \
+		managementType() = default; \
 		 \
-		Map<String, Shared<Shader>> registeredTypes; \
+		Map<String, Shared<managedType>> registeredTypes; \
  \
 	}; 

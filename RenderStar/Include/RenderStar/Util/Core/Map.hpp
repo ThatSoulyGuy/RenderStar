@@ -262,9 +262,9 @@ namespace RenderStar
 					return data.empty();
 				}
 
-				void Remove(const Key& key)
+				Size Count(const Key& key) const
 				{
-					data.erase(key);
+					return data.count(key);
 				}
 
 				void Clear()

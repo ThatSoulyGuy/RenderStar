@@ -273,6 +273,14 @@ namespace RenderStar
 					return std::wstring(buffer.begin(), buffer.end());
 				}
 
+				mutable std::wstring string;
+				operator const wchar_t* () const
+				{
+					string = std::wstring(buffer.begin(), buffer.end());
+
+					return string.c_str();
+				}
+
 				operator int32() const
 				{
 					return std::stoi(buffer);

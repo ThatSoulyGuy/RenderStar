@@ -29,7 +29,7 @@ using namespace RenderStar::Util::Helper;
 	ComPtr<ID3DBlob> shaderBlob; \
 	ComPtr<ID3DBlob> errorBlob; \
  \
-	HRESULT result = D3DCompileFromFile(WString(path), nullptr, nullptr, "Main", target, 0, 0, &shaderBlob, &errorBlob); \
+	HRESULT result = D3DCompileFromFile(WString(path.operator std::wstring()), nullptr, nullptr, "Main", target, 0, 0, &shaderBlob, &errorBlob); \
  \
 	if (FAILED(result)) \
 	{ \
@@ -206,6 +206,42 @@ namespace RenderStar
 				SetSamplerState(slot, samplerState, shaderType);
 			}
 
+			void SetShaderResourceView(UINT slot, ComPtr<ID3D11ShaderResourceView> shaderResourceView, ShaderType shaderType) 
+			{
+				ComPtr<ID3D11DeviceContext> context = Renderer::GetInstance()->GetContext();
+
+				switch (shaderType) 
+				{
+
+				case ShaderType::VERTEX:
+					context->VSSetShaderResources(slot, 1, shaderResourceView.GetAddressOf());
+					break;
+
+				case ShaderType::PIXEL:
+					context->PSSetShaderResources(slot, 1, shaderResourceView.GetAddressOf());
+					break;
+
+				case ShaderType::COMPUTE:
+					context->CSSetShaderResources(slot, 1, shaderResourceView.GetAddressOf());
+					break;
+
+				case ShaderType::DOMAIN:
+					context->DSSetShaderResources(slot, 1, shaderResourceView.GetAddressOf());
+					break;
+
+				case ShaderType::GEOMETRY:
+					context->GSSetShaderResources(slot, 1, shaderResourceView.GetAddressOf());
+					break;
+
+				case ShaderType::HULL:
+					context->HSSetShaderResources(slot, 1, shaderResourceView.GetAddressOf());
+					break;
+
+				default:
+					throw std::invalid_argument("Unknown shader type");
+				}
+			}
+
 			void SetSamplerState(UINT slot, ComPtr<ID3D11SamplerState> samplerState, ShaderType shaderType)
 			{
 				ComPtr<ID3D11DeviceContext> context = Renderer::GetInstance()->GetContext();
@@ -316,7 +352,7 @@ namespace RenderStar
 
 				shader->Generate();
 
-				return shader;
+				return std::move(shader);
 			}
 
 		private:

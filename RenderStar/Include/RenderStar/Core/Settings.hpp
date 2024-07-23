@@ -61,7 +61,7 @@ namespace RenderStar
 
             void Remove(const String& key)
             {
-                settings.Remove(key);
+                settings -= key;
             }
 
             static Shared<Settings> GetInstance()

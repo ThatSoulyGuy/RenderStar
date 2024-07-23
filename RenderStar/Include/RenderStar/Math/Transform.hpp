@@ -138,7 +138,7 @@ namespace RenderStar
             {
                 class Enabled : public Transform { };
 
-                return std::make_shared<Enabled>();
+                return std::move(std::make_shared<Enabled>());
             }
 
         private:

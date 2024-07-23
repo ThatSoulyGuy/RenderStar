@@ -1,4 +1,7 @@
 
+Texture2D diffuse : register(t0);
+SamplerState samplerState : register(s0);
+
 struct PixelInputType
 {
     float4 position : SV_POSITION;
@@ -9,5 +12,5 @@ struct PixelInputType
 
 float4 Main(PixelInputType input) : SV_TARGET
 {
-    return input.color;
+    return diffuse.Sample(samplerState, input.textureCoordinates) * input.color;
 }
