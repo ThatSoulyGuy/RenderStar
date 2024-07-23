@@ -117,7 +117,7 @@ namespace RenderStar
 
 		void Update()
 		{
-
+			InputManager::GetInstance()->Update();
 			GameObjectManager::GetInstance()->Update();
 		}
 

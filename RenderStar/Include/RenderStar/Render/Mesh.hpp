@@ -128,8 +128,6 @@ namespace RenderStar
 
 			String name;
 
-			Shared<Shader> shader;	
-			
 			Vector<Vertex> vertices;
 			Vector<uint32> indices;
 

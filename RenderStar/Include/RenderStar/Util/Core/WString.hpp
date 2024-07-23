@@ -29,8 +29,6 @@ namespace RenderStar
 
 				WString(WString&& other) noexcept : buffer(std::move(other.buffer)) {}
 
-				WString(wchar_t input) : buffer(1, input) {}
-
 				using const_iterator = std::wstring::const_iterator;
 
 				WString& operator=(const WString& other)
@@ -710,11 +708,6 @@ namespace RenderStar
 				std::wstring raw = str;
 				os << raw;
 				return os;
-			}
-
-			WString operator+(wchar_t lhs, const WString& rhs)
-			{
-				return WString(lhs) + rhs;
 			}
 
 			WString operator+(const std::wstring& lhs, const WString& rhs)
