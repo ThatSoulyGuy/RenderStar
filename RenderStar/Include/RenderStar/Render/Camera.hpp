@@ -45,17 +45,11 @@ namespace RenderStar
 				return fieldOfView;
 			}
 
-			Shared<Transform> GetTransform() const
-			{
-				return transform;
-			}
-
 			static Shared<Camera> Create(float nearPlane, float farPlane, float fieldOfView)
 			{
 				class Enabled : public Camera { };
 				Shared<Camera> result = std::make_shared<Enabled>();
 
-				result->transform = Transform::Create();
 				result->nearPlane = nearPlane;
 				result->farPlane = farPlane;
 				result->fieldOfView = fieldOfView;
@@ -66,8 +60,6 @@ namespace RenderStar
 		private:
 
 			Camera() = default;
-
-			Shared<Transform> transform = nullptr;
 
 			float nearPlane = 0.0f;
 			float farPlane = 0.0f;

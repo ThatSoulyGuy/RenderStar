@@ -281,14 +281,10 @@ namespace RenderStar
                 }
 
                 for (auto key : keysToRemove)
-                {
                     keyStates -= key;
-                }
 
                 for (auto button : buttonsToRemove)
-                {
                     mouseButtonStates -= button;
-                }
 
                 POINT newMousePosition;
                 GetCursorPos(&newMousePosition);
@@ -341,16 +337,13 @@ namespace RenderStar
             }
 
         private:
-
             InputManager() 
             {
                 mousePosition = Vector2i{ 0, 0 };
                 mouseDelta = Vector2i{ 0, 0 };
 
                 POINT position = { mousePosition.x, mousePosition.y };
-
                 GetCursorPos(&position);
-
                 mousePosition = Vector2i{ position.x, position.y };
             }
 

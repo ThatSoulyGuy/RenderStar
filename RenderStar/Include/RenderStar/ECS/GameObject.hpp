@@ -32,7 +32,6 @@ namespace RenderStar
 				components[TypeIndex(typeid(T))] = component;
 
 				component->gameObject = shared_from_this();
-				component->transform = GetComponent<Transform>();
 				component->Initialize();
 
 				return component;

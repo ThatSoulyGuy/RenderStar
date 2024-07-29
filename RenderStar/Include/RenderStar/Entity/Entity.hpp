@@ -18,17 +18,10 @@ namespace RenderStar
 			Entity(const Entity&) = delete;
 			Entity& operator=(const Entity&) = delete;
 
-			Shared<Transform> GetTransform() const
-			{
-				return transform;
-			}
-
 			static Shared<Entity> Create()
 			{
 				class Enabled : public Entity { };
 				Shared<Entity> result = std::make_shared<Enabled>();
-
-				result->transform = Transform::Create();
 
 				return std::move(result);
 			}
@@ -36,8 +29,6 @@ namespace RenderStar
 		protected:
 
 			Entity() = default;
-
-			Shared<Transform> transform;
 
 		};
 	}

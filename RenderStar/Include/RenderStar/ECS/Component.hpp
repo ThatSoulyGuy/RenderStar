@@ -38,8 +38,6 @@ namespace RenderStar
 				return result;
 			}
 
-			Shared<Transform> transform;
-			
 			Shared<GameObject> gameObject;
 		};
 	}

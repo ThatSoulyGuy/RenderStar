@@ -749,7 +749,6 @@ namespace RenderStar
 
 			bool operator==(const char* lhs, const String& rhs)
 			{
-				const char* raw = rhs;
 				return lhs == raw;
 			}
 
@@ -761,55 +760,46 @@ namespace RenderStar
 
 			bool operator!=(const char* lhs, const String& rhs)
 			{
-				const char* raw = rhs;
 				return lhs != raw;
 			}
 
 			bool operator<(const std::string& lhs, const String& rhs)
 			{
-				const char* raw = rhs;
 				return lhs < raw;
 			}
 
 			bool operator<(const char* lhs, const String& rhs)
 			{
-				const char* raw = rhs;
 				return lhs < raw;
 			}
 
 			bool operator>(const std::string& lhs, const String& rhs)
 			{
-				const char* raw = rhs;
 				return lhs > raw;
 			}
 
 			bool operator>(const char* lhs, const String& rhs)
 			{
-				const char* raw = rhs;
 				return lhs > raw;
 			}
 
 			bool operator<=(const std::string& lhs, const String& rhs)
 			{
-				const char* raw = rhs;
 				return lhs <= raw;
 			}
 
 			bool operator<=(const char* lhs, const String& rhs)
 			{
-				const char* raw = rhs;
 				return lhs <= raw;
 			}
 
 			bool operator>=(const std::string& lhs, const String& rhs)
 			{
-				const char* raw = rhs;
 				return lhs >= raw;
 			}
 
 			bool operator>=(const char* lhs, const String& rhs)
 			{
-				const char* raw = rhs;
 				return lhs >= raw;
 			}
 
