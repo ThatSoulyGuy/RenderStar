@@ -170,6 +170,7 @@
     <ClInclude Include="RenderStar\Include\RenderStar\ECS\GameObject.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\ECS\GameObjectManager.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Engine.hpp" />
+    <ClInclude Include="RenderStar\Include\RenderStar\Entity\Entities\EntityPlayer.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Entity\Entity.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Quaternion.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Transform.hpp" />
@@ -189,6 +190,7 @@
     <ClInclude Include="RenderStar\Include\RenderStar\Util\General\DateTime.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Util\Helper\FileHelper.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Util\General\Formatter.hpp" />
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\Other\Buildable.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Util\Other\Manager.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Util\Core\Map.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Util\Core\String.hpp" />

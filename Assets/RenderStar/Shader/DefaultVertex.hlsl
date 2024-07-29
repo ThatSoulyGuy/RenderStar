@@ -2,6 +2,8 @@
 
 cbuffer DefaultMatrixBuffer : register(b0)
 {
+    matrix projectionMatrix;
+    matrix viewMatrix;
     matrix worldMatrix;
 };
 
@@ -28,8 +30,10 @@ PixelInputType Main(VertexInputType input)
     float4 worldPosition = float4(input.position, 1.0f);
     
     worldPosition = mul(worldPosition, worldMatrix);
-
-    output.position = worldPosition;
+    worldPosition = mul(worldPosition, viewMatrix);
+    float4 clipPosition = mul(worldPosition, projectionMatrix);
+    
+    output.position = clipPosition;
     output.color = float4(input.color, 1.0f);
     output.normal = input.normal;
     output.textureCoordinates = input.textureCoordinates;

@@ -427,6 +427,34 @@ namespace RenderStar
                 return DirectX::XMFLOAT4(x, y, z, w);
             }
 
+            operator Vector3f() const
+            {
+                DirectX::XMVECTOR quaternion = DirectX::XMVectorSet(x, y, z, w);
+
+                DirectX::XMMATRIX rotationMatrix = DirectX::XMMatrixRotationQuaternion(quaternion);
+
+                float pitch, yaw, roll;
+
+                pitch = std::asin(-rotationMatrix.r[2].m128_f32[1]);
+
+                if (std::cos(pitch) > 0.0001)
+                {
+                    roll = std::atan2(rotationMatrix.r[0].m128_f32[1], rotationMatrix.r[0].m128_f32[0]);
+                    yaw = std::atan2(rotationMatrix.r[1].m128_f32[2], rotationMatrix.r[1].m128_f32[1]);
+                }
+                else
+                {
+                    roll = 0;
+                    yaw = std::atan2(-rotationMatrix.r[1].m128_f32[0], rotationMatrix.r[1].m128_f32[1]);
+                }
+
+                pitch = DirectX::XMConvertToDegrees(pitch);
+                yaw = DirectX::XMConvertToDegrees(yaw);
+                roll = DirectX::XMConvertToDegrees(roll);
+
+                return Vector3f(pitch, yaw, roll);
+            }
+
             float x = 0.0f;
             float y = 0.0f;
             float z = 0.0f;

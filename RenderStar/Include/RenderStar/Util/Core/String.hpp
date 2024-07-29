@@ -721,9 +721,7 @@ namespace RenderStar
 			
 			std::ostream& operator<<(std::ostream& os, const String& str)
 			{
-				std::string raw = str;
-				os << raw;
-				return os;
+				return os << str.operator std::string();
 			}
 
 			String operator+(char lhs, const String& rhs)
@@ -743,64 +741,62 @@ namespace RenderStar
 
 			bool operator==(const std::string& lhs, const String& rhs)
 			{
-				std::string raw = rhs;
-				return lhs == raw;
+				return lhs == rhs.operator std::string();
 			}
 
 			bool operator==(const char* lhs, const String& rhs)
 			{
-				return lhs == raw;
+				return lhs == rhs.operator const char*();
 			}
 
 			bool operator!=(const std::string& lhs, const String& rhs)
 			{
-				std::string raw = rhs;
-				return lhs != raw;
+				return lhs != rhs.operator std::string();
 			}
 
 			bool operator!=(const char* lhs, const String& rhs)
 			{
-				return lhs != raw;
+				return lhs != rhs.operator const char*();
 			}
 
 			bool operator<(const std::string& lhs, const String& rhs)
 			{
-				return lhs < raw;
+				return lhs < rhs.operator const char*();
 			}
 
 			bool operator<(const char* lhs, const String& rhs)
 			{
-				return lhs < raw;
+				return lhs < rhs.operator const char*();
 			}
 
 			bool operator>(const std::string& lhs, const String& rhs)
 			{
-				return lhs > raw;
+				return lhs > rhs.operator const char*();
 			}
 
 			bool operator>(const char* lhs, const String& rhs)
 			{
-				return lhs > raw;
+				return lhs > rhs.operator const char*();
 			}
 
 			bool operator<=(const std::string& lhs, const String& rhs)
 			{
-				return lhs <= raw;
+				return lhs <= rhs.operator const char*();
 			}
 
 			bool operator<=(const char* lhs, const String& rhs)
 			{
-				return lhs <= raw;
+				return lhs <= rhs.operator const char*();
 			}
 
 			bool operator>=(const std::string& lhs, const String& rhs)
 			{
-				return lhs >= raw;
+				return lhs >= rhs.operator const char*();
 			}
 
 			bool operator>=(const char* lhs, const String& rhs)
 			{
-				return lhs >= raw;
+				return lhs >= rhs.operator const char*();
 			}
 
 			String& operator<<(String& lhs, const String& rhs)

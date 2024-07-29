@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include "RenderStar/Core/Window.hpp"
 #include "RenderStar/Math/Vector2.hpp"
 #include "RenderStar/Util/Core/Map.hpp"
 #include "RenderStar/Util/Core/Vector.hpp"
@@ -10,6 +11,7 @@
 #undef XBUTTON2
 #undef DELETE
 
+using namespace RenderStar::Core;
 using namespace RenderStar::Math;   
 using namespace RenderStar::Util;
 using namespace RenderStar::Util::Core;
@@ -249,7 +251,13 @@ namespace RenderStar
 			RELEASED
 		};
 
-        class InputManager 
+        enum class CursorState
+		{
+            UNLOCKED,
+			LOCKED
+		};
+
+        class InputManager
         {
 
         public:
@@ -257,7 +265,7 @@ namespace RenderStar
             InputManager(const InputManager&) = delete;
             InputManager& operator=(const InputManager&) = delete;
 
-            void Update() 
+            void Update()
             {
                 Vector<KeyCode> keysToRemove;
                 Vector<MouseCode> buttonsToRemove;
@@ -289,43 +297,84 @@ namespace RenderStar
                 POINT newMousePosition;
                 GetCursorPos(&newMousePosition);
 
-                mouseDelta = Vector2i{ newMousePosition.x - mousePosition.x, newMousePosition.y - mousePosition.y };
-                mousePosition = Vector2i{ newMousePosition.x, newMousePosition.y };
+                if (cursorState == CursorState::LOCKED)
+                {
+                    if (GetForegroundWindow() == Window::GetInstance()->GetHandle())
+                    {
+                        RECT clientRect;
+                        GetClientRect(Window::GetInstance()->GetHandle(), &clientRect);
+
+                        POINT windowCenter = { (clientRect.right - clientRect.left) / 2, (clientRect.bottom - clientRect.top) / 2 };
+
+                        POINT mousePositionOut;
+                        GetCursorPos(&mousePositionOut);
+
+                        ScreenToClient(Window::GetInstance()->GetHandle(), &mousePositionOut);
+
+                        mouseDelta = Vector2i{ mousePositionOut.x - windowCenter.x, mousePositionOut.y - windowCenter.y };
+
+                        ClientToScreen(Window::GetInstance()->GetHandle(), &windowCenter);
+
+                        SetCursorPos(windowCenter.x, windowCenter.y);
+
+                        mousePosition = Vector2i{ mousePositionOut.x, mousePositionOut.y };
+                    }
+                }
+                else
+                {
+                    mouseDelta = Vector2i{ newMousePosition.x - mousePosition.x, newMousePosition.y - mousePosition.y };
+                    mousePosition = Vector2i{ newMousePosition.x, newMousePosition.y };
+                }
             }
 
-            void SetMousePosition(const Vector2i& position) 
+            void SetMousePosition(const Vector2i& position)
             {
                 mousePosition = Vector2i{ position.x, position.y };
             }
 
-            void SetKeyState(KeyCode key, KeyState state) 
+            void SetKeyState(KeyCode key, KeyState state)
             {
                 keyStates[key] = state;
             }
 
-            void SetMouseButtonState(MouseCode button, MouseState state) 
+            void SetMouseButtonState(MouseCode button, MouseState state)
             {
-                mouseButtonStates[button] = MouseState::PRESSED;
+                mouseButtonStates[button] = state;
             }
 
-            bool GetKeyState(KeyCode key, KeyState state) const 
+            bool GetKeyState(KeyCode key, KeyState state) const
             {
                 return keyStates.Count(key) && keyStates[key] == state;
             }
 
-            bool GetMouseButtonState(MouseCode button, MouseState state) const 
+            bool GetMouseButtonState(MouseCode button, MouseState state) const
             {
                 return mouseButtonStates.Count(button) && mouseButtonStates[button] == state;
             }
 
-            Vector2i GetMousePosition() const 
+            Vector2i GetMousePosition() const
             {
                 return mousePosition;
             }
 
-            Vector2i GetMouseDelta() const 
+            Vector2i GetMouseDelta() const
             {
                 return mouseDelta;
+            }
+
+            void SetCursorState(CursorState state)
+            {
+                cursorState = state;
+
+                if (state == CursorState::LOCKED)
+                    ShowCursor(FALSE);
+                else
+                    ShowCursor(TRUE);
+            }
+
+            CursorState GetCursorState() const
+            {
+                return cursorState;
             }
 
             static Shared<InputManager> GetInstance()
@@ -337,13 +386,16 @@ namespace RenderStar
             }
 
         private:
-            InputManager() 
+
+            InputManager()
             {
                 mousePosition = Vector2i{ 0, 0 };
                 mouseDelta = Vector2i{ 0, 0 };
 
                 POINT position = { mousePosition.x, mousePosition.y };
+
                 GetCursorPos(&position);
+
                 mousePosition = Vector2i{ position.x, position.y };
             }
 
@@ -352,6 +404,8 @@ namespace RenderStar
 
             Vector2i mousePosition;
             Vector2i mouseDelta;
+
+            CursorState cursorState = CursorState::UNLOCKED;
         };
 	}
 }

@@ -186,6 +186,16 @@ namespace RenderStar
             int z = 0;
         };
 
+        bool operator==(const Vector3i& lhs, const Vector3i& rhs)
+        {
+            return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+        }
+
+        bool operator!=(const Vector3i& lhs, const Vector3i& rhs)
+        {
+            return !(lhs == rhs);
+        }
+
         class Vector3f
         {
 
@@ -363,6 +373,21 @@ namespace RenderStar
             float z = 0.0f;
         };
 
+        bool operator==(const Vector3f& lhs, const Vector3f& rhs)
+		{
+			return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+		}
+
+        bool operator!=(const Vector3f& lhs, const Vector3f& rhs)
+        {
+            return !(lhs == rhs);
+        }
+
+        Vector3f operator*(float scalar, const Vector3f& vector)
+        {
+            return vector * scalar;
+        }
+
         class Vector3d
         {
 
@@ -537,5 +562,15 @@ namespace RenderStar
             double y = 0.0;
             double z = 0.0;
         };
+
+        bool operator==(const Vector3d& lhs, const Vector3d& rhs)
+        {
+            return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+        }
+
+        bool operator!=(const Vector3d& lhs, const Vector3d& rhs)
+        {
+            return !(lhs == rhs);
+        }
     }
 }

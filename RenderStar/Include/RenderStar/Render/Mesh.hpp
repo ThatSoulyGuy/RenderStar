@@ -81,8 +81,23 @@ namespace RenderStar
 				}
 			}
 
-			void Render() override
+			void DebugMatrix(const DirectX::XMMATRIX& matrix, const String& name)
 			{
+				DirectX::XMFLOAT4X4 m;
+				DirectX::XMStoreFloat4x4(&m, matrix);
+
+				std::cout << "Matrix: " << name << std::endl;
+				std::cout << m._11 << ", " << m._12 << ", " << m._13 << ", " << m._14 << std::endl;
+				std::cout << m._21 << ", " << m._22 << ", " << m._23 << ", " << m._24 << std::endl;
+				std::cout << m._31 << ", " << m._32 << ", " << m._33 << ", " << m._34 << std::endl;
+				std::cout << m._41 << ", " << m._42 << ", " << m._43 << ", " << m._44 << std::endl;
+			}
+
+			void Render(Shared<Camera> camera) override
+			{
+				if (camera == nullptr)
+					return;
+
 				Shared<Shader> shader = gameObject->GetComponent<Shader>();
 				Shared<Texture> texture = gameObject->GetComponent<Texture>();
 
@@ -96,7 +111,9 @@ namespace RenderStar
 
 				shader->SetConstantBuffer(0, DefaultMatrixBuffer
 				{
-					transform->GetWorldMatrix(true),
+					DirectX::XMMatrixTranspose(camera->GetProjectionMatrix()),
+					DirectX::XMMatrixTranspose(camera->GetViewMatrix()),
+					gameObject->GetComponent<Transform>()->GetWorldMatrix(true),
 				}, ShaderType::VERTEX);
 
 				shader->SetShaderResourceView(0, texture->GetTextureView(), ShaderType::PIXEL);

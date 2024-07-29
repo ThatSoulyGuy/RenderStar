@@ -5,6 +5,7 @@
 #include "RenderStar/Core/InputManager.hpp"
 #include "RenderStar/Core/Logger.hpp"
 #include "RenderStar/ECS/GameObjectManager.hpp"
+#include "RenderStar/Entity/Entities/EntityPlayer.hpp"
 #include "RenderStar/Render/Mesh.hpp"
 #include "RenderStar/Render/Renderer.hpp"
 #include "RenderStar/Render/ShaderManager.hpp"
@@ -15,6 +16,7 @@
 using namespace RenderStar::Core;
 using namespace RenderStar::Render;
 using namespace RenderStar::ECS;
+using namespace RenderStar::Entity;
 using namespace RenderStar::Util::Core;
 using namespace RenderStar::Util::General;
 using namespace RenderStar::Util::Other;
@@ -127,6 +129,10 @@ namespace RenderStar
 				}
 			});
 
+			lastTime = std::chrono::high_resolution_clock::now();
+			frameCount = 0;
+			fps = 0.0;
+
 			Logger_WriteConsole("Pre-initializing engine...", LogLevel::INFORMATION);
 		}
 
@@ -134,10 +140,17 @@ namespace RenderStar
 		{
 			Logger_WriteConsole("Initializing engine...", LogLevel::INFORMATION);
 
+			Shared<Transform> transform = Transform::Create();
+			transform->SetRotation(Vector3f(0.0f, 90.0f, 0.0f));
+
 			Renderer::GetInstance()->Initialize();
 
 			ShaderManager::GetInstance()->Register(Shader::Create("Shader/Default", "default"));
 			TextureManager::GetInstance()->Register(Texture::Create("Texture/Debug.dds", "debug", D3D11_FILTER_MIN_MAG_MIP_POINT));
+
+			Shared<GameObject> player = GameObjectManager::GetInstance()->Register(GameObject::Create("Player"));
+			player->GetComponent<Transform>()->SetPosition({ 0.0f, 0.0f, -10.0f });
+			player->AddComponent(IEntity::Create<EntityPlayer>());
 
 			Shared<GameObject> mesh = GameObjectManager::GetInstance()->Register(GameObject::Create("Mesh"));
 				
@@ -145,14 +158,14 @@ namespace RenderStar
 			mesh->AddComponent(TextureManager::GetInstance()->Get("debug"));
 			mesh->AddComponent(Mesh::Create("default",
 			{
-				{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
-				{ {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-				{ {  0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-				{ { -0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } }
+				{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+				{ {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
+				{ {  0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+				{ { -0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }
 			}, 
 			{ 
-				0, 2, 1,
-				2, 0, 3
+				2, 1, 0, 
+				3, 2, 0
 			}));
 
 			mesh->GetComponent<Mesh>()->Generate();
@@ -162,13 +175,26 @@ namespace RenderStar
 		{
 			InputManager::GetInstance()->Update();
 			GameObjectManager::GetInstance()->Update();
+
+			frameCount++;
+			auto currentTime = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double> elapsed = currentTime - lastTime;
+
+			if (elapsed.count() >= 1.0)
+			{
+				fps = frameCount / elapsed.count();
+				frameCount = 0;
+				lastTime = currentTime;
+
+				Logger_WriteConsole("Current FPS: " + std::to_string(fps), LogLevel::INFORMATION);
+			}
 		}
 
 		void Render()
 		{
 			Renderer::GetInstance()->PreRender();
 
-			GameObjectManager::GetInstance()->Render();
+			GameObjectManager::GetInstance()->Render(Renderer::GetInstance()->GetCamera());
 
 			Renderer::GetInstance()->PostRender();
 		}
@@ -194,5 +220,9 @@ namespace RenderStar
 	private:
 
 		Engine() = default;
+
+		std::chrono::high_resolution_clock::time_point lastTime;
+		unsigned int frameCount;
+		double fps;
 	};
 }

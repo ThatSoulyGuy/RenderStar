@@ -1,10 +1,12 @@
 #pragma once
 
 #include "RenderStar/Core/Window.hpp"
+#include "RenderStar/ECS/GameObject.hpp"
 #include "RenderStar/Math/Transform.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Core;
+using namespace RenderStar::ECS;
 using namespace RenderStar::Math;
 using namespace RenderStar::Util;
 
@@ -12,7 +14,7 @@ namespace RenderStar
 {
 	namespace Render
 	{
-		class Camera
+		class Camera : public Component
 		{
 
 		public:
@@ -22,12 +24,16 @@ namespace RenderStar
 
 			DirectX::XMMATRIX GetProjectionMatrix() const
 			{
-				return DirectX::XMMatrixPerspectiveFovLH(static_cast<float>(static_cast<double>(fieldOfView) * PI / 180.0), Window::GetInstance()->GetAspectRatio(), nearPlane, farPlane);
+				return DirectX::XMMatrixPerspectiveFovLH(DirectX::XMConvertToRadians(fieldOfView), Window::GetInstance()->GetAspectRatio(), nearPlane, farPlane);
 			}
 
 			DirectX::XMMATRIX GetViewMatrix() const
 			{
-				return DirectX::XMMatrixLookAtLH(transform->GetWorldPosition(), transform->GetWorldPosition() * transform->GetForward(), { 0.0f, 1.0f, 0.0f });
+				Shared<Transform> transform = gameObject->GetComponent<Transform>();
+				Vector3f worldPosition = transform->GetWorldPosition();
+				Vector3f forward = transform->GetForward();
+
+				return DirectX::XMMatrixLookAtLH(worldPosition, worldPosition + forward, { 0.0f, 1.0f, 0.0f });
 			}
 
 			float GetNearPlane() const

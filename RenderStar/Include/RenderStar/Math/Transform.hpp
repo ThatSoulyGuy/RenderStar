@@ -24,7 +24,7 @@ namespace RenderStar
                 return localPosition;
             }
 
-            Quaternionf GetRotation() const
+            Vector3f GetRotation() const
             {
                 return localRotation;
             }
@@ -72,12 +72,12 @@ namespace RenderStar
 
             Vector3f GetForward() const
 			{
-				auto worldMatrix = GetWorldMatrix(false);
+                auto worldMatrix = GetWorldMatrix(false);
 
-				DirectX::XMFLOAT3 forward;
-				DirectX::XMStoreFloat3(&forward, worldMatrix.r[2]);
+                DirectX::XMFLOAT3 forward;
+                DirectX::XMStoreFloat3(&forward, worldMatrix.r[2]);
 
-				return Vector3f(forward.x, forward.y, forward.z);
+                return Vector3f(forward.x, forward.y, forward.z);
 			}
 
             Vector3f GetRight() const
@@ -95,7 +95,7 @@ namespace RenderStar
                 localPosition = position;
             }
 
-            void SetRotation(const Quaternionf& rotation)
+            void SetRotation(const Vector3f& rotation)
             {
                 localRotation = rotation;
             }
@@ -110,6 +110,21 @@ namespace RenderStar
                 this->parent = parent;
             }
 
+            void Translate(const Vector3f& translation)
+			{
+				localPosition += translation;
+			}
+
+            void Rotate(const Vector3f& rotation)
+            {
+                localRotation += rotation;
+			}
+
+            void Scale(const Vector3f& scale)
+			{
+				localScale *= scale;
+			}
+
             Shared<Transform> GetParent() const
             {
                 return parent;
@@ -117,8 +132,12 @@ namespace RenderStar
 
             DirectX::XMMATRIX GetWorldMatrix(bool transpose) const
             {
+                float pitch = DirectX::XMConvertToRadians(localRotation.x);
+                float yaw = DirectX::XMConvertToRadians(localRotation.y);
+                float roll = DirectX::XMConvertToRadians(localRotation.z);
+
                 DirectX::XMMATRIX translation = DirectX::XMMatrixTranslation(localPosition.x, localPosition.y, localPosition.z);
-                DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationQuaternion(DirectX::XMVectorSet(localRotation.x, localRotation.y, localRotation.z, localRotation.w));
+                DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
                 DirectX::XMMATRIX scaling = DirectX::XMMatrixScaling(localScale.x, localScale.y, localScale.z);
 
                 DirectX::XMMATRIX localMatrix = scaling * rotation * translation;
@@ -146,7 +165,7 @@ namespace RenderStar
             Transform() = default;
 
             Vector3f localPosition;
-            Quaternionf localRotation;
+            Vector3f localRotation;
             Vector3f localScale = Vector3f(1.0f, 1.0f, 1.0f);
 
             Shared<Transform> parent = nullptr;

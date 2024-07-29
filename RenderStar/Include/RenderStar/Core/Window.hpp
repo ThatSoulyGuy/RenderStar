@@ -98,6 +98,31 @@ namespace RenderStar
                 return { rect.right - rect.left, rect.bottom - rect.top };
             }
 
+            Vector2i GetScreenDimensions() const
+			{
+				RECT rect;
+
+				GetWindowRect(handle, &rect);
+
+				return { rect.right - rect.left, rect.bottom - rect.top };
+			}
+
+            Vector2i GetClientPosition() const
+			{
+				POINT point = { 0 };
+
+				ClientToScreen(handle, &point);
+
+				return { point.x, point.y };
+			}
+
+            Vector2i GetCenter() const
+			{
+				Vector2i dimensions = GetScreenDimensions();
+
+				return { dimensions.x / 2, dimensions.y / 2 };
+			}
+
             float GetDeltaTime()
             {
                 TimePoint currentTime = SystemClock::now();

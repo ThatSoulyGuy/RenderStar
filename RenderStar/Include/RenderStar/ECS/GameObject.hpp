@@ -6,6 +6,7 @@
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Math;
+using namespace RenderStar::Render;
 using namespace RenderStar::Util;
 
 namespace RenderStar
@@ -103,10 +104,10 @@ namespace RenderStar
 					component->Update();
 			}
 
-			void Render()
+			void Render(Shared<Camera> camera)
 			{
 				for (auto& [type, component] : components)
-					component->Render();
+					component->Render(camera);
 			}
 
 			void SetActive(bool value)
@@ -122,6 +123,41 @@ namespace RenderStar
 			String GetName() const
 			{
 				return name;
+			}
+
+			void SetName(const String& value)
+			{
+				name = value;
+			}
+
+			void AddChild(Shared<GameObject> child)
+			{
+				child->parent = shared_from_this();
+				child->GetComponent<Transform>()->SetParent(GetComponent<Transform>());
+				children += { child->GetName(), child };
+			}
+			
+			Shared<GameObject> GetChild(const String& name)
+			{
+				if (!children.Contains(name))
+					return nullptr;
+
+				return children[name];
+			}
+
+			void RemoveChild(const String& name)
+			{
+				if (!children.Contains(name))
+					return;
+
+				children[name]->parent.reset();
+				children[name]->GetComponent<Transform>()->SetParent(nullptr);
+				children -= name;
+			}
+
+			Shared<GameObject> GetParent()
+			{
+				return parent.lock();
 			}
 
 			void CleanUp()
@@ -149,8 +185,11 @@ namespace RenderStar
 
 			bool isActive = true;
 
+			Weak<GameObject> parent;
+
 			Map<TypeIndex, Shared<Component>> components;
-			
+			Map<String, Shared<GameObject>> children;
+
 		};
 	}
 }

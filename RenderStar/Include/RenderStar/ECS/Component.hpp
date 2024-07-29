@@ -8,7 +8,16 @@ namespace RenderStar
 	}
 }
 
+namespace RenderStar
+{
+	namespace Render
+	{
+		class Camera;
+	}
+}
+
 using namespace RenderStar::Math;
+using namespace RenderStar::Render;
 
 namespace RenderStar
 {
@@ -26,7 +35,7 @@ namespace RenderStar
 			virtual void Initialize() { }
 
 			virtual void Update() { }
-			virtual void Render() { }
+			virtual void Render(Shared<Camera> camera) { }
 
 			virtual void CleanUp() { }
 

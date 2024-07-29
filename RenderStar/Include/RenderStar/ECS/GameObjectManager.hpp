@@ -2,6 +2,8 @@
 
 #include "RenderStar/ECS/GameObject.hpp"
 
+using namespace RenderStar::Render;
+
 namespace RenderStar
 {
 	namespace ECS
@@ -50,14 +52,14 @@ namespace RenderStar
 				}
 			}
 
-			void Render()
+			void Render(Shared<Camera> camera)
 			{
 				for (auto& [name, gameObject] : gameObjects)
 				{
 					if (!gameObject)
 						continue;
 
-					gameObject->Render();
+					gameObject->Render(camera);
 				}
 			}
 

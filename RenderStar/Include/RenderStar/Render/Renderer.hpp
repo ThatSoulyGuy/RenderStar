@@ -5,10 +5,12 @@
 #include "RenderStar/Core/Logger.hpp"
 #include "RenderStar/Core/Window.hpp"
 #include "RenderStar/Math/Vector2.hpp"
+#include "RenderStar/Render/Camera.hpp"
 #include "RenderStar/Util/Typedefs.hpp"
 
 using namespace RenderStar::Core;
 using namespace RenderStar::Math;
+using namespace RenderStar::Render;
 using namespace RenderStar::Util;
 
 namespace RenderStar
@@ -94,7 +96,37 @@ namespace RenderStar
 					return;
 				}
 
-				context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), nullptr);
+				D3D11_TEXTURE2D_DESC depthStencilDescription = {};
+
+				depthStencilDescription.Width = currentDimensions.x;
+				depthStencilDescription.Height = currentDimensions.y;
+				depthStencilDescription.MipLevels = 1;
+				depthStencilDescription.ArraySize = 1;
+				depthStencilDescription.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+				depthStencilDescription.SampleDesc.Count = 1;
+				depthStencilDescription.SampleDesc.Quality = 0;
+				depthStencilDescription.Usage = D3D11_USAGE_DEFAULT;
+				depthStencilDescription.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+				depthStencilDescription.CPUAccessFlags = 0;
+				depthStencilDescription.MiscFlags = 0;
+
+				result = device->CreateTexture2D(&depthStencilDescription, nullptr, &depthStencilBuffer);
+
+				if (FAILED(result))
+				{
+					Logger_WriteConsole("Failed to create depth-stencil buffer.", LogLevel::ERROR);
+					return;
+				}
+
+				result = device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, &depthStencilView);
+
+				if (FAILED(result))
+				{
+					Logger_WriteConsole("Failed to create depth-stencil view.", LogLevel::ERROR);
+					return;
+				}
+
+				context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView.Get());
 
 				D3D11_VIEWPORT viewport = {};
 
@@ -107,6 +139,23 @@ namespace RenderStar
 
 				context->RSSetViewports(1, &viewport);
 
+				D3D11_RASTERIZER_DESC rasterizerDescription = {};
+
+				rasterizerDescription.FillMode = D3D11_FILL_SOLID; 
+				rasterizerDescription.CullMode = D3D11_CULL_NONE;
+				rasterizerDescription.FrontCounterClockwise = FALSE;
+				rasterizerDescription.DepthBias = 0;
+				rasterizerDescription.SlopeScaledDepthBias = 0.0f;
+				rasterizerDescription.DepthBiasClamp = 0.0f;
+				rasterizerDescription.DepthClipEnable = TRUE;
+				rasterizerDescription.ScissorEnable = FALSE;
+				rasterizerDescription.MultisampleEnable = FALSE;
+				rasterizerDescription.AntialiasedLineEnable = FALSE;
+
+				result = device->CreateRasterizerState(&rasterizerDescription, rasterizerState.GetAddressOf());
+
+				//context->RSSetState(rasterizerState.Get());
+
 				isInitialized = true;
 			}
 
@@ -114,10 +163,14 @@ namespace RenderStar
 			{
 				LockGuard<Mutex> lock(mutex);
 
-				context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), nullptr);
+				context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView.Get());
 
 				FLOAT clearColor[4] = { 0.0f, 0.45f, 0.75f, 1.0f };
 				context->ClearRenderTargetView(renderTargetView.Get(), clearColor);
+
+				context->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+				//context->RSSetState(rasterizerState.Get());
 			}
 
 			void PostRender() const
@@ -163,7 +216,37 @@ namespace RenderStar
 					return;
 				}
 
-				context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), nullptr);
+				D3D11_TEXTURE2D_DESC depthStencilDescription = {};
+
+				depthStencilDescription.Width = currentDimensions.x;
+				depthStencilDescription.Height = currentDimensions.y;
+				depthStencilDescription.MipLevels = 1;
+				depthStencilDescription.ArraySize = 1;
+				depthStencilDescription.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+				depthStencilDescription.SampleDesc.Count = 1;
+				depthStencilDescription.SampleDesc.Quality = 0;
+				depthStencilDescription.Usage = D3D11_USAGE_DEFAULT;
+				depthStencilDescription.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+				depthStencilDescription.CPUAccessFlags = 0;
+				depthStencilDescription.MiscFlags = 0;
+
+				result = device->CreateTexture2D(&depthStencilDescription, nullptr, &depthStencilBuffer);
+
+				if (FAILED(result))
+				{
+					Logger_WriteConsole("Failed to create depth-stencil buffer.", LogLevel::ERROR);
+					return;
+				}
+
+				result = device->CreateDepthStencilView(depthStencilBuffer.Get(), nullptr, &depthStencilView);
+
+				if (FAILED(result))
+				{
+					Logger_WriteConsole("Failed to create depth-stencil view.", LogLevel::ERROR);
+					return;
+				}
+
+				context->OMSetRenderTargets(1, renderTargetView.GetAddressOf(), depthStencilView.Get());
 
 				D3D11_VIEWPORT viewport = {};
 
@@ -202,6 +285,21 @@ namespace RenderStar
 				return renderTargetView;
 			}
 
+			void SetCamera(Shared<Camera> camera)
+			{
+				this->camera = camera;
+			}
+
+			Shared<Camera> GetCamera() const
+			{
+				return camera;
+			}
+
+			Vector2i GetCurrentDimensions() const
+			{
+				return currentDimensions;
+			}
+
 			void CleanUp()
 			{
 				if (renderTargetView)
@@ -215,6 +313,12 @@ namespace RenderStar
 
 				if (device)
 					device.Reset();
+
+				if (depthStencilView)
+					depthStencilView.Reset();
+
+				if (depthStencilBuffer)
+					depthStencilBuffer.Reset();
 
 				Logger_WriteConsole("Renderer cleaned up.", LogLevel::INFORMATION);
 			}
@@ -231,10 +335,15 @@ namespace RenderStar
 
 			Renderer() = default;
 
+			Shared<Camera> camera = nullptr;
+
 			ComPtr<ID3D11Device> device = nullptr;
 			ComPtr<ID3D11DeviceContext> context = nullptr;
 			ComPtr<IDXGISwapChain1> swapChain = nullptr;
 			ComPtr<ID3D11RenderTargetView> renderTargetView = nullptr;
+			ComPtr<ID3D11RasterizerState> rasterizerState = nullptr;
+			ComPtr<ID3D11DepthStencilView> depthStencilView = nullptr;
+			ComPtr<ID3D11Texture2D> depthStencilBuffer = nullptr;
 
 			Vector2i currentDimensions;
 

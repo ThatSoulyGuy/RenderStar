@@ -24,7 +24,7 @@ namespace RenderStar
 	{
 		namespace Other
 		{
-			using VariableValue = Variant<std::string, CommonVersionFormat, Vector2i, Vector2f, Vector2d, Vector3i, Vector3f, Vector3d, Vector4i, Vector4f, Vector4d>;
+			using VariableValue = Variant<std::string, int, float, double, CommonVersionFormat, Vector2i, Vector2f, Vector2d, Vector3i, Vector3f, Vector3d, Vector4i, Vector4f, Vector4d>;
 
 			class XXMLParser
 			{
@@ -47,6 +47,11 @@ namespace RenderStar
 				const Map<std::string, Map<std::string, VariableValue>>& GetNamespaces() const
 				{
 					return namespaces;
+				}
+
+				const Vector<std::string>& GetGlobalDefines() const
+				{
+					return globalDefines;
 				}
 
 				template <typename T>
@@ -114,6 +119,10 @@ namespace RenderStar
 
 					RegularExpression versionVariableRegex(R"((\w+)\s*=\s*(\[\s*((\d)\s*.\s*(\d)\s*.\s*(\d))\s*\]))");
 
+					RegularExpression intVariableRegex(R"((\w+)\s*=\s*(\d+))");
+					RegularExpression floatVariableRegex(R"((\w+)\s*=\s*(\d+\.?\d*)f)");
+					RegularExpression doubleVariableRegex(R"((\w+)\s*=\s*(\d+\.?\d*)d)");
+
 					RegularExpression vector2iVariableRegex(R"((\w+)\s*=\s*\[\s*(\d+)\s*,\s*(\d+)\s*\])");
 					RegularExpression vector2fVariableRegex(R"((\w+)\s*=\s*\[\s*(\d+\.?\d*)f\s*,\s*(\d+\.?\d*)f\s*\])");
 					RegularExpression vector2dVariableRegex(R"((\w+)\s*=\s*\[\s*(\d+\.?\d*)d\s*,\s*(\d+\.?\d*)d\s*\])");
@@ -126,7 +135,9 @@ namespace RenderStar
 					RegularExpression vector4fVariableRegex(R"((\w+)\s*=\s*\[\s*(\d+\.?\d*)f\s*,\s*(\d+\.?\d*)f\s*\,\s*(\d+\.?\d*)f\s*\,\s*(\d+\.?\d*)f\s*\])");
 					RegularExpression vector4dVariableRegex(R"((\w+)\s*=\s*\[\s*(\d+\.?\d*)d\s*,\s*(\d+\.?\d*)d\s*\,\s*(\d+\.?\d*)d\s*\,\s*(\d+\.?\d*)d\s*\])");
 
-					Match<String::const_iterator> match;
+					RegularExpression globalDefineRegex(R"(#\s*(\w+)\s*(\S+)\s*(\w+))");
+
+					Match<std::string::const_iterator> match;
 					String currentNamespace;
 
 					while (std::getline(stream, line))
@@ -163,6 +174,29 @@ namespace RenderStar
 								globalVariables[match[1]] = version;
 							else
 								namespaces[currentNamespace][match[1]] = version;
+						}
+						else if (std::regex_search(line, match, intVariableRegex))
+						{
+							if (currentNamespace.IsEmpty())
+								globalVariables[match[1]] = std::stoi(match[2]);
+							else
+								namespaces[currentNamespace][match[1]] = std::stoi(match[2]);
+						}
+						else if (std::regex_search(line, match, floatVariableRegex))
+						{
+							if (currentNamespace.IsEmpty())
+								globalVariables[match[1]] = std::stof(match[2]);
+							else
+								namespaces[currentNamespace][match[1]] = std::stof(match[2]);
+						}
+						else if (std::regex_search(line, match, doubleVariableRegex))
+						{
+							if (currentNamespace.IsEmpty())
+								globalVariables[match[1]] = std::stod(match[2]);
+							else
+								namespaces[currentNamespace][match[1]] = std::stod(match[2]);
+
+							Logger_WriteConsole("Warning: double-precision is not fully supported!", LogLevel::WARNING);
 						}
 						else if (std::regex_search(line, match, vector2iVariableRegex))
 						{
@@ -251,6 +285,10 @@ namespace RenderStar
 
 							Logger_WriteConsole("Warning: double-precision is not fully supported!", LogLevel::WARNING);
 						}
+						else if (std::regex_search(line, match, globalDefineRegex))
+						{
+							globalDefines += match[3];
+						}
 					}
 				}
 
@@ -262,11 +300,12 @@ namespace RenderStar
 
 				Map<std::string, VariableValue> globalVariables;
 				Map<std::string, Map<std::string, VariableValue>> namespaces;
+				Vector<std::string> globalDefines;
 
 				static const float VERSION;
 			};
 
-			const float XXMLParser::VERSION = 1.1f;
+			const float XXMLParser::VERSION = 1.2f;
 		}
 	}
 }
