@@ -19,7 +19,7 @@ int main()
 	Window::GetInstance()->AddUpdateFunction([]() 
 	{ 
 		Engine::GetInstance()->Update();
-		Engine::GetInstance()->Render();	
+		Engine::GetInstance()->Render();
 	});
 
 	Window::GetInstance()->Run();

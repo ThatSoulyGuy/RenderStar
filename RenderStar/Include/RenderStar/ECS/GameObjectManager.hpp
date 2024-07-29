@@ -88,5 +88,7 @@ namespace RenderStar
 
 			Map<String, Shared<GameObject>> gameObjects;
 		};
+
+		EXPORT_INSTANCE_FUNCTION(GameObjectManager);
 	}
 }

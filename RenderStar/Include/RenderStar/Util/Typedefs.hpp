@@ -59,6 +59,26 @@
 #undef WriteConsole
 #undef DOMAIN
 
+#ifdef IS_MOD
+#define MOD_API __declspec(dllexport)
+#else
+#define MOD_API __declspec(dllimport)
+#endif // IS_MOD
+
+#ifdef IS_MOD
+#define MOD_API_N __declspec(dllimport)
+#else
+#define MOD_API_N __declspec(dllexport)
+#endif // IS_MOD
+
+#define DLL_EXPORT __declspec(dllexport)
+#define DLL_IMPORT __declspec(dllimport)
+
+#define EXPORT_INSTANCE_FUNCTION(className) extern "C" DLL_EXPORT Shared<className> className##_GetInstance() \
+{ \
+	return className::GetInstance(); \
+}
+
 namespace RenderStar
 {
 	namespace Util

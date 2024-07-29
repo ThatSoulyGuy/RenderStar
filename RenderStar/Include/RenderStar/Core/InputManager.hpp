@@ -407,5 +407,7 @@ namespace RenderStar
 
             CursorState cursorState = CursorState::UNLOCKED;
         };
+
+        EXPORT_INSTANCE_FUNCTION(InputManager)
 	}
 }

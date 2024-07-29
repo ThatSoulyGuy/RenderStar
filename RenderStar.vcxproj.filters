@@ -113,6 +113,27 @@
     <ClInclude Include="RenderStar\Include\RenderStar\ECS\GameObjectManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\Core\InputManager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\Entity\Entities\EntityPlayer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\Render\Texture.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\Render\TextureManager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\Util\Other\Buildable.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\Mod\Mod.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderStar\Include\RenderStar\Mod\ModManager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\RenderStar\EngineSettings.xxml" />
@@ -120,5 +141,8 @@
   <ItemGroup>
     <FxCompile Include="Assets\RenderStar\Shader\DefaultVertex.hlsl" />
     <FxCompile Include="Assets\RenderStar\Shader\DefaultPixel.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\RenderStar\Texture\Debug.dds" />
   </ItemGroup>
 </Project>

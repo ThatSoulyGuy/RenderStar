@@ -331,5 +331,7 @@ namespace RenderStar
 
 			mutable Mutex mutex;
 		};
+
+		EXPORT_INSTANCE_FUNCTION(Renderer);
 	}
 }

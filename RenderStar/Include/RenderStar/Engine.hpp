@@ -6,6 +6,7 @@
 #include "RenderStar/Core/Logger.hpp"
 #include "RenderStar/ECS/GameObjectManager.hpp"
 #include "RenderStar/Entity/Entities/EntityPlayer.hpp"
+#include "RenderStar/Mod/ModManager.hpp"
 #include "RenderStar/Render/Mesh.hpp"
 #include "RenderStar/Render/Renderer.hpp"
 #include "RenderStar/Render/ShaderManager.hpp"
@@ -17,6 +18,7 @@ using namespace RenderStar::Core;
 using namespace RenderStar::Render;
 using namespace RenderStar::ECS;
 using namespace RenderStar::Entity;
+using namespace RenderStar::Mod;	
 using namespace RenderStar::Util::Core;
 using namespace RenderStar::Util::General;
 using namespace RenderStar::Util::Other;
@@ -33,6 +35,8 @@ namespace RenderStar
 		
 		void PreInitialize()
 		{
+			Logger_WriteConsole("Pre-initializing engine...", LogLevel::INFORMATION);
+
 			Shared<XXMLParser> settings = XXMLParser::Create("EngineSettings.xxml", "Settings");
 
 			if (!settings->GetGlobalVariables().Contains("ID"))
@@ -139,31 +143,14 @@ namespace RenderStar
 			ShaderManager::GetInstance()->Register(Shader::Create("Shader/Default", "default"));
 			TextureManager::GetInstance()->Register(Texture::Create("Texture/Debug.dds", "debug", D3D11_FILTER_MIN_MAG_MIP_POINT));
 
-			Shared<GameObject> player = GameObjectManager::GetInstance()->Register(GameObject::Create("Player"));
-			player->GetComponent<Transform>()->SetPosition({ 0.0f, 0.0f, -10.0f });
-			player->AddComponent(IEntity::Create<EntityPlayer>());
-
-			Shared<GameObject> mesh = GameObjectManager::GetInstance()->Register(GameObject::Create("Mesh"));
-				
-			mesh->AddComponent(ShaderManager::GetInstance()->Get("default"));
-			mesh->AddComponent(TextureManager::GetInstance()->Get("debug"));
-			mesh->AddComponent(Mesh::Create("default",
-			{
-				{ { -0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },
-				{ {  0.5f, -0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } },
-				{ {  0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },
-				{ { -0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } }
-			}, 
-			{ 
-				2, 1, 0, 
-				3, 2, 0
-			}));
-
-			mesh->GetComponent<Mesh>()->Generate();
+			ModManager::GetInstance()->LoadFromDirectory("CoreMods/");
+			ModManager::GetInstance()->LoadFromDirectory("Mods/");
 		}
 
 		void Update()
 		{
+			ModManager::GetInstance()->Update();
+
 			InputManager::GetInstance()->Update();
 			GameObjectManager::GetInstance()->Update();
 		}
@@ -172,6 +159,7 @@ namespace RenderStar
 		{
 			Renderer::GetInstance()->PreRender();
 
+			ModManager::GetInstance()->Render();
 			GameObjectManager::GetInstance()->Render(Renderer::GetInstance()->GetCamera());
 
 			Renderer::GetInstance()->PostRender();
@@ -181,6 +169,7 @@ namespace RenderStar
 		{
 			Logger_WriteConsole("Cleaning up engine...", LogLevel::INFORMATION);
 
+			ModManager::GetInstance()->CleanUp();
 			GameObjectManager::GetInstance()->CleanUp();
 			ShaderManager::GetInstance()->CleanUp();
 			TextureManager::GetInstance()->CleanUp();

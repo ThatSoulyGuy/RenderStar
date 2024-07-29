@@ -128,6 +128,8 @@ namespace RenderStar
 				FileHelper() = default;
 
 			};
+
+			EXPORT_INSTANCE_FUNCTION(FileHelper);
 		}
 	}
 }

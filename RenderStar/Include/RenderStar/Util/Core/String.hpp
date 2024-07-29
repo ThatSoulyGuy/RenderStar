@@ -849,8 +849,16 @@ namespace std
 	{
 		auto format(const RenderStar::Util::Core::String& str, format_context& ctx) const
 		{
-			std::string message = str;
-			return formatter<std::string>::format(message, ctx);
+			return formatter<std::string>::format(str.operator std::string(), ctx);
+		}
+	};
+	
+	template<>
+	struct hash<RenderStar::Util::Core::String>
+	{
+		std::size_t operator()(const RenderStar::Util::Core::String& s) const noexcept
+		{
+			return std::hash<std::string>()(s.operator std::string());
 		}
 	};
 }

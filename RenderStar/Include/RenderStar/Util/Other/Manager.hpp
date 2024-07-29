@@ -51,4 +51,6 @@ using namespace RenderStar::Util::Core;
 		 \
 		Map<String, Shared<managedType>> registeredTypes; \
  \
-	}; 
+	}; \
+\
+	EXPORT_INSTANCE_FUNCTION(managementType);

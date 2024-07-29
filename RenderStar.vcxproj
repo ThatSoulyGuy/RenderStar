@@ -177,6 +177,8 @@
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Vector2.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Vector3.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Math\Vector4.hpp" />
+    <ClInclude Include="RenderStar\Include\RenderStar\Mod\Mod.hpp" />
+    <ClInclude Include="RenderStar\Include\RenderStar\Mod\ModManager.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Render\Camera.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Render\Mesh.hpp" />
     <ClInclude Include="RenderStar\Include\RenderStar\Render\Renderer.hpp" />

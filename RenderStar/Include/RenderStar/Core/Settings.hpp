@@ -9,19 +9,6 @@
 using namespace RenderStar::Util;
 using namespace RenderStar::Util::Core;
 
-namespace std 
-{
-    template<>
-    struct hash<String>
-    {
-        std::size_t operator()(const String& s) const noexcept
-        {
-            std::string raw = s;
-            return std::hash<std::string>()(raw);
-        }
-    };
-}
-
 namespace RenderStar
 {
 	namespace Core
@@ -90,5 +77,7 @@ namespace RenderStar
 
             Map<String, Shared<HolderBase>> settings;
         };
+
+        EXPORT_INSTANCE_FUNCTION(Settings);
 	}
 }

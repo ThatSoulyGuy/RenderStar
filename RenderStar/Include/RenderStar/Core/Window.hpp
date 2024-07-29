@@ -224,5 +224,7 @@ namespace RenderStar
 
             volatile bool running = false;
         };
+
+        EXPORT_INSTANCE_FUNCTION(Window);
     }
 }
