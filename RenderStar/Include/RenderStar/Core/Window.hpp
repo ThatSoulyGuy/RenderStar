@@ -174,7 +174,6 @@ namespace RenderStar
                     DispatchMessage(&message);
                 }
 
-                running = false;
                 updateThread.join();
             }
 
@@ -198,17 +197,8 @@ namespace RenderStar
             void UpdateLoop()
             {
                 while (running)
-                {
-                    {
-                        LockGuard<Mutex> lock(updateMutex);
-
-                        for (auto& function : updateFunctions)
-                            function();
-                    }
-
                     std::this_thread::sleep_for(Milliseconds(16));
                 }
-            }
 
             Vector<Function<void()>> updateFunctions;
 

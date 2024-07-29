@@ -80,7 +80,6 @@ namespace RenderStar
 			void UpdateMovement()
 			{
 				Shared<Transform> cameraTransform = gameObject->GetChild("Camera")->GetComponent<Transform>();
-
 				Vector3f movement = { 0.0f, 0.0f, 0.0f };
 
 				if (InputManager::GetInstance()->GetKeyState(KeyCode::W, KeyState::HELD))

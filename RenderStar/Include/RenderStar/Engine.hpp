@@ -129,10 +129,6 @@ namespace RenderStar
 				}
 			});
 
-			lastTime = std::chrono::high_resolution_clock::now();
-			frameCount = 0;
-			fps = 0.0;
-
 			Logger_WriteConsole("Pre-initializing engine...", LogLevel::INFORMATION);
 		}
 
@@ -175,19 +171,6 @@ namespace RenderStar
 		{
 			InputManager::GetInstance()->Update();
 			GameObjectManager::GetInstance()->Update();
-
-			frameCount++;
-			auto currentTime = std::chrono::high_resolution_clock::now();
-			std::chrono::duration<double> elapsed = currentTime - lastTime;
-
-			if (elapsed.count() >= 1.0)
-			{
-				fps = frameCount / elapsed.count();
-				frameCount = 0;
-				lastTime = currentTime;
-
-				Logger_WriteConsole("Current FPS: " + std::to_string(fps), LogLevel::INFORMATION);
-			}
 		}
 
 		void Render()
@@ -220,9 +203,5 @@ namespace RenderStar
 	private:
 
 		Engine() = default;
-
-		std::chrono::high_resolution_clock::time_point lastTime;
-		unsigned int frameCount;
-		double fps;
 	};
 }

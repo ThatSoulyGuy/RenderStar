@@ -139,23 +139,6 @@ namespace RenderStar
 
 				context->RSSetViewports(1, &viewport);
 
-				D3D11_RASTERIZER_DESC rasterizerDescription = {};
-
-				rasterizerDescription.FillMode = D3D11_FILL_SOLID; 
-				rasterizerDescription.CullMode = D3D11_CULL_NONE;
-				rasterizerDescription.FrontCounterClockwise = FALSE;
-				rasterizerDescription.DepthBias = 0;
-				rasterizerDescription.SlopeScaledDepthBias = 0.0f;
-				rasterizerDescription.DepthBiasClamp = 0.0f;
-				rasterizerDescription.DepthClipEnable = TRUE;
-				rasterizerDescription.ScissorEnable = FALSE;
-				rasterizerDescription.MultisampleEnable = FALSE;
-				rasterizerDescription.AntialiasedLineEnable = FALSE;
-
-				result = device->CreateRasterizerState(&rasterizerDescription, rasterizerState.GetAddressOf());
-
-				//context->RSSetState(rasterizerState.Get());
-
 				isInitialized = true;
 			}
 
@@ -169,8 +152,6 @@ namespace RenderStar
 				context->ClearRenderTargetView(renderTargetView.Get(), clearColor);
 
 				context->ClearDepthStencilView(depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
-
-				//context->RSSetState(rasterizerState.Get());
 			}
 
 			void PostRender() const
@@ -341,7 +322,6 @@ namespace RenderStar
 			ComPtr<ID3D11DeviceContext> context = nullptr;
 			ComPtr<IDXGISwapChain1> swapChain = nullptr;
 			ComPtr<ID3D11RenderTargetView> renderTargetView = nullptr;
-			ComPtr<ID3D11RasterizerState> rasterizerState = nullptr;
 			ComPtr<ID3D11DepthStencilView> depthStencilView = nullptr;
 			ComPtr<ID3D11Texture2D> depthStencilBuffer = nullptr;
 
