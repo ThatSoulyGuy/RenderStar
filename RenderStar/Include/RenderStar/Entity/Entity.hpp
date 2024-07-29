@@ -20,15 +20,15 @@ namespace RenderStar
 
 		public:
 
-			String registryName;
+			String registryName = "";
 
-			float maxHealth;
+			float maxHealth = 0;
+			
+			float movementSpeed = 0;
+			float runningSpeed = 0;
 
-			float movementSpeed;
-			float runningSpeed;
-
-			bool canJump;
-			bool canCrouch;
+			bool canJump = false;
+			bool canCrouch = false;
 
 			EntityRegistration SetRegistryName(const String& registryName)
 			{
@@ -152,15 +152,15 @@ namespace RenderStar
 
 		private:
 
-			String registryName;
+			String registryName = "";
 
-			float maxHealth;
+			float maxHealth = 0;
 
-			float movementSpeed;
-			float runningSpeed;
+			float movementSpeed = 0;
+			float runningSpeed = 0;
 
-			bool canJump;
-			bool canCrouch;
+			bool canJump = false;
+			bool canCrouch = false;
 
 		};
 	}

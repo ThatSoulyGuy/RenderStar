@@ -348,6 +348,21 @@ namespace RenderStar
                 return *this;
             }
 
+            float Length() const
+            {
+                return sqrt(x * x + y * y + z * z);
+            }
+
+            Vector3f Normalized() const
+            {
+                float length = Length();
+
+                if (length == 0.0f)
+                    return Vector3f(0.0f, 0.0f, 0.0f);
+                
+                return Vector3f(x / length, y / length, z / length);
+            }
+
             operator DirectX::XMFLOAT2() const
             {
                 return DirectX::XMFLOAT2(x, y);

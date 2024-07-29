@@ -168,10 +168,23 @@ namespace RenderStar
 
                 MSG message = { 0 };
 
-                while (GetMessage(&message, nullptr, 0, 0) > 0)
+                while (running)
                 {
-                    TranslateMessage(&message);
-                    DispatchMessage(&message);
+                    while (PeekMessage(&message, nullptr, 0, 0, PM_REMOVE))
+                    {
+                        TranslateMessage(&message);
+                        DispatchMessage(&message);
+
+                        if (message.message == WM_QUIT)
+                        {
+                            running = false;
+                        }
+                    }
+
+                    LockGuard<Mutex> lock(updateMutex);
+
+                    for (auto& function : updateFunctions)
+                        function();
                 }
 
                 updateThread.join();
@@ -198,7 +211,7 @@ namespace RenderStar
             {
                 while (running)
                     std::this_thread::sleep_for(Milliseconds(16));
-                }
+            }
 
             Vector<Function<void()>> updateFunctions;
 

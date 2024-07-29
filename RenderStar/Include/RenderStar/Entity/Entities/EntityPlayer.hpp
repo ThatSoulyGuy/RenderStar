@@ -44,8 +44,8 @@ namespace RenderStar
 				return EntityRegistration::New()
 					.SetRegistryName("entity_player")
 					.SetMaxHealth(100.0f)
-					.SetMovementSpeed(1.0f)
-					.SetRunningSpeed(5.0f)
+					.SetMovementSpeed(10.0f)
+					.SetRunningSpeed(20.0f)
 					.SetCanJump(true)
 					.SetCanCrouch(true)
 					.Build();
@@ -82,19 +82,28 @@ namespace RenderStar
 				Shared<Transform> cameraTransform = gameObject->GetChild("Camera")->GetComponent<Transform>();
 				Vector3f movement = { 0.0f, 0.0f, 0.0f };
 
+				float deltaTime = Window::GetInstance()->GetDeltaTime();
+
 				if (InputManager::GetInstance()->GetKeyState(KeyCode::W, KeyState::HELD))
-					movement = (movement.z + GetMovementSpeed()) * cameraTransform->GetForward();
+					movement += cameraTransform->GetForward();
 
 				if (InputManager::GetInstance()->GetKeyState(KeyCode::S, KeyState::HELD))
-					movement = (movement.z - GetMovementSpeed()) * cameraTransform->GetForward();
+					movement -= cameraTransform->GetForward();
 
 				if (InputManager::GetInstance()->GetKeyState(KeyCode::A, KeyState::HELD))
-					movement = (movement.x - GetMovementSpeed()) * cameraTransform->GetRight();
+					movement -= cameraTransform->GetRight();
 
 				if (InputManager::GetInstance()->GetKeyState(KeyCode::D, KeyState::HELD))
-					movement = (movement.x + GetMovementSpeed()) * cameraTransform->GetRight();
+					movement += cameraTransform->GetRight();
 
-				gameObject->GetComponent<Transform>()->Translate(movement);
+				if (movement.Length() > 0)
+				{
+					movement = movement.Normalized();
+
+					movement *= GetMovementSpeed() * deltaTime;
+
+					gameObject->GetComponent<Transform>()->Translate(movement);
+				}
 			}
 		};
 	}
