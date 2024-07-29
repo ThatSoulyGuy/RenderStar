@@ -128,16 +128,11 @@ namespace RenderStar
 					return DefWindowProc(handle, message, wParam, lParam);
 				}
 			});
-
-			Logger_WriteConsole("Pre-initializing engine...", LogLevel::INFORMATION);
 		}
 
 		void Initialize()
 		{
 			Logger_WriteConsole("Initializing engine...", LogLevel::INFORMATION);
-
-			Shared<Transform> transform = Transform::Create();
-			transform->SetRotation(Vector3f(0.0f, 90.0f, 0.0f));
 
 			Renderer::GetInstance()->Initialize();
 
