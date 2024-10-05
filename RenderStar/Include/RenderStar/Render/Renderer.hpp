@@ -313,7 +313,7 @@ namespace RenderStar
 			}
 
 		private:
-
+			
 			Renderer() = default;
 
 			Shared<Camera> camera = nullptr;

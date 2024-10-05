@@ -29,7 +29,10 @@ namespace RenderStar
 				Vector<String> files;
 
 				for (const auto& entry : std::filesystem::directory_iterator(directory.operator std::string()))
-					files += entry.path().string();
+				{
+					if (entry.path().extension() == ".dll")
+						files += entry.path().string();
+				}
 
 				if (files.Length() == 0)
 				{

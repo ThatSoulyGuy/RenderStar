@@ -74,9 +74,36 @@
 #define DLL_EXPORT __declspec(dllexport)
 #define DLL_IMPORT __declspec(dllimport)
 
-#define EXPORT_INSTANCE_FUNCTION(className) extern "C" DLL_EXPORT Shared<className> className##_GetInstance() \
+#define EXPORT_INSTANCE_FUNCTION(className) extern "C++" DLL_EXPORT Shared<className> className##_GetInstance() \
 { \
 	return className::GetInstance(); \
+}
+
+#define CREATE_MAPPED_INSTANCE(T) \
+template<typename U = T> \
+static std::shared_ptr<U> CreateInstance() \
+{ \
+    std::string mapName = "Global\\" + std::string(#T) + "Instance"; \
+    HANDLE hMapFile = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, mapName.c_str()); \
+    if (hMapFile == nullptr) \
+    { \
+        hMapFile = CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(U), mapName.c_str()); \
+        if (hMapFile == nullptr) \
+            throw std::runtime_error("Could not create file mapping."); \
+    } \
+    LPVOID pBuf = MapViewOfFile(hMapFile, FILE_MAP_ALL_ACCESS, 0, 0, sizeof(U)); \
+    if (pBuf == nullptr) \
+    { \
+        CloseHandle(hMapFile); \
+        throw std::runtime_error("Could not map view of file."); \
+    } \
+    auto deleter = [hMapFile](U* p) \
+    { \
+        p->~U(); \
+        UnmapViewOfFile(p); \
+        CloseHandle(hMapFile); \
+    }; \
+    return std::shared_ptr<U>(new(pBuf) U, deleter); \
 }
 
 namespace RenderStar
