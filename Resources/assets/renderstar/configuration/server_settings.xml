@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<render_star>
+    <ServerNetworkModule>
+        <port>25565</port>
+        <max_players>20</max_players>
+        <motd>"A RenderStar Server"</motd>
+    </ServerNetworkModule>
+</render_star>

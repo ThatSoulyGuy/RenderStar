@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<render_star>
+    <ClientWindowModule>
+        <window_title>"RenderStar* 1.0.0"</window_title>
+        <window_dimensions>750, 450</window_dimensions>
+        <render_backend>OPENGL</render_backend>
+    </ClientWindowModule>
+
+    <ClientNetworkModule>
+        <local_server_max_players>1</local_server_max_players>
+        <connection_timeout_ms>10000</connection_timeout_ms>
+    </ClientNetworkModule>
+</render_star>

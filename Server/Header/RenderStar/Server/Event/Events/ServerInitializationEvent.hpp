@@ -1,0 +1,11 @@
+#pragma once
+
+#include "RenderStar/Common/Event/IEvent.hpp"
+
+namespace RenderStar::Server::Event::Events
+{
+    struct ServerInitializationEvent : public Common::Event::Event<ServerInitializationEvent>
+    {
+        std::string_view GetName() const override { return "ServerInitializationEvent"; }
+    };
+}
