@@ -29,12 +29,6 @@ namespace RenderStar::Client::Render
 
         virtual ~IMesh() = default;
 
-        virtual void Bind() = 0;
-        virtual void Unbind() = 0;
-
-        virtual void Draw() = 0;
-        virtual void DrawInstanced(int32_t instanceCount) = 0;
-
         virtual void SetVertexData(const void* data, size_t size) = 0;
         virtual void SetIndexData(const void* data, size_t size, IndexType indexType) = 0;
 

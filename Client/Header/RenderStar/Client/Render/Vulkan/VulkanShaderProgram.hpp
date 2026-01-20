@@ -30,23 +30,10 @@ namespace RenderStar::Client::Render::Vulkan
             VulkanShaderModule* shaderModule,
             VulkanShader computeShader);
 
-        void Bind() override;
-        void Unbind() override;
-
         void BindPipeline(VkCommandBuffer commandBuffer);
         void BindDescriptorSet(VkCommandBuffer commandBuffer, VkDescriptorSet descriptorSet);
 
         bool IsValid() const override;
-
-        void SetUniform(const std::string& name, int32_t value) override;
-        void SetUniform(const std::string& name, float value) override;
-        void SetUniform(const std::string& name, const glm::vec2& value) override;
-        void SetUniform(const std::string& name, const glm::vec3& value) override;
-        void SetUniform(const std::string& name, const glm::vec4& value) override;
-        void SetUniform(const std::string& name, const glm::mat3& value) override;
-        void SetUniform(const std::string& name, const glm::mat4& value) override;
-
-        int32_t GetUniformLocation(const std::string& name) const override;
 
         const VulkanShader& GetVertexShader() const;
         const VulkanShader& GetFragmentShader() const;

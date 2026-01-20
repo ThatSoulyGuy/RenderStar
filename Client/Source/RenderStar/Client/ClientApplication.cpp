@@ -9,6 +9,7 @@
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Configuration/ConfigurationFactory.hpp"
 #include "RenderStar/Common/Time/TimeModule.hpp"
+#include "RenderStar/Common/Asset/AssetModule.hpp"
 #include <spdlog/spdlog.h>
 #include <filesystem>
 
@@ -41,9 +42,12 @@ namespace RenderStar::Client
 
     void ClientApplication::Initialize()
     {
+        auto basePath = Common::Configuration::ConfigurationFactory::GetBasePath();
+
         moduleManager = Common::Module::ModuleManager::Builder()
             .EventBus(std::make_unique<Event::ClientCoreEventBus>())
             .EventBus(std::make_unique<Event::ClientRenderEventBus>())
+            .Module(std::make_unique<Common::Asset::AssetModule>(basePath))
             .Module(std::make_unique<Common::Time::TimeModule>())
             .Module(std::make_unique<Common::Component::ComponentModule>())
             .Module(std::make_unique<Core::ClientWindowModule>())

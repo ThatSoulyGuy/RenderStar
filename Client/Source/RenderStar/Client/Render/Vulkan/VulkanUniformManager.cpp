@@ -140,7 +140,7 @@ namespace RenderStar::Client::Render::Vulkan
 
     std::unique_ptr<IUniformBindingHandle> VulkanUniformManager::CreateBindingForShader(IShaderProgram* shader)
     {
-        auto* vulkanShader = dynamic_cast<VulkanShaderProgram*>(shader);
+        auto* vulkanShader = static_cast<VulkanShaderProgram*>(shader);
 
         if (vulkanShader == nullptr || !vulkanShader->IsValid())
         {

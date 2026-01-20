@@ -1,6 +1,9 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanShaderManager.hpp"
-#include "RenderStar/Client/Render/Vulkan/VulkanShaderProgram.hpp"
+
 #include "RenderStar/Client/Render/Vulkan/VulkanDescriptorModule.hpp"
+#include "RenderStar/Client/Render/Vulkan/VulkanShaderProgram.hpp"
+#include "RenderStar/Common/Asset/AssetLocation.hpp"
+#include "RenderStar/Common/Asset/AssetModule.hpp"
 
 namespace RenderStar::Client::Render::Vulkan
 {
@@ -64,22 +67,17 @@ namespace RenderStar::Client::Render::Vulkan
         return program;
     }
 
-    std::unique_ptr<IShaderProgram> VulkanShaderManager::LoadFromFile(
-        const std::string& vertexPath,
-        const std::string& fragmentPath)
+    std::unique_ptr<IShaderProgram> VulkanShaderManager::LoadFromFile(const Common::Asset::AssetModule& assetModule, const Common::Asset::AssetLocation& vertexPath, const Common::Asset::AssetLocation& fragmentPath)
     {
         auto program = std::make_unique<VulkanShaderProgram>();
 
-        VulkanShader vertexShader = shaderModule->LoadShaderFromFile(
-            vertexPath, VulkanShaderStage::VERTEX);
+        const VulkanShader vertexShader = shaderModule->LoadShaderFromFile(vertexPath.ToFilesystemPath(assetModule.GetBasePath()).string(), VulkanShaderStage::VERTEX);
 
-        VulkanShader fragmentShader = shaderModule->LoadShaderFromFile(
-            fragmentPath, VulkanShaderStage::FRAGMENT);
+        const VulkanShader fragmentShader = shaderModule->LoadShaderFromFile(fragmentPath.ToFilesystemPath(assetModule.GetBasePath()).string(), VulkanShaderStage::FRAGMENT);
 
-        program->Initialize(device, renderPass, shaderModule, descriptorModule,
-            vertexShader, fragmentShader, vertexLayout);
+        program->Initialize(device, renderPass, shaderModule, descriptorModule, vertexShader, fragmentShader, vertexLayout);
 
-        logger->info("Loaded shader from files: {}, {}", vertexPath, fragmentPath);
+        logger->info("Loaded shader from files: {}, {}", vertexPath.ToFilesystemPath(assetModule.GetBasePath()).string(), fragmentPath.ToFilesystemPath(assetModule.GetBasePath()).string());
 
         return program;
     }
@@ -88,8 +86,7 @@ namespace RenderStar::Client::Render::Vulkan
     {
         auto program = std::make_unique<VulkanShaderProgram>();
 
-        VulkanShader computeShader = shaderModule->LoadShaderFromFile(
-            computePath, VulkanShaderStage::COMPUTE);
+        const VulkanShader computeShader = shaderModule->LoadShaderFromFile(computePath, VulkanShaderStage::COMPUTE);
 
         program->InitializeCompute(shaderModule, computeShader);
 

@@ -2,6 +2,7 @@
 #include "RenderStar/Common/Module/ModuleManager.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Configuration/ConfigurationFactory.hpp"
+#include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Server/Core/ServerLifecycleModule.hpp"
 #include "RenderStar/Server/Event/Buses/ServerCoreEventBus.hpp"
 #include "RenderStar/Server/Event/Events/ServerPreinitializationEvent.hpp"
@@ -18,6 +19,7 @@ namespace RenderStar::Server
         Common::Configuration::ConfigurationFactory::SetResourceBasePath(basePath);
         auto manager = Common::Module::ModuleManager::Builder()
             .EventBus<Event::Buses::ServerCoreEventBus>(std::make_unique<Event::Buses::ServerCoreEventBus>())
+            .Module<Common::Asset::AssetModule>(std::make_unique<Common::Asset::AssetModule>(basePath))
             .Module<Network::ServerNetworkModule>(Network::ServerNetworkModule::FromArguments(argc, argv))
             .Module<Common::Component::ComponentModule>(std::make_unique<Common::Component::ComponentModule>())
             .Module<Core::ServerLifecycleModule>(std::make_unique<Core::ServerLifecycleModule>())

@@ -13,9 +13,6 @@ namespace RenderStar::Client::Render
 
         virtual ~IMaterial() = default;
 
-        virtual void Bind() = 0;
-        virtual void Unbind() = 0;
-
         virtual IShaderProgram* GetShader() const = 0;
         virtual const UniformLayout& GetUniformLayout() const = 0;
 

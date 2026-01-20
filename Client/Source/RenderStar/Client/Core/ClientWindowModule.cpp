@@ -1,4 +1,5 @@
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
+#include "RenderStar/Client/Render/Backend/BackendFactory.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
 #include "RenderStar/Common/Configuration/ConfigurationFactory.hpp"
 
@@ -156,7 +157,11 @@ namespace RenderStar::Client::Core
                 preferredBackend = Render::RenderBackend::VULKAN;
         }
         else
-            logger->info("No render_backend found in configuration, using default");
+        {
+            preferredBackend = Render::BackendFactory::DetectBestBackend();
+            logger->info("No render_backend in configuration, auto-detected: {}",
+                preferredBackend == Render::RenderBackend::VULKAN ? "VULKAN" : "OPENGL");
+        }
 
         if (const auto forceOptional = config->GetBoolean("force_render_backend"); forceOptional.has_value())
             forceBackend = forceOptional.value();

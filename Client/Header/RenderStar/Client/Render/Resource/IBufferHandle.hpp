@@ -26,9 +26,6 @@ namespace RenderStar::Client::Render
 
         virtual ~IBufferHandle() = default;
 
-        virtual void Bind() = 0;
-        virtual void Unbind() = 0;
-
         virtual void SetData(const void* data, size_t size) = 0;
         virtual void SetSubData(const void* data, size_t size, size_t offset) = 0;
 

@@ -6,9 +6,28 @@
 #include "RenderStar/Client/Render/Resource/IUniformBindingHandle.hpp"
 #include "RenderStar/Client/Render/Resource/IMesh.hpp"
 #include "RenderStar/Client/Render/Resource/Vertex.hpp"
+#include "RenderStar/Client/Render/Backend/BackendFactory.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+namespace
+{
+    bool CheckVulkanAvailability()
+    {
+        return glfwVulkanSupported() == GLFW_TRUE;
+    }
+
+    static bool registered = []()
+    {
+        RenderStar::Client::Render::BackendFactory::RegisterBackend(
+            RenderStar::Client::Render::RenderBackend::VULKAN,
+            []() { return std::make_unique<RenderStar::Client::Render::Vulkan::VulkanRenderBackend>(); },
+            CheckVulkanAvailability,
+            100);
+        return true;
+    }();
+}
 
 namespace RenderStar::Client::Render::Vulkan
 {
@@ -119,6 +138,9 @@ namespace RenderStar::Client::Render::Vulkan
         uniformManager = std::make_unique<VulkanUniformManager>();
         uniformManager->Initialize(&bufferModule, &descriptorModule, MAX_FRAMES_IN_FLIGHT);
 
+        commandQueue = std::make_unique<VulkanCommandQueue>();
+        commandQueue->Initialize(&commandModule, MAX_FRAMES_IN_FLIGHT);
+
         initialized = true;
         logger->info("Vulkan render backend initialized ({}x{})", width, height);
     }
@@ -127,6 +149,7 @@ namespace RenderStar::Client::Render::Vulkan
     {
         vkDeviceWaitIdle(deviceModule.GetDevice());
 
+        commandQueue.reset();
         uniformManager->Destroy();
         uniformManager.reset();
         shaderManager.reset();
@@ -345,6 +368,11 @@ namespace RenderStar::Client::Render::Vulkan
         return uniformManager.get();
     }
 
+    IRenderCommandQueue* VulkanRenderBackend::GetCommandQueue()
+    {
+        return commandQueue.get();
+    }
+
     void VulkanRenderBackend::SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh)
     {
         drawCommands.push_back(VulkanDrawCommand{ shader, uniformBinding, frameIndex, mesh });
@@ -356,9 +384,9 @@ namespace RenderStar::Client::Render::Vulkan
 
         for (const auto& command : drawCommands)
         {
-            auto* vulkanShader = dynamic_cast<VulkanShaderProgram*>(command.shader);
-            auto* vulkanMesh = dynamic_cast<VulkanMesh*>(command.mesh);
-            auto* vulkanBinding = dynamic_cast<VulkanUniformBinding*>(command.uniformBinding);
+            auto* vulkanShader = static_cast<VulkanShaderProgram*>(command.shader);
+            auto* vulkanMesh = static_cast<VulkanMesh*>(command.mesh);
+            auto* vulkanBinding = static_cast<VulkanUniformBinding*>(command.uniformBinding);
 
             if (vulkanShader)
                 vulkanShader->BindPipeline(commandBuffer);

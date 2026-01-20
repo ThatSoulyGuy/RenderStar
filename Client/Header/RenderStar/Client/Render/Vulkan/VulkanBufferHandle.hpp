@@ -17,9 +17,6 @@ namespace RenderStar::Client::Render::Vulkan
 
         ~VulkanBufferHandle() override;
 
-        void Bind() override;
-        void Unbind() override;
-
         void SetData(const void* data, size_t size) override;
         void SetSubData(const void* data, size_t size, size_t offset) override;
 

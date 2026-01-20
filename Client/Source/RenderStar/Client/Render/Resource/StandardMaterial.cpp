@@ -22,24 +22,6 @@ namespace RenderStar::Client::Render
         uniformBuffer = buffer;
     }
 
-    void StandardMaterial::Bind()
-    {
-        if (shader)
-            shader->Bind();
-
-        if (uniformBuffer)
-            uniformBuffer->Bind();
-    }
-
-    void StandardMaterial::Unbind()
-    {
-        if (uniformBuffer)
-            uniformBuffer->Unbind();
-
-        if (shader)
-            shader->Unbind();
-    }
-
     IShaderProgram* StandardMaterial::GetShader() const
     {
         return shader;

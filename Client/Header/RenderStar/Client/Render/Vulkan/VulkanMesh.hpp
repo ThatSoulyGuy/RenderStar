@@ -18,12 +18,6 @@ namespace RenderStar::Client::Render::Vulkan
             const VertexLayout& layout,
             PrimitiveType primitive = PrimitiveType::TRIANGLES);
 
-        void Bind() override;
-        void Unbind() override;
-
-        void Draw() override;
-        void DrawInstanced(int32_t instanceCount) override;
-
         void SetVertexData(const void* data, size_t size) override;
         void SetIndexData(const void* data, size_t size, IndexType indexType) override;
 

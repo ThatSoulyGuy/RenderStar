@@ -1,23 +1,27 @@
 #include "RenderStar/Client/Render/RendererModule.hpp"
+
+#include "RenderStar/Client/Core/ClientWindowModule.hpp"
 #include "RenderStar/Client/Render/Backend/BackendFactory.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
+#include "RenderStar/Client/Render/Components/Camera.hpp"
+#include "RenderStar/Client/Render/Resource/IBufferHandle.hpp"
+#include "RenderStar/Client/Render/Resource/IBufferManager.hpp"
+#include "RenderStar/Client/Render/Resource/IMesh.hpp"
 #include "RenderStar/Client/Render/Resource/IShaderManager.hpp"
 #include "RenderStar/Client/Render/Resource/IShaderProgram.hpp"
-#include "RenderStar/Client/Render/Resource/IBufferManager.hpp"
-#include "RenderStar/Client/Render/Resource/IBufferHandle.hpp"
-#include "RenderStar/Client/Render/Resource/IUniformManager.hpp"
 #include "RenderStar/Client/Render/Resource/IUniformBindingHandle.hpp"
-#include "RenderStar/Client/Render/Resource/IMesh.hpp"
+#include "RenderStar/Client/Render/Resource/IUniformManager.hpp"
+#include "RenderStar/Client/Render/Resource/Mesh.hpp"
+#include "RenderStar/Client/Render/Resource/StandardUniforms.hpp"
 #include "RenderStar/Client/Render/Resource/Vertex.hpp"
-#include "RenderStar/Client/Render/OpenGL/OpenGLShaderProgram.hpp"
-#include "RenderStar/Client/Render/OpenGL/OpenGLMesh.hpp"
-#include "RenderStar/Client/Render/Components/Camera.hpp"
-#include "RenderStar/Client/Core/ClientWindowModule.hpp"
-#include "RenderStar/Common/Module/ModuleContext.hpp"
+#include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Common/Configuration/ConfigurationFactory.hpp"
-#include <glad/gl.h>
+#include "RenderStar/Common/Module/ModuleContext.hpp"
+
 #include <glm/gtc/type_ptr.hpp>
+
 #include <cstring>
+#include <vector>
 
 namespace RenderStar::Client::Render
 {
@@ -28,14 +32,18 @@ namespace RenderStar::Client::Render
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aColor;
 
-uniform mat4 uModel;
-uniform mat4 uViewProjection;
+layout(std140, binding = 0) uniform StandardUniforms
+{
+    mat4 model;
+    mat4 viewProjection;
+    vec4 colorTint;
+};
 
 out vec3 vColor;
 
 void main()
 {
-    gl_Position = uViewProjection * uModel * vec4(aPosition, 1.0);
+    gl_Position = viewProjection * model * vec4(aPosition, 1.0);
     vColor = aColor;
 }
 )";
@@ -45,11 +53,16 @@ void main()
 in vec3 vColor;
 out vec4 fragColor;
 
-uniform vec4 uColorTint;
+layout(std140, binding = 0) uniform StandardUniforms
+{
+    mat4 model;
+    mat4 viewProjection;
+    vec4 colorTint;
+};
 
 void main()
 {
-    vec3 finalColor = mix(vColor, uColorTint.rgb, uColorTint.a);
+    vec3 finalColor = mix(vColor, colorTint.rgb, colorTint.a);
     fragColor = vec4(finalColor, 1.0);
 }
 )";
@@ -58,14 +71,10 @@ void main()
     RendererModule::RendererModule()
         : backend(nullptr)
         , backendType(RenderBackend::OPENGL)
-        , openglTestShader(nullptr)
-        , openglTestMesh(nullptr)
-        , testVertexBuffer(0)
-        , testIndexBuffer(0)
-        , vulkanTestShader(nullptr)
-        , vulkanTestMesh(nullptr)
-        , vulkanUniformBinding(nullptr)
-        , vulkanUniformBuffer(nullptr)
+        , testShader(nullptr)
+        , testMesh(nullptr)
+        , uniformBinding(nullptr)
+        , uniformBuffer(nullptr)
         , testGeometryInitialized(false)
         , rotationAngle(0.0f)
         , aspectRatio(16.0f / 9.0f)
@@ -77,19 +86,10 @@ void main()
         if (backend != nullptr)
             backend->WaitIdle();
 
-        vulkanUniformBinding.reset();
-        vulkanUniformBuffer.reset();
-        vulkanTestMesh.reset();
-        vulkanTestShader.reset();
-
-        if (testVertexBuffer != 0)
-            glDeleteBuffers(1, &testVertexBuffer);
-
-        if (testIndexBuffer != 0)
-            glDeleteBuffers(1, &testIndexBuffer);
-
-        openglTestMesh.reset();
-        openglTestShader.reset();
+        uniformBinding.reset();
+        uniformBuffer.reset();
+        testShader.reset();
+        testMesh.reset();
 
         if (backend != nullptr)
             backend->Destroy();
@@ -103,12 +103,7 @@ void main()
         backend->BeginFrame();
 
         if (testGeometryInitialized)
-        {
-            if (backendType == RenderBackend::OPENGL)
-                RenderOpenGLTestGeometry();
-            else
-                RenderVulkanTestGeometry();
-        }
+            RenderTestGeometry();
 
         backend->EndFrame();
     }
@@ -148,108 +143,13 @@ void main()
             windowModule->get().GetFramebufferHeight()
         );
 
-        if (backendType == RenderBackend::OPENGL)
-            InitializeOpenGLTestGeometry();
-        else
-            InitializeVulkanTestGeometry();
+        InitializeTestGeometry(moduleContext);
 
         logger->info("RendererModule initialized with {} backend",
             backendType == RenderBackend::OPENGL ? "OpenGL" : "Vulkan");
     }
 
-    void RendererModule::InitializeOpenGLTestGeometry()
-    {
-        openglTestShader = std::make_unique<OpenGL::OpenGLShaderProgram>();
-
-        if (!openglTestShader->CompileFromSource(TEST_VERTEX_SHADER, TEST_FRAGMENT_SHADER))
-        {
-            logger->error("Failed to compile test shader");
-            return;
-        }
-
-        float vertices[] = {
-            -0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.0f,
-             0.5f,  0.5f, -0.5f,  0.0f, 0.0f, 1.0f,
-            -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, 1.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 1.0f,
-            -0.5f,  0.5f,  0.5f,  0.5f, 0.5f, 0.5f
-        };
-
-        uint32_t indices[] = {
-            0, 2, 1, 0, 3, 2,
-            4, 5, 6, 4, 6, 7,
-            0, 7, 4, 0, 3, 7,
-            1, 2, 6, 1, 6, 5,
-            3, 6, 2, 3, 7, 6,
-            0, 1, 5, 0, 5, 4
-        };
-
-        glGenBuffers(1, &testVertexBuffer);
-        glBindBuffer(GL_ARRAY_BUFFER, testVertexBuffer);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        glGenBuffers(1, &testIndexBuffer);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, testIndexBuffer);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-        openglTestMesh = std::make_unique<OpenGL::OpenGLMesh>();
-
-        std::vector<OpenGL::VertexAttribute> attributes = {
-            { 0, 3, GL_FLOAT, false, 6 * sizeof(float), 0 },
-            { 1, 3, GL_FLOAT, false, 6 * sizeof(float), 3 * sizeof(float) }
-        };
-
-        openglTestMesh->Create(attributes);
-        openglTestMesh->SetVertexBuffer(testVertexBuffer);
-        openglTestMesh->SetIndexBuffer(testIndexBuffer);
-
-        aspectRatio = static_cast<float>(backend->GetWidth()) / static_cast<float>(backend->GetHeight());
-
-        testGeometryInitialized = true;
-        logger->info("OpenGL test geometry initialized successfully");
-    }
-
-    void RendererModule::RenderOpenGLTestGeometry()
-    {
-        rotationAngle += 0.5f;
-        if (rotationAngle >= 360.0f)
-            rotationAngle -= 360.0f;
-
-        Components::Camera camera = Components::Camera::CreatePerspective(60.0f, aspectRatio, 0.1f, 100.0f);
-
-        glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
-        glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-        glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-        camera.viewMatrix = glm::lookAt(cameraPosition, cameraTarget, cameraUp);
-
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::rotate(model, glm::radians(rotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(rotationAngle * 0.5f), glm::vec3(1.0f, 0.0f, 0.0f));
-
-        glm::mat4 viewProjection = camera.GetViewProjectionMatrix();
-
-        openglTestShader->Bind();
-
-        GLint modelLoc = glGetUniformLocation(openglTestShader->GetHandle(), "uModel");
-        GLint vpLoc = glGetUniformLocation(openglTestShader->GetHandle(), "uViewProjection");
-        GLint tintLoc = glGetUniformLocation(openglTestShader->GetHandle(), "uColorTint");
-
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(vpLoc, 1, GL_FALSE, glm::value_ptr(viewProjection));
-
-        glm::vec4 colorTint = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-        glUniform4fv(tintLoc, 1, glm::value_ptr(colorTint));
-
-        openglTestMesh->Draw(36);
-        openglTestShader->Unbind();
-    }
-
-    void RendererModule::InitializeVulkanTestGeometry()
+    void RendererModule::InitializeTestGeometry(Common::Module::ModuleContext& context)
     {
         IShaderManager* shaderManager = backend->GetShaderManager();
         IBufferManager* bufferManager = backend->GetBufferManager();
@@ -257,24 +157,47 @@ void main()
 
         if (!shaderManager || !bufferManager || !uniformManager)
         {
-            logger->error("Failed to get Vulkan managers");
+            logger->error("Failed to get managers from backend");
             return;
         }
 
-        std::filesystem::path basePath = Common::Configuration::ConfigurationFactory::GetBasePath();
-        std::filesystem::path shaderDir = basePath / "assets" / "renderstar" / "shader";
-        std::string vertexPath = (shaderDir / "test.vert").string();
-        std::string fragmentPath = (shaderDir / "test.frag").string();
-
-        vulkanTestShader = shaderManager->LoadFromFile(vertexPath, fragmentPath);
-
-        if (!vulkanTestShader || !vulkanTestShader->IsValid())
+        if (backendType == RenderBackend::OPENGL)
         {
-            logger->error("Failed to load Vulkan test shader from {} and {}", vertexPath, fragmentPath);
-            return;
+            ShaderSource source;
+            source.vertexSource = TEST_VERTEX_SHADER;
+            source.fragmentSource = TEST_FRAGMENT_SHADER;
+
+            testShader = shaderManager->CreateFromSource(source);
+
+            if (!testShader || !testShader->IsValid())
+            {
+                logger->error("Failed to compile OpenGL test shader");
+                return;
+            }
+        }
+        else
+        {
+            auto assetModule = context.GetModule<Common::Asset::AssetModule>();
+
+            if (!assetModule.has_value())
+            {
+                logger->error("AssetModule not found");
+                return;
+            }
+
+            testShader = shaderManager->LoadFromFile(
+                assetModule.value().get(),
+                Common::Asset::AssetLocation::Parse("renderstar:shader/test.vert"),
+                Common::Asset::AssetLocation::Parse("renderstar:shader/test.frag"));
+
+            if (!testShader || !testShader->IsValid())
+            {
+                logger->error("Failed to load Vulkan test shader");
+                return;
+            }
         }
 
-        Vertex vertices[] = {
+        std::vector<Vertex> vertices = {
             Vertex(-0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f),
             Vertex( 0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f),
             Vertex( 0.5f,  0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f),
@@ -285,7 +208,7 @@ void main()
             Vertex(-0.5f,  0.5f,  0.5f, 0.5f, 0.5f, 0.5f, 0.0f, 1.0f)
         };
 
-        uint32_t indices[] = {
+        std::vector<uint32_t> indices = {
             0, 2, 1, 0, 3, 2,
             4, 5, 6, 4, 6, 7,
             0, 7, 4, 0, 3, 7,
@@ -294,27 +217,23 @@ void main()
             0, 1, 5, 0, 5, 4
         };
 
-        std::vector<float> vertexData = Vertex::ToFloatArray(std::span(vertices));
+        testMesh = std::make_unique<Resource::Mesh>(*bufferManager, Vertex::LAYOUT, PrimitiveType::TRIANGLES);
+        testMesh->SetVertices(vertices);
+        testMesh->SetIndices(indices);
 
-        vulkanTestMesh = bufferManager->CreateMesh(Vertex::LAYOUT, PrimitiveType::TRIANGLES);
-        vulkanTestMesh->SetVertexData(vertexData.data(), vertexData.size() * sizeof(float));
-        vulkanTestMesh->SetIndexData(indices, sizeof(indices), IndexType::UINT32);
+        uniformBuffer = bufferManager->CreateUniformBuffer(StandardUniforms::Size());
+        uniformBinding = uniformManager->CreateBindingForShader(testShader.get());
 
-        size_t uniformSize = sizeof(glm::mat4) * 2 + sizeof(glm::vec4);
-        vulkanUniformBuffer = bufferManager->CreateUniformBuffer(uniformSize);
-
-        vulkanUniformBinding = uniformManager->CreateBindingForShader(vulkanTestShader.get());
-
-        if (vulkanUniformBinding)
-            vulkanUniformBinding->UpdateBuffer(0, vulkanUniformBuffer.get(), uniformSize);
+        if (uniformBinding)
+            uniformBinding->UpdateBuffer(0, uniformBuffer.get(), StandardUniforms::Size());
 
         aspectRatio = static_cast<float>(backend->GetWidth()) / static_cast<float>(backend->GetHeight());
 
         testGeometryInitialized = true;
-        logger->info("Vulkan test geometry initialized successfully");
+        logger->info("Test geometry initialized successfully");
     }
 
-    void RendererModule::RenderVulkanTestGeometry()
+    void RendererModule::RenderTestGeometry()
     {
         rotationAngle += 0.5f;
         if (rotationAngle >= 360.0f)
@@ -333,20 +252,12 @@ void main()
 
         glm::mat4 viewProjection = camera.GetViewProjectionMatrix();
 
-        struct UniformData {
-            glm::mat4 model;
-            glm::mat4 viewProjection;
-            glm::vec4 colorTint;
-        } uniformData;
+        StandardUniforms uniformData(model, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
 
-        uniformData.model = model;
-        uniformData.viewProjection = viewProjection;
-        uniformData.colorTint = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
-
-        vulkanUniformBuffer->SetSubData(&uniformData, sizeof(uniformData), 0);
+        uniformBuffer->SetSubData(&uniformData, StandardUniforms::Size(), 0);
 
         int32_t frameIndex = backend->GetCurrentFrame();
-        backend->SubmitDrawCommand(vulkanTestShader.get(), vulkanUniformBinding.get(), frameIndex, vulkanTestMesh.get());
+        backend->SubmitDrawCommand(testShader.get(), uniformBinding.get(), frameIndex, testMesh->GetUnderlyingMesh());
         backend->ExecuteDrawCommands();
     }
 }

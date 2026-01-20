@@ -1,43 +1,80 @@
 #include "RenderStar/Client/Render/Backend/BackendFactory.hpp"
-#include "RenderStar/Client/Render/OpenGL/OpenGLRenderBackend.hpp"
-#include "RenderStar/Client/Render/Vulkan/VulkanRenderBackend.hpp"
-
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <unordered_map>
+#include <algorithm>
 
 namespace RenderStar::Client::Render
 {
+    struct BackendEntry
+    {
+        BackendCreator creator;
+        BackendAvailabilityChecker checker;
+        int32_t priority;
+    };
+
+    static std::unordered_map<RenderBackend, BackendEntry>& GetRegistry()
+    {
+        static std::unordered_map<RenderBackend, BackendEntry> registry;
+        return registry;
+    }
+
+    void BackendFactory::RegisterBackend(
+        RenderBackend type,
+        BackendCreator creator,
+        BackendAvailabilityChecker checker,
+        int32_t priority)
+    {
+        GetRegistry()[type] = BackendEntry{ std::move(creator), std::move(checker), priority };
+    }
+
     std::unique_ptr<IRenderBackend> BackendFactory::Create(RenderBackend backendType)
     {
-        switch (backendType)
-        {
-            case RenderBackend::OPENGL:
-                return std::make_unique<OpenGL::OpenGLRenderBackend>();
-            case RenderBackend::VULKAN:
-                return std::make_unique<Vulkan::VulkanRenderBackend>();
-            default:
-                return nullptr;
-        }
+        auto& registry = GetRegistry();
+        auto it = registry.find(backendType);
+        if (it != registry.end() && it->second.creator)
+            return it->second.creator();
+
+        return nullptr;
     }
 
     RenderBackend BackendFactory::DetectBestBackend()
     {
-        if (IsBackendAvailable(RenderBackend::VULKAN))
-            return RenderBackend::VULKAN;
+        auto& registry = GetRegistry();
+        RenderBackend best = RenderBackend::OPENGL;
+        int32_t bestPriority = -1;
 
-        return RenderBackend::OPENGL;
+        for (const auto& [type, entry] : registry)
+        {
+            if (entry.checker && entry.checker() && entry.priority > bestPriority)
+            {
+                best = type;
+                bestPriority = entry.priority;
+            }
+        }
+
+        return best;
     }
 
     bool BackendFactory::IsBackendAvailable(RenderBackend backendType)
     {
-        switch (backendType)
+        auto& registry = GetRegistry();
+        auto it = registry.find(backendType);
+        if (it != registry.end() && it->second.checker)
+            return it->second.checker();
+
+        return false;
+    }
+
+    std::vector<RenderBackend> BackendFactory::GetAvailableBackends()
+    {
+        std::vector<RenderBackend> result;
+        auto& registry = GetRegistry();
+
+        for (const auto& [type, entry] : registry)
         {
-            case RenderBackend::VULKAN:
-                return glfwVulkanSupported() == GLFW_TRUE;
-            case RenderBackend::OPENGL:
-                return true;
-            default:
-                return false;
+            if (entry.checker && entry.checker())
+                result.push_back(type);
         }
+
+        return result;
     }
 }

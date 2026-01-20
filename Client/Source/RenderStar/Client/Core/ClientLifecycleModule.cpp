@@ -16,7 +16,7 @@ namespace RenderStar::Client::Core
 
     void ClientLifecycleModule::SetupMainLoop()
     {
-        auto eventBus = context->GetEventBus<Event::ClientCoreEventBus>();
+        const auto eventBus = context->GetEventBus<Event::ClientCoreEventBus>();
 
         if (!eventBus.has_value())
         {

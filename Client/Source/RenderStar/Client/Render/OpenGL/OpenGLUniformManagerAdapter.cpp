@@ -1,5 +1,6 @@
 #include "RenderStar/Client/Render/OpenGL/OpenGLUniformManagerAdapter.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLBufferHandle.hpp"
+#include "RenderStar/Client/Render/OpenGL/OpenGLUniformBinding.hpp"
 #include <glad/gl.h>
 
 namespace RenderStar::Client::Render::OpenGL
@@ -50,7 +51,7 @@ namespace RenderStar::Client::Render::OpenGL
             return;
         }
 
-        auto* glBuffer = dynamic_cast<OpenGLBufferHandle*>(it->second.get());
+        auto* glBuffer = static_cast<OpenGLBufferHandle*>(it->second.get());
         if (glBuffer != nullptr)
         {
             glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, glBuffer->GetBufferId());
@@ -82,7 +83,7 @@ namespace RenderStar::Client::Render::OpenGL
     std::unique_ptr<IUniformBindingHandle> OpenGLUniformManagerAdapter::CreateBindingForShader(IShaderProgram* shader)
     {
         (void)shader;
-        logger->warn("CreateBindingForShader not implemented for OpenGL - use uniforms directly");
-        return nullptr;
+        UniformLayout layout = UniformLayout::ForMVP();
+        return std::make_unique<OpenGLUniformBinding>(layout, 2);
     }
 }

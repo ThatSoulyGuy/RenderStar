@@ -24,7 +24,7 @@ namespace RenderStar::Client::Render::Vulkan
 
     void VulkanUniformBinding::UpdateBuffer(int32_t binding, IBufferHandle* buffer, size_t size)
     {
-        auto* vulkanBuffer = dynamic_cast<VulkanBufferHandle*>(buffer);
+        auto* vulkanBuffer = static_cast<VulkanBufferHandle*>(buffer);
         if (vulkanBuffer == nullptr)
             return;
 

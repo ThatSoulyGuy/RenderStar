@@ -37,23 +37,6 @@ namespace RenderStar::Client::Render::Vulkan
         primitiveType = primitive;
     }
 
-    void VulkanMesh::Bind()
-    {
-    }
-
-    void VulkanMesh::Unbind()
-    {
-    }
-
-    void VulkanMesh::Draw()
-    {
-    }
-
-    void VulkanMesh::DrawInstanced(int32_t instanceCount)
-    {
-        (void)instanceCount;
-    }
-
     void VulkanMesh::SetVertexData(const void* data, size_t size)
     {
         if (vertexBuffer.buffer != VK_NULL_HANDLE)

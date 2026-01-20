@@ -9,14 +9,12 @@ namespace RenderStar::Client::Render
 {
     class IRenderBackend;
     class IShaderProgram;
-    class IMesh;
     class IUniformBindingHandle;
     class IBufferHandle;
 
-    namespace OpenGL
+    namespace Resource
     {
-        class OpenGLShaderProgram;
-        class OpenGLMesh;
+        class Mesh;
     }
 
     class RendererModule : public Common::Module::AbstractModule
@@ -39,24 +37,16 @@ namespace RenderStar::Client::Render
 
     private:
 
-        void InitializeOpenGLTestGeometry();
-        void RenderOpenGLTestGeometry();
-
-        void InitializeVulkanTestGeometry();
-        void RenderVulkanTestGeometry();
+        void InitializeTestGeometry(Common::Module::ModuleContext& context);
+        void RenderTestGeometry();
 
         std::unique_ptr<IRenderBackend> backend;
         RenderBackend backendType;
 
-        std::unique_ptr<OpenGL::OpenGLShaderProgram> openglTestShader;
-        std::unique_ptr<OpenGL::OpenGLMesh> openglTestMesh;
-        uint32_t testVertexBuffer;
-        uint32_t testIndexBuffer;
-
-        std::unique_ptr<IShaderProgram> vulkanTestShader;
-        std::unique_ptr<IMesh> vulkanTestMesh;
-        std::unique_ptr<IUniformBindingHandle> vulkanUniformBinding;
-        std::unique_ptr<IBufferHandle> vulkanUniformBuffer;
+        std::unique_ptr<IShaderProgram> testShader;
+        std::unique_ptr<Resource::Mesh> testMesh;
+        std::unique_ptr<IUniformBindingHandle> uniformBinding;
+        std::unique_ptr<IBufferHandle> uniformBuffer;
 
         bool testGeometryInitialized;
         float rotationAngle;

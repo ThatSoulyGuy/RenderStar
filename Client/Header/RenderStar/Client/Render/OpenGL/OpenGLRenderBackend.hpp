@@ -12,6 +12,7 @@ namespace RenderStar::Client::Render::OpenGL
     class OpenGLBufferManagerAdapter;
     class OpenGLUniformManagerAdapter;
     class OpenGLShaderManagerAdapter;
+    class OpenGLCommandQueue;
 
     struct OpenGLDrawCommand
     {
@@ -57,6 +58,7 @@ namespace RenderStar::Client::Render::OpenGL
         IBufferManager* GetBufferManager() override;
         IShaderManager* GetShaderManager() override;
         IUniformManager* GetUniformManager() override;
+        IRenderCommandQueue* GetCommandQueue() override;
 
         void SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh) override;
         void ExecuteDrawCommands() override;
@@ -76,5 +78,6 @@ namespace RenderStar::Client::Render::OpenGL
         std::unique_ptr<OpenGLBufferManagerAdapter> bufferManager;
         std::unique_ptr<OpenGLUniformManagerAdapter> uniformManager;
         std::unique_ptr<OpenGLShaderManagerAdapter> shaderManager;
+        std::unique_ptr<OpenGLCommandQueue> commandQueue;
     };
 }

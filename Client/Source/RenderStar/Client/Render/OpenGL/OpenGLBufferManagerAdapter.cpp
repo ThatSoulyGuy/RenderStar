@@ -1,5 +1,6 @@
 #include "RenderStar/Client/Render/OpenGL/OpenGLBufferManagerAdapter.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLBufferHandle.hpp"
+#include "RenderStar/Client/Render/OpenGL/OpenGLMeshAdapter.hpp"
 #include <glad/gl.h>
 
 namespace RenderStar::Client::Render::OpenGL
@@ -67,10 +68,7 @@ namespace RenderStar::Client::Render::OpenGL
         const VertexLayout& layout,
         PrimitiveType primitive)
     {
-        (void)layout;
-        (void)primitive;
-        logger->warn("CreateMesh not implemented for OpenGL adapter - use OpenGLMesh directly");
-        return nullptr;
+        return std::make_unique<OpenGLMeshAdapter>(layout, primitive);
     }
 
     void OpenGLBufferManagerAdapter::DestroyBuffer(IBufferHandle* buffer)
@@ -78,7 +76,7 @@ namespace RenderStar::Client::Render::OpenGL
         if (buffer == nullptr)
             return;
 
-        auto* glBuffer = dynamic_cast<OpenGLBufferHandle*>(buffer);
+        auto* glBuffer = static_cast<OpenGLBufferHandle*>(buffer);
         if (glBuffer != nullptr && glBuffer->IsValid())
         {
             GLuint bufferId = glBuffer->GetBufferId();

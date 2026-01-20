@@ -2,13 +2,35 @@
 #include "RenderStar/Client/Render/OpenGL/OpenGLBufferManagerAdapter.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLUniformManagerAdapter.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderManagerAdapter.hpp"
+#include "RenderStar/Client/Render/OpenGL/OpenGLCommandQueue.hpp"
+#include "RenderStar/Client/Render/OpenGL/OpenGLShaderProgram.hpp"
+#include "RenderStar/Client/Render/OpenGL/OpenGLMeshAdapter.hpp"
 #include "RenderStar/Client/Render/Resource/IShaderProgram.hpp"
 #include "RenderStar/Client/Render/Resource/IUniformBindingHandle.hpp"
 #include "RenderStar/Client/Render/Resource/IMesh.hpp"
+#include "RenderStar/Client/Render/Backend/BackendFactory.hpp"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <glad/gl.h>
+
+namespace
+{
+    bool CheckOpenGLAvailability()
+    {
+        return true;
+    }
+
+    static bool registered = []()
+    {
+        RenderStar::Client::Render::BackendFactory::RegisterBackend(
+            RenderStar::Client::Render::RenderBackend::OPENGL,
+            []() { return std::make_unique<RenderStar::Client::Render::OpenGL::OpenGLRenderBackend>(); },
+            CheckOpenGLAvailability,
+            0);
+        return true;
+    }();
+}
 
 namespace RenderStar::Client::Render::OpenGL
 {
@@ -89,6 +111,7 @@ namespace RenderStar::Client::Render::OpenGL
         bufferManager = std::make_unique<OpenGLBufferManagerAdapter>();
         uniformManager = std::make_unique<OpenGLUniformManagerAdapter>();
         shaderManager = std::make_unique<OpenGLShaderManagerAdapter>();
+        commandQueue = std::make_unique<OpenGLCommandQueue>();
 
         initialized = true;
         logger->info("OpenGL render backend initialized ({}x{})", width, height);
@@ -96,6 +119,7 @@ namespace RenderStar::Client::Render::OpenGL
 
     void OpenGLRenderBackend::Destroy()
     {
+        commandQueue.reset();
         shaderManager.reset();
         uniformManager.reset();
         bufferManager.reset();
@@ -170,6 +194,11 @@ namespace RenderStar::Client::Render::OpenGL
         return uniformManager.get();
     }
 
+    IRenderCommandQueue* OpenGLRenderBackend::GetCommandQueue()
+    {
+        return commandQueue.get();
+    }
+
     void OpenGLRenderBackend::SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh)
     {
         drawCommands.push_back(OpenGLDrawCommand{ shader, uniformBinding, frameIndex, mesh });
@@ -179,21 +208,24 @@ namespace RenderStar::Client::Render::OpenGL
     {
         for (const auto& command : drawCommands)
         {
-            if (command.shader)
-                command.shader->Bind();
+            auto* glShader = static_cast<OpenGLShaderProgram*>(command.shader);
+            auto* glMesh = static_cast<OpenGLMeshAdapter*>(command.mesh);
+
+            if (glShader)
+                glShader->Bind();
 
             if (command.uniformBinding)
                 command.uniformBinding->Bind(command.frameIndex);
 
-            if (command.mesh)
+            if (glMesh && glMesh->IsValid())
             {
-                command.mesh->Bind();
-                command.mesh->Draw();
-                command.mesh->Unbind();
+                glMesh->Bind();
+                glMesh->Draw();
+                glMesh->Unbind();
             }
 
-            if (command.shader)
-                command.shader->Unbind();
+            if (glShader)
+                glShader->Unbind();
         }
 
         drawCommands.clear();

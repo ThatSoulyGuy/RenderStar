@@ -20,14 +20,6 @@ namespace RenderStar::Client::Render::Vulkan
             bufferModule->DestroyBuffer(buffer);
     }
 
-    void VulkanBufferHandle::Bind()
-    {
-    }
-
-    void VulkanBufferHandle::Unbind()
-    {
-    }
-
     void VulkanBufferHandle::SetData(const void* data, size_t size)
     {
         if (usage == BufferUsage::DYNAMIC)

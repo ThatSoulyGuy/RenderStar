@@ -4,7 +4,7 @@
     <ClientWindowModule>
         <window_title>"RenderStar* 1.0.0"</window_title>
         <window_dimensions>750, 450</window_dimensions>
-        <render_backend>OPENGL</render_backend>
+        <render_backend>VULKAN</render_backend>
     </ClientWindowModule>
 
     <ClientNetworkModule>

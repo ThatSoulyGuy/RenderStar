@@ -1,5 +1,9 @@
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderManagerAdapter.hpp"
+
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderProgram.hpp"
+#include "RenderStar/Common/Asset/AssetLocation.hpp"
+#include "RenderStar/Common/Asset/AssetModule.hpp"
+
 #include <fstream>
 #include <sstream>
 
@@ -34,9 +38,7 @@ namespace RenderStar::Client::Render::OpenGL
         return nullptr;
     }
 
-    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::LoadFromFile(
-        const std::string& vertexPath,
-        const std::string& fragmentPath)
+    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::LoadFromFile(const Common::Asset::AssetModule& assetModule, const Common::Asset::AssetLocation& vertexPath, const Common::Asset::AssetLocation& fragmentPath)
     {
         auto readFile = [](const std::string& path) -> std::string {
             std::ifstream file(path);
@@ -48,22 +50,23 @@ namespace RenderStar::Client::Render::OpenGL
             return buffer.str();
         };
 
-        std::string vertexSource = readFile(vertexPath);
-        std::string fragmentSource = readFile(fragmentPath);
+        std::string vertexSource = readFile(vertexPath.ToFilesystemPath(assetModule.GetBasePath()).string());
+        std::string fragmentSource = readFile(fragmentPath.ToFilesystemPath(assetModule.GetBasePath()).string());
 
         if (vertexSource.empty())
         {
-            logger->error("Failed to read vertex shader from: {}", vertexPath);
+            logger->error("Failed to read vertex shader from: {}", vertexPath.ToFilesystemPath(assetModule.GetBasePath()).string());
             return nullptr;
         }
 
         if (fragmentSource.empty())
         {
-            logger->error("Failed to read fragment shader from: {}", fragmentPath);
+            logger->error("Failed to read fragment shader from: {}", fragmentPath.ToFilesystemPath(assetModule.GetBasePath()).string());
             return nullptr;
         }
 
         ShaderSource source;
+
         source.vertexSource = std::move(vertexSource);
         source.fragmentSource = std::move(fragmentSource);
 

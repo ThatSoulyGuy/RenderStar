@@ -14,6 +14,7 @@ namespace RenderStar::Client::Render
     class IShaderProgram;
     class IUniformBindingHandle;
     class IMesh;
+    class IRenderCommandQueue;
 
     class IRenderBackend
     {
@@ -47,6 +48,7 @@ namespace RenderStar::Client::Render
         virtual IBufferManager* GetBufferManager() = 0;
         virtual IShaderManager* GetShaderManager() = 0;
         virtual IUniformManager* GetUniformManager() = 0;
+        virtual IRenderCommandQueue* GetCommandQueue() = 0;
 
         virtual void SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh) = 0;
         virtual void ExecuteDrawCommands() = 0;

@@ -229,14 +229,6 @@ namespace RenderStar::Client::Render::Vulkan
         return VK_FORMAT_R32G32B32_SFLOAT;
     }
 
-    void VulkanShaderProgram::Bind()
-    {
-    }
-
-    void VulkanShaderProgram::Unbind()
-    {
-    }
-
     void VulkanShaderProgram::BindPipeline(VkCommandBuffer commandBuffer)
     {
         if (pipeline != VK_NULL_HANDLE)
@@ -252,54 +244,6 @@ namespace RenderStar::Client::Render::Vulkan
     bool VulkanShaderProgram::IsValid() const
     {
         return valid;
-    }
-
-    void VulkanShaderProgram::SetUniform(const std::string& name, int32_t value)
-    {
-        (void)name;
-        (void)value;
-    }
-
-    void VulkanShaderProgram::SetUniform(const std::string& name, float value)
-    {
-        (void)name;
-        (void)value;
-    }
-
-    void VulkanShaderProgram::SetUniform(const std::string& name, const glm::vec2& value)
-    {
-        (void)name;
-        (void)value;
-    }
-
-    void VulkanShaderProgram::SetUniform(const std::string& name, const glm::vec3& value)
-    {
-        (void)name;
-        (void)value;
-    }
-
-    void VulkanShaderProgram::SetUniform(const std::string& name, const glm::vec4& value)
-    {
-        (void)name;
-        (void)value;
-    }
-
-    void VulkanShaderProgram::SetUniform(const std::string& name, const glm::mat3& value)
-    {
-        (void)name;
-        (void)value;
-    }
-
-    void VulkanShaderProgram::SetUniform(const std::string& name, const glm::mat4& value)
-    {
-        (void)name;
-        (void)value;
-    }
-
-    int32_t VulkanShaderProgram::GetUniformLocation(const std::string& name) const
-    {
-        (void)name;
-        return -1;
     }
 
     const VulkanShader& VulkanShaderProgram::GetVertexShader() const

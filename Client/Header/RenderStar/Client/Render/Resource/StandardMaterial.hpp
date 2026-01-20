@@ -26,9 +26,6 @@ namespace RenderStar::Client::Render
 
         void Initialize(IShaderProgram* shader, IBufferHandle* uniformBuffer);
 
-        void Bind() override;
-        void Unbind() override;
-
         IShaderProgram* GetShader() const override;
         const UniformLayout& GetUniformLayout() const override;
 

@@ -36,7 +36,7 @@ namespace RenderStar::Client::Render::OpenGL
         if (destroyed)
             return;
 
-        auto* glBuffer = dynamic_cast<OpenGLBufferHandle*>(buffer);
+        auto* glBuffer = static_cast<OpenGLBufferHandle*>(buffer);
         if (glBuffer == nullptr)
             return;
 
