@@ -204,4 +204,4 @@ The Vulkan backend is highly modular:
 
 ## License
 
-[Add your license here]
+MIT
