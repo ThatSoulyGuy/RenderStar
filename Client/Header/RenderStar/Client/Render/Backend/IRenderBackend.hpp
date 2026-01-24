@@ -25,7 +25,7 @@ namespace RenderStar::Client::Render
         virtual RenderBackend GetType() const = 0;
         virtual const BackendCapabilities& GetCapabilities() const = 0;
 
-        virtual void Initialize(GLFWwindow* windowHandle, int32_t width, int32_t height) = 0;
+        virtual void Initialize(GLFWwindow* windowHandle, uint32_t width, uint32_t height) = 0;
 
         virtual void Destroy() = 0;
 

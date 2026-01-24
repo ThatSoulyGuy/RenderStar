@@ -34,21 +34,12 @@ namespace
 
 namespace RenderStar::Client::Render::OpenGL
 {
-    OpenGLRenderBackend::OpenGLRenderBackend()
-        : logger(spdlog::default_logger())
-        , window(nullptr)
-        , width(0)
-        , height(0)
-        , currentFrame(0)
-        , initialized(false)
-        , capabilities(BackendCapabilities::ForOpenGL45())
-    {
-    }
+    OpenGLRenderBackend::OpenGLRenderBackend() : logger(spdlog::default_logger()), window(nullptr), width(0), height(0), currentFrame(0), initialized(false), capabilities(BackendCapabilities::ForOpenGL45()) { }
 
     OpenGLRenderBackend::~OpenGLRenderBackend()
     {
         if (initialized)
-            Destroy();
+            OpenGLRenderBackend::Destroy();
     }
 
     RenderBackend OpenGLRenderBackend::GetType() const
@@ -61,7 +52,7 @@ namespace RenderStar::Client::Render::OpenGL
         return capabilities;
     }
 
-    void OpenGLRenderBackend::Initialize(GLFWwindow* windowHandle, int32_t initialWidth, int32_t initialHeight)
+    void OpenGLRenderBackend::Initialize(GLFWwindow* windowHandle, uint32_t initialWidth, uint32_t initialHeight)
     {
         window = windowHandle;
         width = initialWidth;

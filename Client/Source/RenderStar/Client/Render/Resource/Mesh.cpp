@@ -2,18 +2,15 @@
 
 namespace RenderStar::Client::Render::Resource
 {
-    Mesh::Mesh(IBufferManager& bufferManager, const VertexLayout& layout, PrimitiveType primitive)
-        : mesh(bufferManager.CreateMesh(layout, primitive))
-    {
-    }
+    Mesh::Mesh(IBufferManager& bufferManager, const VertexLayout& layout, PrimitiveType primitive) : mesh(bufferManager.CreateMesh(layout, primitive)) { }
 
-    void Mesh::SetVertexData(const void* data, size_t size)
+    void Mesh::SetVertexData(const void* data, const size_t size) const
     {
         if (mesh)
             mesh->SetVertexData(data, size);
     }
 
-    void Mesh::SetIndexData(const void* data, size_t size, IndexType indexType)
+    void Mesh::SetIndexData(const void* data, const size_t size, const IndexType indexType) const
     {
         if (mesh)
             mesh->SetIndexData(data, size, indexType);

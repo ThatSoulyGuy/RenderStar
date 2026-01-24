@@ -25,7 +25,7 @@ namespace RenderStar::Client::Render::Resource
         requires std::derived_from<VertexType, IVertex>
         void SetVertices(const std::vector<VertexType>& vertices);
 
-        void SetVertexData(const void* data, size_t size);
+        void SetVertexData(const void* data, size_t size) const;
 
         template<typename IndexT>
         requires std::integral<IndexT>
@@ -35,7 +35,7 @@ namespace RenderStar::Client::Render::Resource
         requires std::integral<IndexT>
         void SetIndices(const std::vector<IndexT>& indices);
 
-        void SetIndexData(const void* data, size_t size, IndexType indexType);
+        void SetIndexData(const void* data, size_t size, IndexType indexType) const;
 
         int32_t GetVertexCount() const;
         int32_t GetIndexCount() const;

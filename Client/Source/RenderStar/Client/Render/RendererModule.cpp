@@ -68,18 +68,7 @@ void main()
 )";
     }
 
-    RendererModule::RendererModule()
-        : backend(nullptr)
-        , backendType(RenderBackend::OPENGL)
-        , testShader(nullptr)
-        , testMesh(nullptr)
-        , uniformBinding(nullptr)
-        , uniformBuffer(nullptr)
-        , testGeometryInitialized(false)
-        , rotationAngle(0.0f)
-        , aspectRatio(16.0f / 9.0f)
-    {
-    }
+    RendererModule::RendererModule() : backend(nullptr), backendType(RenderBackend::OPENGL), testShader(nullptr), testMesh(nullptr), uniformBinding(nullptr), uniformBuffer(nullptr), testGeometryInitialized(false), rotationAngle(0.0f), aspectRatio(16.0f / 9.0f) { }
 
     RendererModule::~RendererModule()
     {
@@ -137,16 +126,11 @@ void main()
             return;
         }
 
-        backend->Initialize(
-            windowModule->get().GetWindowHandle(),
-            windowModule->get().GetFramebufferWidth(),
-            windowModule->get().GetFramebufferHeight()
-        );
+        backend->Initialize(windowModule->get().GetWindowHandle(), windowModule->get().GetFramebufferWidth(), windowModule->get().GetFramebufferHeight());
 
         InitializeTestGeometry(moduleContext);
 
-        logger->info("RendererModule initialized with {} backend",
-            backendType == RenderBackend::OPENGL ? "OpenGL" : "Vulkan");
+        logger->info("RendererModule initialized with {} backend", backendType == RenderBackend::OPENGL ? "OpenGL" : "Vulkan");
     }
 
     void RendererModule::InitializeTestGeometry(Common::Module::ModuleContext& context)

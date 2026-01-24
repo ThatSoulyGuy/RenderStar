@@ -44,10 +44,13 @@ namespace RenderStar::Client::Render::Vulkan
 
         ~VulkanRenderBackend() override;
 
+        [[nodiscard]]
         RenderBackend GetType() const override;
+
+        [[nodiscard]]
         const BackendCapabilities& GetCapabilities() const override;
 
-        void Initialize(GLFWwindow* windowHandle, int32_t width, int32_t height) override;
+        void Initialize(GLFWwindow* windowHandle, uint32_t width, uint32_t height) override;
 
         void Destroy() override;
 
@@ -59,12 +62,16 @@ namespace RenderStar::Client::Render::Vulkan
 
         void OnResize(int32_t width, int32_t height) override;
 
-        int32_t GetWidth() const override;
+        [[nodiscard]]
+        auto GetWidth() const -> int32_t override;
 
+        [[nodiscard]]
         int32_t GetHeight() const override;
 
+        [[nodiscard]]
         int32_t GetCurrentFrame() const override;
 
+        [[nodiscard]]
         int32_t GetMaxFramesInFlight() const override;
 
         IBufferManager* GetBufferManager() override;
@@ -85,8 +92,8 @@ namespace RenderStar::Client::Render::Vulkan
 
         std::shared_ptr<spdlog::logger> logger;
         GLFWwindow* window;
-        int32_t width;
-        int32_t height;
+        uint32_t width;
+        uint32_t height;
         int32_t currentFrame;
         uint32_t currentImageIndex;
         bool initialized;

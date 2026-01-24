@@ -32,10 +32,13 @@ namespace RenderStar::Client::Render::OpenGL
 
         ~OpenGLRenderBackend() override;
 
+        [[nodiscard]]
         RenderBackend GetType() const override;
+
+        [[nodiscard]]
         const BackendCapabilities& GetCapabilities() const override;
 
-        void Initialize(GLFWwindow* windowHandle, int32_t width, int32_t height) override;
+        void Initialize(GLFWwindow* windowHandle, uint32_t width, uint32_t height) override;
 
         void Destroy() override;
 
@@ -47,12 +50,16 @@ namespace RenderStar::Client::Render::OpenGL
 
         void OnResize(int32_t width, int32_t height) override;
 
+        [[nodiscard]]
         int32_t GetWidth() const override;
 
+        [[nodiscard]]
         int32_t GetHeight() const override;
 
+        [[nodiscard]]
         int32_t GetCurrentFrame() const override;
 
+        [[nodiscard]]
         int32_t GetMaxFramesInFlight() const override;
 
         IBufferManager* GetBufferManager() override;
@@ -63,14 +70,15 @@ namespace RenderStar::Client::Render::OpenGL
         void SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh) override;
         void ExecuteDrawCommands() override;
 
+        [[nodiscard]]
         bool IsInitialized() const override;
 
     private:
 
         std::shared_ptr<spdlog::logger> logger;
         GLFWwindow* window;
-        int32_t width;
-        int32_t height;
+        uint32_t width;
+        uint32_t height;
         int32_t currentFrame;
         bool initialized;
         BackendCapabilities capabilities;

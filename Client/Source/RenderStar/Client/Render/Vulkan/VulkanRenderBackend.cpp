@@ -63,7 +63,7 @@ namespace RenderStar::Client::Render::Vulkan
         return capabilities;
     }
 
-    void VulkanRenderBackend::Initialize(GLFWwindow* windowHandle, int32_t initialWidth, int32_t initialHeight)
+    void VulkanRenderBackend::Initialize(GLFWwindow* windowHandle, uint32_t initialWidth, uint32_t initialHeight)
     {
         window = windowHandle;
         width = initialWidth;
