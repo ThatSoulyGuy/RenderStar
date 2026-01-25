@@ -1,7 +1,7 @@
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
 #include "RenderStar/Client/Render/Backend/BackendFactory.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
-#include "RenderStar/Common/Configuration/ConfigurationFactory.hpp"
+#include "RenderStar/Common/Configuration/ConfigurationModule.hpp"
 
 #define GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_VULKAN
@@ -68,9 +68,9 @@ namespace RenderStar::Client::Core
         return preferredBackend;
     }
 
-    void ClientWindowModule::OnInitialize(Common::Module::ModuleContext&)
+    void ClientWindowModule::OnInitialize(Common::Module::ModuleContext& moduleContext)
     {
-        LoadConfiguration();
+        LoadConfiguration(moduleContext);
 
         if (!glfwInit())
         {
@@ -120,14 +120,32 @@ namespace RenderStar::Client::Core
         glfwTerminate();
     }
 
-    void ClientWindowModule::LoadConfiguration()
+    void ClientWindowModule::LoadConfiguration(Common::Module::ModuleContext& moduleContext)
     {
-        const auto config = GetConfiguration();
+        auto configModule = moduleContext.GetModule<Common::Configuration::ConfigurationModule>();
 
-        if (const auto titleOptional = config->GetString("window_title"); titleOptional.has_value())
-            title = titleOptional.value();
+        if (!configModule.has_value())
+        {
+            logger->error("ConfigurationModule not found");
+            return;
+        }
 
-        if (const auto dimensionsOptional = config->GetStringList("window_dimensions"); dimensionsOptional.size() >= 2)
+        auto configOpt = configModule->get().For<ClientWindowModule>("render_star");
+
+        if (!configOpt)
+        {
+            preferredBackend = Render::BackendFactory::DetectBestBackend();
+            logger->info("No configuration found, using defaults with auto-detected backend: {}",
+                preferredBackend == Render::RenderBackend::VULKAN ? "VULKAN" : "OPENGL");
+            return;
+        }
+
+        auto& config = *configOpt;
+
+        if (auto titleOptional = config->GetString("window_title"))
+            title = *titleOptional;
+
+        if (auto dimensionsOptional = config->GetStringList("window_dimensions"); dimensionsOptional.size() >= 2)
         {
             try
             {
@@ -140,9 +158,9 @@ namespace RenderStar::Client::Core
             }
         }
 
-        if (const auto backendOptional = config->GetString("render_backend"); backendOptional.has_value())
+        if (auto backendOptional = config->GetString("render_backend"))
         {
-            std::string backend = backendOptional.value();
+            std::string backend = *backendOptional;
 
             const size_t start = backend.find_first_not_of(" \t\r\n");
 
@@ -163,14 +181,9 @@ namespace RenderStar::Client::Core
                 preferredBackend == Render::RenderBackend::VULKAN ? "VULKAN" : "OPENGL");
         }
 
-        if (const auto forceOptional = config->GetBoolean("force_render_backend"); forceOptional.has_value())
-            forceBackend = forceOptional.value();
+        if (auto forceOptional = config->GetBoolean("force_render_backend"))
+            forceBackend = *forceOptional;
 
         logger->debug("Loaded configuration: title='{}', dimensions={}x{}, backend={}, force={}", title, width, height, preferredBackend == Render::RenderBackend::VULKAN ? "VULKAN" : "OPENGL", forceBackend);
-    }
-
-    std::shared_ptr<Common::Configuration::IConfiguration> ClientWindowModule::GetConfiguration()
-    {
-        return Common::Configuration::ConfigurationFactory::For<ClientWindowModule>("render_star");
     }
 }

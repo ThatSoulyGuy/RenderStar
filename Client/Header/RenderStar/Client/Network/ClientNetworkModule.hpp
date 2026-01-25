@@ -1,10 +1,8 @@
 #pragma once
 
 #include "RenderStar/Common/Module/AbstractModule.hpp"
-#include "RenderStar/Common/Configuration/IConfiguration.hpp"
 #include "RenderStar/Client/Network/ConnectionState.hpp"
 #include <asio.hpp>
-#include <memory>
 #include <atomic>
 #include <thread>
 #include <queue>
@@ -75,9 +73,7 @@ namespace RenderStar::Client::Network
 
         void NetworkThreadLoop();
 
-        void LoadConfiguration();
-
-        static std::shared_ptr<Common::Configuration::IConfiguration> GetConfiguration();
+        void LoadConfiguration(Common::Module::ModuleContext& context);
 
         std::atomic<ConnectionState> state;
         std::string serverAddress;

@@ -58,7 +58,7 @@ namespace RenderStar::Client::Render::Shader
 
     std::string GlslTransformer::RemovePushConstants(const std::string& source)
     {
-        std::regex pushConstantPattern(R"(layout\s*\(\s*push_constant\s*\)\s*uniform.*?\{[^}]*\}\s*\w+\s*;)", std::regex::extended);
+        std::regex pushConstantPattern(R"(layout\s*\(\s*push_constant\s*\)\s*uniform[^;]*\{[^}]*\}\s*\w+\s*;)");
         return std::regex_replace(source, pushConstantPattern, "// Push constants removed for OpenGL compatibility");
     }
 }

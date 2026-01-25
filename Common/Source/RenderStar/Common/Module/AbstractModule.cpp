@@ -3,13 +3,7 @@
 
 namespace RenderStar::Common::Module
 {
-    AbstractModule::AbstractModule()
-        : logger(spdlog::default_logger())
-        , context(nullptr)
-        , parent(nullptr)
-        , initialized(false)
-    {
-    }
+    AbstractModule::AbstractModule() : logger(spdlog::default_logger()), context(nullptr), parent(nullptr), initialized(false) { }
 
     void AbstractModule::OnRegistration(ModuleContext& moduleContext)
     {
@@ -20,7 +14,7 @@ namespace RenderStar::Common::Module
         OnInitialize(moduleContext);
         initialized = true;
 
-        for (auto& subModule : subModules)
+        for (const auto& subModule : subModules)
             subModule->OnRegistration(moduleContext);
     }
 
@@ -41,6 +35,6 @@ namespace RenderStar::Common::Module
 
     std::type_index AbstractModule::GetTypeIndex() const
     {
-        return std::type_index(typeid(*this));
+        return { typeid(*this) };
     }
 }

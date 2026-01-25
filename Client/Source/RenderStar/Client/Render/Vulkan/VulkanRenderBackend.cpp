@@ -6,28 +6,9 @@
 #include "RenderStar/Client/Render/Resource/IUniformBindingHandle.hpp"
 #include "RenderStar/Client/Render/Resource/IMesh.hpp"
 #include "RenderStar/Client/Render/Resource/Vertex.hpp"
-#include "RenderStar/Client/Render/Backend/BackendFactory.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
-namespace
-{
-    bool CheckVulkanAvailability()
-    {
-        return glfwVulkanSupported() == GLFW_TRUE;
-    }
-
-    static bool registered = []()
-    {
-        RenderStar::Client::Render::BackendFactory::RegisterBackend(
-            RenderStar::Client::Render::RenderBackend::VULKAN,
-            []() { return std::make_unique<RenderStar::Client::Render::Vulkan::VulkanRenderBackend>(); },
-            CheckVulkanAvailability,
-            100);
-        return true;
-    }();
-}
 
 namespace RenderStar::Client::Render::Vulkan
 {
@@ -276,10 +257,11 @@ namespace RenderStar::Client::Render::Vulkan
         vkDeviceWaitIdle(deviceModule.GetDevice());
     }
 
-    void VulkanRenderBackend::OnResize(int32_t newWidth, int32_t newHeight)
+    void VulkanRenderBackend::OnResize(const uint32_t width, const uint32_t height)
     {
-        width = newWidth;
-        height = newHeight;
+        this->width = width;
+        this->height = height;
+
         framebufferResized = true;
     }
 
@@ -328,12 +310,12 @@ namespace RenderStar::Client::Render::Vulkan
         logger->info("Swapchain recreated ({}x{})", width, height);
     }
 
-    int32_t VulkanRenderBackend::GetWidth() const
+    uint32_t VulkanRenderBackend::GetWidth() const
     {
         return width;
     }
 
-    int32_t VulkanRenderBackend::GetHeight() const
+    uint32_t VulkanRenderBackend::GetHeight() const
     {
         return height;
     }

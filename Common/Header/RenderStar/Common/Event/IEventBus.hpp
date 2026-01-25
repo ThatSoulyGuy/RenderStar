@@ -26,18 +26,11 @@ namespace RenderStar::Common::Event
 
         virtual void Shutdown() = 0;
 
+        [[nodiscard]]
         virtual bool RunsOnMainThread() const = 0;
 
-        virtual void SubscribeRaw(
-            std::type_index eventType,
-            EventHandlerFunction handler,
-            HandlerPriority priority
-        ) = 0;
-
-        virtual void PublishRaw(
-            std::unique_ptr<IEvent> event,
-            EventPriority priority
-        ) = 0;
+        virtual void SubscribeRaw(std::type_index eventType,EventHandlerFunction handler,HandlerPriority priority) = 0;
+        virtual void PublishRaw(std::unique_ptr<IEvent> event,EventPriority priority) = 0;
 
         virtual void SetTickHandler(TickHandlerFunction handler) = 0;
     };

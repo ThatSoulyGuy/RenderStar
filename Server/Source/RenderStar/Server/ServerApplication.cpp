@@ -1,7 +1,7 @@
 #include "RenderStar/Server/ServerApplication.hpp"
 #include "RenderStar/Common/Module/ModuleManager.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
-#include "RenderStar/Common/Configuration/ConfigurationFactory.hpp"
+#include "RenderStar/Common/Configuration/ConfigurationModule.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Server/Core/ServerLifecycleModule.hpp"
 #include "RenderStar/Server/Event/Buses/ServerCoreEventBus.hpp"
@@ -16,11 +16,15 @@ namespace RenderStar::Server
     {
         std::filesystem::path executablePath(argv[0]);
         std::filesystem::path basePath = executablePath.parent_path();
-        Common::Configuration::ConfigurationFactory::SetResourceBasePath(basePath);
+
+        auto configModule = std::make_unique<Common::Configuration::ConfigurationModule>(basePath);
+        auto& configModuleRef = *configModule;
+
         auto manager = Common::Module::ModuleManager::Builder()
             .EventBus<Event::Buses::ServerCoreEventBus>(std::make_unique<Event::Buses::ServerCoreEventBus>())
+            .Module<Common::Configuration::ConfigurationModule>(std::move(configModule))
             .Module<Common::Asset::AssetModule>(std::make_unique<Common::Asset::AssetModule>(basePath))
-            .Module<Network::ServerNetworkModule>(Network::ServerNetworkModule::FromArguments(argc, argv))
+            .Module<Network::ServerNetworkModule>(Network::ServerNetworkModule::FromArguments(argc, argv, configModuleRef))
             .Module<Common::Component::ComponentModule>(std::make_unique<Common::Component::ComponentModule>())
             .Module<Core::ServerLifecycleModule>(std::make_unique<Core::ServerLifecycleModule>())
             .Build();

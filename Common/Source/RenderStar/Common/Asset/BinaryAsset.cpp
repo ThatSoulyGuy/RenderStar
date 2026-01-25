@@ -1,13 +1,10 @@
+#include <utility>
+
 #include "RenderStar/Common/Asset/BinaryAsset.hpp"
 
 namespace RenderStar::Common::Asset
 {
-    BinaryAsset::BinaryAsset(const AssetLocation& location, std::vector<uint8_t> data)
-        : location(location)
-        , data(std::move(data))
-        , loaded(true)
-    {
-    }
+    BinaryAsset::BinaryAsset(AssetLocation  location, std::vector<uint8_t> data) : location(std::move(location)), data(std::move(data)), loaded(true) { }
 
     const AssetLocation& BinaryAsset::GetLocation() const
     {

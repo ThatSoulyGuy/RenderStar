@@ -7,7 +7,7 @@
 #include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
 #include "RenderStar/Common/Module/ModuleManager.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
-#include "RenderStar/Common/Configuration/ConfigurationFactory.hpp"
+#include "RenderStar/Common/Configuration/ConfigurationModule.hpp"
 #include "RenderStar/Common/Time/TimeModule.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
 #include <spdlog/spdlog.h>
@@ -24,10 +24,9 @@ namespace RenderStar::Client
         spdlog::set_level(spdlog::level::info);
         spdlog::info("RenderStar Client starting...");
 
-        std::filesystem::path executablePath(argumentValues[0]);
-        std::filesystem::path basePath = executablePath.parent_path();
-        Common::Configuration::ConfigurationFactory::SetResourceBasePath(basePath);
-        spdlog::info("Resource base path set to: {}", basePath.string());
+        const std::filesystem::path executablePath(argumentValues[0]);
+        resourceBasePath = executablePath.parent_path();
+        spdlog::info("Resource base path set to: {}", resourceBasePath.string());
 
         Initialize();
 
@@ -42,12 +41,11 @@ namespace RenderStar::Client
 
     void ClientApplication::Initialize()
     {
-        auto basePath = Common::Configuration::ConfigurationFactory::GetBasePath();
-
         moduleManager = Common::Module::ModuleManager::Builder()
             .EventBus(std::make_unique<Event::ClientCoreEventBus>())
             .EventBus(std::make_unique<Event::ClientRenderEventBus>())
-            .Module(std::make_unique<Common::Asset::AssetModule>(basePath))
+            .Module(std::make_unique<Common::Configuration::ConfigurationModule>(resourceBasePath))
+            .Module(std::make_unique<Common::Asset::AssetModule>(resourceBasePath))
             .Module(std::make_unique<Common::Time::TimeModule>())
             .Module(std::make_unique<Common::Component::ComponentModule>())
             .Module(std::make_unique<Core::ClientWindowModule>())

@@ -5,7 +5,7 @@
 
 namespace RenderStar::Common::Time
 {
-    class TimeModule : public Module::AbstractModule
+    class TimeModule final : public Module::AbstractModule
     {
     public:
 
@@ -13,16 +13,22 @@ namespace RenderStar::Common::Time
 
         void Tick();
 
+        [[nodiscard]]
         float GetDeltaTime() const;
 
+        [[nodiscard]]
         float GetDeltaTimeMilliseconds() const;
 
+        [[nodiscard]]
         double GetElapsedTime() const;
 
+        [[nodiscard]]
         int64_t GetFrameCount() const;
 
+        [[nodiscard]]
         float GetFramesPerSecond() const;
 
+        [[nodiscard]]
         float GetFrameTime() const;
 
     protected:
@@ -41,8 +47,10 @@ namespace RenderStar::Common::Time
 
         float deltaTime;
         double elapsedTime;
+
         int64_t frameCount;
         int64_t fpsFrameCount;
+
         float framesPerSecond;
         float frameTime;
     };

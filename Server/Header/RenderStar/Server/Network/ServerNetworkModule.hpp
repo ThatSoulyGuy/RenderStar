@@ -1,7 +1,6 @@
 #pragma once
 
 #include "RenderStar/Common/Module/AbstractModule.hpp"
-#include "RenderStar/Common/Configuration/IConfiguration.hpp"
 #include "RenderStar/Server/Network/ServerMode.hpp"
 #include "RenderStar/Server/Network/ClientConnection.hpp"
 #include <asio.hpp>
@@ -9,6 +8,11 @@
 #include <atomic>
 #include <thread>
 #include <unordered_map>
+
+namespace RenderStar::Common::Configuration
+{
+    class ConfigurationModule;
+}
 
 namespace RenderStar::Common::Event
 {
@@ -34,11 +38,11 @@ namespace RenderStar::Server::Network
 
         ~ServerNetworkModule() override;
 
-        static std::unique_ptr<ServerNetworkModule> Dedicated();
+        static std::unique_ptr<ServerNetworkModule> Dedicated(Common::Configuration::ConfigurationModule& configModule);
 
         static std::unique_ptr<ServerNetworkModule> Local(int32_t port, int32_t maxPlayers);
 
-        static std::unique_ptr<ServerNetworkModule> FromArguments(int argc, char** argv);
+        static std::unique_ptr<ServerNetworkModule> FromArguments(int argc, char** argv, Common::Configuration::ConfigurationModule& configModule);
 
         void StartServer();
 
@@ -84,8 +88,6 @@ namespace RenderStar::Server::Network
         void ProcessPackets(ConnectionPointer connection, size_t bytesReceived);
 
         void RemoveConnection(ConnectionPointer connection);
-
-        static std::shared_ptr<Common::Configuration::IConfiguration> GetConfiguration();
 
         ServerMode mode;
         int32_t port;

@@ -4,7 +4,7 @@
 
 namespace RenderStar::Server::Event::Events
 {
-    struct ServerPreinitializationEvent : public Common::Event::Event<ServerPreinitializationEvent>
+    struct ServerPreinitializationEvent : public Common::Event::TypedEvent<ServerPreinitializationEvent>
     {
         std::string_view GetName() const override { return "ServerPreinitializationEvent"; }
     };

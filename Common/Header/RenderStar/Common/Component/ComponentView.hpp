@@ -25,7 +25,7 @@ namespace RenderStar::Common::Component
 
             GameObject operator*() const
             {
-                return view.smallestPool->Entities()[index];
+                return view.smallestPool->GetEntities()[index];
             }
 
             Iterator& operator++()
@@ -44,11 +44,11 @@ namespace RenderStar::Common::Component
 
             void AdvanceToValid()
             {
-                int32_t size = view.smallestPool->Size();
+                int32_t size = view.smallestPool->GetSize();
 
                 while (index < size)
                 {
-                    GameObject entity = view.smallestPool->Entities()[index];
+                    GameObject entity = view.smallestPool->GetEntities()[index];
 
                     if (view.AllHave(entity))
                         return;
@@ -124,7 +124,7 @@ namespace RenderStar::Common::Component
             if (smallestPool == nullptr)
                 return Iterator(*this, 0);
 
-            return Iterator(*this, smallestPool->Size());
+            return Iterator(*this, smallestPool->GetSize());
         }
 
     private:
@@ -135,7 +135,7 @@ namespace RenderStar::Common::Component
 
             for (size_t i = 1; i < pools.size(); ++i)
             {
-                if (pools[i]->Size() < smallest->Size())
+                if (pools[i]->GetSize() < smallest->GetSize())
                     smallest = pools[i];
             }
 

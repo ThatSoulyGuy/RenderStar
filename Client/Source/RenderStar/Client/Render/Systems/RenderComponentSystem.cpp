@@ -65,7 +65,7 @@ namespace RenderStar::Client::Render::Systems
 
         auto& cameraPool = ecs.GetPool<Camera>();
 
-        if (cameraPool.Size() == 0)
+        if (cameraPool.GetSize() == 0)
             return;
 
         if (activeCameraEntity.IsValid() && ecs.HasComponent<Camera>(activeCameraEntity))
@@ -100,7 +100,7 @@ namespace RenderStar::Client::Render::Systems
     {
         auto& meshRendererPool = ecs.GetPool<MeshRenderer>();
 
-        if (meshRendererPool.Size() == 0)
+        if (meshRendererPool.GetSize() == 0)
             return;
 
         for (auto [entity, renderer] : meshRendererPool)

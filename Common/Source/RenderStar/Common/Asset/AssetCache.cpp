@@ -2,26 +2,19 @@
 
 namespace RenderStar::Common::Asset
 {
-    AssetCache::AssetCache()
-        : maxCacheSize(DEFAULT_MAX_SIZE)
-    {
-    }
+    AssetCache::AssetCache() : maxCacheSize(DEFAULT_MAX_SIZE) { }
 
-    AssetCache::AssetCache(size_t maxSize)
-        : maxCacheSize(maxSize)
-    {
-    }
+    AssetCache::AssetCache(const size_t maxSize) : maxCacheSize(maxSize) { }
 
     void AssetCache::Evict(const AssetLocation& location)
     {
-        std::lock_guard<std::mutex> lock(cacheMutex);
+        std::lock_guard lock(cacheMutex);
 
-        auto it = cache.find(location);
-        if (it != cache.end())
+        if (const auto iterator = cache.find(location); iterator != cache.end())
         {
-            cache.erase(it);
-            auto lruIt = lruIterators.find(location);
-            if (lruIt != lruIterators.end())
+            cache.erase(iterator);
+
+            if (const auto lruIt = lruIterators.find(location); lruIt != lruIterators.end())
             {
                 lruOrder.erase(lruIt->second);
                 lruIterators.erase(lruIt);
@@ -31,15 +24,15 @@ namespace RenderStar::Common::Asset
 
     void AssetCache::Clear()
     {
-        std::lock_guard<std::mutex> lock(cacheMutex);
+        std::lock_guard lock(cacheMutex);
         cache.clear();
         lruOrder.clear();
         lruIterators.clear();
     }
 
-    void AssetCache::SetMaxSize(size_t size)
+    void AssetCache::SetMaxSize(const size_t size)
     {
-        std::lock_guard<std::mutex> lock(cacheMutex);
+        std::lock_guard lock(cacheMutex);
         maxCacheSize = size;
 
         while (cache.size() > maxCacheSize)
@@ -48,7 +41,7 @@ namespace RenderStar::Common::Asset
 
     size_t AssetCache::GetSize() const
     {
-        std::lock_guard<std::mutex> lock(cacheMutex);
+        std::lock_guard lock(cacheMutex);
         return cache.size();
     }
 
@@ -59,11 +52,11 @@ namespace RenderStar::Common::Asset
 
     void AssetCache::TouchEntry(const AssetLocation& location)
     {
-        auto lruIt = lruIterators.find(location);
-        if (lruIt != lruIterators.end())
+        if (const auto lruIt = lruIterators.find(location); lruIt != lruIterators.end())
         {
             lruOrder.erase(lruIt->second);
             lruOrder.push_front(location);
+
             lruIt->second = lruOrder.begin();
         }
     }
@@ -73,7 +66,8 @@ namespace RenderStar::Common::Asset
         if (lruOrder.empty())
             return;
 
-        auto& lruLocation = lruOrder.back();
+        const auto& lruLocation = lruOrder.back();
+
         cache.erase(lruLocation);
         lruIterators.erase(lruLocation);
         lruOrder.pop_back();

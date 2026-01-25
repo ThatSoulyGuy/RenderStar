@@ -10,6 +10,7 @@ namespace RenderStar::Common::Component
         GameObject parent{ GameObject::INVALID_ID };
         std::vector<GameObject> children;
 
+        [[nodiscard]]
         bool HasParent() const
         {
             return parent.IsValid();

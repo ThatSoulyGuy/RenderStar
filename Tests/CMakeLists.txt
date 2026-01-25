@@ -7,6 +7,8 @@ target_sources(RenderStarTests PRIVATE
     Source/PacketBufferTest.cpp
     Source/EventBusTest.cpp
     Source/GameObjectTest.cpp
+    Source/TypeNameTest.cpp
+    Source/NetworkingTest.cpp
 )
 
 target_include_directories(RenderStarTests PRIVATE

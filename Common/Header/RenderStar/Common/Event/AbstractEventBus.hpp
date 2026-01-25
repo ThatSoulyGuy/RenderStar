@@ -30,26 +30,16 @@ namespace RenderStar::Common::Event
 
         bool RunsOnMainThread() const override;
 
-        void SubscribeRaw(
-            std::type_index eventType,
-            EventHandlerFunction handler,
-            HandlerPriority priority
-        ) override;
+        void SubscribeRaw(std::type_index eventType, EventHandlerFunction handler, HandlerPriority priority) override;
 
-        void PublishRaw(
-            std::unique_ptr<IEvent> event,
-            EventPriority priority
-        ) override;
+        void PublishRaw(std::unique_ptr<IEvent> event, EventPriority priority) override;
 
         void SetTickHandler(TickHandlerFunction handler) override;
 
-        template<typename EventType>
-        void Subscribe(
-            std::function<EventResult(const EventType&)> handler,
-            HandlerPriority priority = HandlerPriority::NORMAL
-        );
+        template <typename EventType>
+        void Subscribe(std::function<EventResult(const EventType&)> handler, HandlerPriority priority = HandlerPriority::NORMAL);
 
-        template<typename EventType>
+        template <typename EventType>
         void Publish(EventType event, EventPriority priority = EventPriority::NORMAL);
 
     protected:
@@ -91,7 +81,9 @@ namespace RenderStar::Common::Event
         std::condition_variable queueCondition;
         std::atomic<bool> running;
         std::jthread processingThread;
+
         TickHandlerFunction tickHandler;
+
         bool mainThread;
     };
 }

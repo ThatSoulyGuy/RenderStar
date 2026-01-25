@@ -1,20 +1,19 @@
 #pragma once
 
+#include <ranges>
 #include "RenderStar/Common/Module/IModule.hpp"
-#include "RenderStar/Common/Event/IEventBus.hpp"
 
 namespace RenderStar::Common::Module
 {
-    template<typename ModuleType>
+    template <typename ModuleType>
     std::optional<std::reference_wrapper<ModuleType>> ModuleContext::GetModule()
     {
-        auto typeIndex = std::type_index(typeid(ModuleType));
-        auto iterator = modules.find(typeIndex);
+        const auto typeIndex = std::type_index(typeid(ModuleType));
 
-        if (iterator != modules.end())
+        if (const auto iterator = modules.find(typeIndex); iterator != modules.end())
             return std::ref(static_cast<ModuleType&>(*iterator->second));
 
-        for (auto& [key, module] : modules)
+        for (const auto& module : modules | std::views::values)
         {
             for (auto& subModule : module->GetSubModules())
             {
@@ -26,13 +25,12 @@ namespace RenderStar::Common::Module
         return std::nullopt;
     }
 
-    template<typename EventBusType>
+    template <typename EventBusType>
     std::optional<std::reference_wrapper<EventBusType>> ModuleContext::GetEventBus()
     {
-        auto typeIndex = std::type_index(typeid(EventBusType));
-        auto iterator = eventBuses.find(typeIndex);
+        const auto typeIndex = std::type_index(typeid(EventBusType));
 
-        if (iterator != eventBuses.end())
+        if (const auto iterator = eventBuses.find(typeIndex); iterator != eventBuses.end())
             return std::ref(static_cast<EventBusType&>(*iterator->second));
 
         return std::nullopt;

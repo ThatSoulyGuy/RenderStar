@@ -1,30 +1,15 @@
 #include "RenderStar/Common/Configuration/Configuration.hpp"
 #include <sstream>
+#include <utility>
 
 namespace RenderStar::Common::Configuration
 {
-    Configuration::Configuration(
-        const std::string& configNamespace,
-        const std::string& classScope,
-        std::shared_ptr<pugi::xml_document> sharedDocument,
-        const std::filesystem::path& sourceFilePath)
-        : logger(spdlog::default_logger())
-        , configNamespace(configNamespace)
-        , classScope(classScope)
-        , document(std::move(sharedDocument))
-        , filePath(sourceFilePath)
+    Configuration::Configuration(std::string configNamespace, std::string classScope, std::shared_ptr<pugi::xml_document> sharedDocument, std::filesystem::path sourceFilePath) : logger(spdlog::default_logger()), configNamespace(std::move(configNamespace)), classScope(std::move(classScope)), document(std::move(sharedDocument)), filePath(std::move(sourceFilePath))
     {
         InitializeScopedElement();
     }
 
-    Configuration::Configuration(
-        const std::string& configNamespace,
-        const std::string& classScope,
-        std::shared_ptr<pugi::xml_document> sharedDocument)
-        : logger(spdlog::default_logger())
-        , configNamespace(configNamespace)
-        , classScope(classScope)
-        , document(std::move(sharedDocument))
+    Configuration::Configuration(std::string configNamespace, std::string classScope, std::shared_ptr<pugi::xml_document> sharedDocument) : logger(spdlog::default_logger()), configNamespace(std::move(configNamespace)), classScope(std::move(classScope)), document(std::move(sharedDocument))
     {
         InitializeScopedElement();
     }
@@ -56,7 +41,7 @@ namespace RenderStar::Common::Configuration
 
     std::optional<std::string> Configuration::GetString(const std::string& path) const
     {
-        auto node = NavigateToNode(path);
+        const auto node = NavigateToNode(path);
 
         if (node.empty())
             return std::nullopt;
@@ -71,7 +56,7 @@ namespace RenderStar::Common::Configuration
 
     std::optional<int32_t> Configuration::GetInteger(const std::string& path) const
     {
-        auto node = NavigateToNode(path);
+        const auto node = NavigateToNode(path);
 
         if (node.empty())
             return std::nullopt;
@@ -81,7 +66,7 @@ namespace RenderStar::Common::Configuration
 
     std::optional<float> Configuration::GetFloat(const std::string& path) const
     {
-        auto node = NavigateToNode(path);
+        const auto node = NavigateToNode(path);
 
         if (node.empty())
             return std::nullopt;
@@ -91,7 +76,7 @@ namespace RenderStar::Common::Configuration
 
     std::optional<bool> Configuration::GetBoolean(const std::string& path) const
     {
-        auto node = NavigateToNode(path);
+        const auto node = NavigateToNode(path);
 
         if (node.empty())
             return std::nullopt;
@@ -105,7 +90,7 @@ namespace RenderStar::Common::Configuration
     std::vector<std::string> Configuration::GetStringList(const std::string& path) const
     {
         std::vector<std::string> result;
-        auto node = NavigateToNode(path);
+        const auto node = NavigateToNode(path);
 
         if (node.empty())
             return result;
@@ -116,10 +101,9 @@ namespace RenderStar::Common::Configuration
 
         while (std::getline(stream, item, ','))
         {
-            size_t start = item.find_first_not_of(" \t");
-            size_t end = item.find_last_not_of(" \t");
+            const size_t start = item.find_first_not_of(" \t");
 
-            if (start != std::string::npos && end != std::string::npos)
+            if (const size_t end = item.find_last_not_of(" \t"); start != std::string::npos && end != std::string::npos)
                 result.push_back(item.substr(start, end - start + 1));
         }
 
@@ -128,25 +112,25 @@ namespace RenderStar::Common::Configuration
 
     void Configuration::SetString(const std::string& path, const std::string& value)
     {
-        auto node = NavigateOrCreateNode(path);
+        const auto node = NavigateOrCreateNode(path);
         node.text().set(value.c_str());
     }
 
     void Configuration::SetInteger(const std::string& path, int32_t value)
     {
-        auto node = NavigateOrCreateNode(path);
+        const auto node = NavigateOrCreateNode(path);
         node.text().set(value);
     }
 
     void Configuration::SetFloat(const std::string& path, float value)
     {
-        auto node = NavigateOrCreateNode(path);
+        const auto node = NavigateOrCreateNode(path);
         node.text().set(value);
     }
 
     void Configuration::SetBoolean(const std::string& path, bool value)
     {
-        auto node = NavigateOrCreateNode(path);
+        const auto node = NavigateOrCreateNode(path);
         node.text().set(value ? "true" : "false");
     }
 
@@ -158,7 +142,8 @@ namespace RenderStar::Common::Configuration
             return;
         }
 
-        document->save_file(filePath.c_str(), "    ");
+        (void)document->save_file(filePath.c_str(), "    ");
+
         logger->debug("Configuration saved to {}", filePath.string());
     }
 
@@ -187,7 +172,7 @@ namespace RenderStar::Common::Configuration
     pugi::xml_node Configuration::NavigateToNode(const std::string& path) const
     {
         if (scopedElement.empty())
-            return pugi::xml_node();
+            return {};
 
         pugi::xml_node current = scopedElement;
         std::istringstream stream(path);
@@ -198,18 +183,18 @@ namespace RenderStar::Common::Configuration
             current = current.child(segment.c_str());
 
             if (current.empty())
-                return pugi::xml_node();
+                return {};
         }
 
         return current;
     }
 
-    pugi::xml_node Configuration::NavigateOrCreateNode(const std::string& path)
+    pugi::xml_node Configuration::NavigateOrCreateNode(const std::string& path) const
     {
         if (scopedElement.empty())
         {
             logger->error("Cannot create node, configuration not loaded");
-            return pugi::xml_node();
+            return {};
         }
 
         pugi::xml_node current = scopedElement;

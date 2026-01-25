@@ -1,6 +1,6 @@
 #include "RenderStar/Client/ClientApplication.hpp"
 
-int main(int argumentCount, char* argumentValues[])
+int main(const int argumentCount, char* argumentValues[])
 {
     RenderStar::Client::ClientApplication application;
     return application.Run(argumentCount, argumentValues);

@@ -3,7 +3,7 @@
 #include "RenderStar/Common/Event/AbstractEventBus.hpp"
 #include "RenderStar/Common/Network/PacketModule.hpp"
 #include "RenderStar/Common/Network/IPacket.hpp"
-#include "RenderStar/Common/Configuration/ConfigurationFactory.hpp"
+#include "RenderStar/Common/Configuration/ConfigurationModule.hpp"
 #include "RenderStar/Client/Event/Buses/ClientCoreEventBus.hpp"
 #include <algorithm>
 #include <spdlog/spdlog.h>
@@ -19,7 +19,7 @@ namespace RenderStar::Client::Network
 
     void ClientNetworkModule::OnInitialize(Common::Module::ModuleContext& context)
     {
-        LoadConfiguration();
+        LoadConfiguration(context);
 
         RegisterSubModule<Common::Network::PacketModule>(std::make_unique<Common::Network::PacketModule>());
 
@@ -249,21 +249,32 @@ namespace RenderStar::Client::Network
         return localServerMaxPlayers;
     }
 
-    void ClientNetworkModule::LoadConfiguration()
+    void ClientNetworkModule::LoadConfiguration(Common::Module::ModuleContext& moduleContext)
     {
-        const auto config = GetConfiguration();
+        auto configModule = moduleContext.GetModule<Common::Configuration::ConfigurationModule>();
 
-        if (const auto timeoutOpt = config->GetInteger("connection_timeout_ms"); timeoutOpt.has_value())
-            connectionTimeoutMs = timeoutOpt.value();
+        if (!configModule.has_value())
+        {
+            logger->error("ConfigurationModule not found");
+            return;
+        }
 
-        if (const auto maxPlayersOpt = config->GetInteger("local_server_max_players"); maxPlayersOpt.has_value())
-            localServerMaxPlayers = maxPlayersOpt.value();
+        auto configOpt = configModule->get().For<ClientNetworkModule>("render_star");
+
+        if (!configOpt)
+        {
+            logger->debug("No configuration found, using defaults: connection_timeout={}ms, local_max_players={}", connectionTimeoutMs, localServerMaxPlayers);
+            return;
+        }
+
+        auto& config = *configOpt;
+
+        if (auto timeoutOpt = config->GetInteger("connection_timeout_ms"))
+            connectionTimeoutMs = *timeoutOpt;
+
+        if (auto maxPlayersOpt = config->GetInteger("local_server_max_players"))
+            localServerMaxPlayers = *maxPlayersOpt;
 
         logger->debug("Loaded configuration: connection_timeout={}ms, local_max_players={}", connectionTimeoutMs, localServerMaxPlayers);
-    }
-
-    std::shared_ptr<Common::Configuration::IConfiguration> ClientNetworkModule::GetConfiguration()
-    {
-        return Common::Configuration::ConfigurationFactory::For<ClientNetworkModule>("render_star");
     }
 }

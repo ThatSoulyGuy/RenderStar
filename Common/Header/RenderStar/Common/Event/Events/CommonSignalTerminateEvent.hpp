@@ -5,7 +5,7 @@
 
 namespace RenderStar::Common::Event::Events
 {
-    struct CommonSignalTerminateEvent final : Event<CommonSignalTerminateEvent>
+    struct CommonSignalTerminateEvent final : TypedEvent<CommonSignalTerminateEvent>
     {
         std::string_view GetName() const override { return "CommonSignalTerminateEvent"; }
     };

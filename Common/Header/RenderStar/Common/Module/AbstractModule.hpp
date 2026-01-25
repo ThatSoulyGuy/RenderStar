@@ -19,10 +19,12 @@ namespace RenderStar::Common::Module
 
         void SetParent(IModule* parent) override;
 
+        [[nodiscard]]
         IModule* GetParent() const override;
 
         std::span<std::unique_ptr<IModule>> GetSubModules() override;
 
+        [[nodiscard]]
         std::type_index GetTypeIndex() const override;
 
         template<typename SubModuleType>
@@ -37,8 +39,10 @@ namespace RenderStar::Common::Module
 
         std::shared_ptr<spdlog::logger> logger;
         ModuleContext* context;
+
         IModule* parent;
         bool initialized;
+
         std::vector<std::unique_ptr<IModule>> subModules;
     };
 }

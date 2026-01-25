@@ -2,28 +2,21 @@
 
 namespace RenderStar::Common::Asset
 {
-    AssetLocation::AssetLocation(std::string_view namespaceId, std::string_view path)
-        : namespaceId(namespaceId)
-        , path(path)
-    {
-    }
+    AssetLocation::AssetLocation(const std::string_view namespaceId, const std::string_view path) : namespaceId(namespaceId), path(path) { }
 
     AssetLocation AssetLocation::Parse(std::string_view identifier)
     {
-        auto separatorPosition = identifier.find(NAMESPACE_SEPARATOR);
+        const auto separatorPosition = identifier.find(NAMESPACE_SEPARATOR);
 
         if (separatorPosition == std::string_view::npos)
-            return AssetLocation(DEFAULT_NAMESPACE, identifier);
+            return { DEFAULT_NAMESPACE, identifier };
 
-        return AssetLocation(
-            identifier.substr(0, separatorPosition),
-            identifier.substr(separatorPosition + 1)
-        );
+        return { identifier.substr(0, separatorPosition), identifier.substr(separatorPosition + 1) };
     }
 
     AssetLocation AssetLocation::Of(std::string_view namespaceId, std::string_view path)
     {
-        return AssetLocation(namespaceId, path);
+        return { namespaceId, path };
     }
 
     const std::string& AssetLocation::GetNamespace() const

@@ -22,7 +22,10 @@ namespace RenderStar::Client::Render
 
         virtual ~IRenderBackend() = default;
 
+        [[nodiscard]]
         virtual RenderBackend GetType() const = 0;
+
+        [[nodiscard]]
         virtual const BackendCapabilities& GetCapabilities() const = 0;
 
         virtual void Initialize(GLFWwindow* windowHandle, uint32_t width, uint32_t height) = 0;
@@ -35,14 +38,18 @@ namespace RenderStar::Client::Render
 
         virtual void WaitIdle() = 0;
 
-        virtual void OnResize(int32_t width, int32_t height) = 0;
+        virtual void OnResize(uint32_t width, uint32_t height) = 0;
 
-        virtual int32_t GetWidth() const = 0;
+        [[nodiscard]]
+        virtual uint32_t GetWidth() const = 0;
 
-        virtual int32_t GetHeight() const = 0;
+        [[nodiscard]]
+        virtual uint32_t GetHeight() const = 0;
 
+        [[nodiscard]]
         virtual int32_t GetCurrentFrame() const = 0;
 
+        [[nodiscard]]
         virtual int32_t GetMaxFramesInFlight() const = 0;
 
         virtual IBufferManager* GetBufferManager() = 0;
@@ -53,6 +60,7 @@ namespace RenderStar::Client::Render
         virtual void SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh) = 0;
         virtual void ExecuteDrawCommands() = 0;
 
+        [[nodiscard]]
         virtual bool IsInitialized() const = 0;
     };
 }

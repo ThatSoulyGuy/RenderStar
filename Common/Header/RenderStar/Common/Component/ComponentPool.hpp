@@ -31,11 +31,7 @@ namespace RenderStar::Common::Component
         {
         public:
 
-            Iterator(ComponentPool& pool, DenseIndex index)
-                : pool(pool)
-                , index(index)
-            {
-            }
+            Iterator(ComponentPool& pool, const DenseIndex index) : pool(pool), index(index) { }
 
             Entry operator*()
             {
@@ -59,17 +55,11 @@ namespace RenderStar::Common::Component
             DenseIndex index;
         };
 
-        ComponentPool()
-            : factory([]() { return ComponentType{}; })
-        {
-        }
+        ComponentPool() : factory([] { return ComponentType{}; }) { }
 
-        explicit ComponentPool(ComponentFactory componentFactory)
-            : factory(std::move(componentFactory))
-        {
-        }
+        explicit ComponentPool(ComponentFactory componentFactory) : factory(std::move(componentFactory)) { }
 
-        ComponentType& Add(GameObject entity)
+        ComponentType& Add(const GameObject entity)
         {
             if (Has(entity))
                 return Get(entity).value().get();
@@ -77,7 +67,7 @@ namespace RenderStar::Common::Component
             EnsureSparseCapacity(entity.id);
 
             ComponentType component = factory();
-            DenseIndex denseIndex = static_cast<DenseIndex>(denseComponents.size());
+            const auto denseIndex = static_cast<DenseIndex>(denseComponents.size());
 
             denseComponents.push_back(std::move(component));
             denseToEntity.push_back(entity);
@@ -86,14 +76,14 @@ namespace RenderStar::Common::Component
             return denseComponents.back();
         }
 
-        ComponentType& Add(GameObject entity, ComponentType component)
+        ComponentType& Add(const GameObject entity, ComponentType component)
         {
             if (Has(entity))
                 return Get(entity).value().get();
 
             EnsureSparseCapacity(entity.id);
 
-            DenseIndex denseIndex = static_cast<DenseIndex>(denseComponents.size());
+            const auto denseIndex = static_cast<DenseIndex>(denseComponents.size());
 
             denseComponents.push_back(std::move(component));
             denseToEntity.push_back(entity);
@@ -150,31 +140,32 @@ namespace RenderStar::Common::Component
             return component.value().get();
         }
 
-        bool Has(GameObject entity) const override
+        [[nodiscard]]
+        bool Has(const GameObject entity) const override
         {
-            EntityIdentifier entityId = entity.id;
+            const EntityIdentifier entityId = entity.id;
 
-            return entityId >= 0 &&
-                   entityId < static_cast<EntityIdentifier>(sparseArray.size()) &&
-                   sparseArray[entityId] != INVALID_INDEX;
+            return entityId >= 0 && entityId < static_cast<EntityIdentifier>(sparseArray.size()) && sparseArray[entityId] != INVALID_INDEX;
         }
 
-        int32_t Size() const override
+        [[nodiscard]]
+        uint32_t GetSize() const override
         {
             return static_cast<int32_t>(denseComponents.size());
         }
 
-        std::span<const GameObject> Entities() const override
+        [[nodiscard]]
+        std::span<const GameObject> GetEntities() const override
         {
             return denseToEntity;
         }
 
-        std::span<ComponentType> Components()
+        std::span<ComponentType> GetComponents()
         {
             return denseComponents;
         }
 
-        std::span<const ComponentType> Components() const
+        std::span<const ComponentType> GetComponents() const
         {
             return denseComponents;
         }
@@ -191,7 +182,7 @@ namespace RenderStar::Common::Component
 
     private:
 
-        void EnsureSparseCapacity(EntityIdentifier entityId)
+        void EnsureSparseCapacity(const EntityIdentifier entityId)
         {
             while (static_cast<EntityIdentifier>(sparseArray.size()) <= entityId)
                 sparseArray.push_back(INVALID_INDEX);
@@ -200,6 +191,7 @@ namespace RenderStar::Common::Component
         std::vector<ComponentType> denseComponents;
         std::vector<GameObject> denseToEntity;
         std::vector<DenseIndex> sparseArray;
+
         ComponentFactory factory;
     };
 }

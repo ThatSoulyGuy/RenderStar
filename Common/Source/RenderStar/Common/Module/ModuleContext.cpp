@@ -3,23 +3,19 @@
 
 namespace RenderStar::Common::Module
 {
-    ModuleContext::ModuleContext(ModuleMap& modules, EventBusMap& eventBuses)
-        : modules(modules)
-        , eventBuses(eventBuses)
-    {
-    }
+    ModuleContext::ModuleContext(ModuleMap& modules, EventBusMap& eventBuses) : modules(modules), eventBuses(eventBuses) { }
 
     int32_t ModuleContext::GetTotalModuleCount() const
     {
-        int32_t count = static_cast<int32_t>(modules.size());
+        auto count = static_cast<int32_t>(modules.size());
 
-        for (auto& [key, module] : modules)
+        for (auto& module : modules | std::views::values)
             count += CountModulesRecursive(*module);
 
         return count;
     }
 
-    int32_t ModuleContext::CountModulesRecursive(IModule& module) const
+    int32_t ModuleContext::CountModulesRecursive(IModule& module)
     {
         int32_t count = 0;
 

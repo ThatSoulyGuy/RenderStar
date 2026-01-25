@@ -14,7 +14,7 @@ namespace RenderStar::Common::Component
 {
     using ComponentSystemFunction = std::function<void(class ComponentModule&)>;
 
-    class ComponentModule : public Module::AbstractModule
+    class ComponentModule final : public Module::AbstractModule
     {
     public:
 

@@ -15,7 +15,7 @@ namespace RenderStar::Common::Component::Systems
 
         void Run(ComponentModule& ecs)
         {
-            if (!ecs.HasComponent<Transform>(GameObject{ 0 }) && ecs.GetPool<Transform>().Size() == 0)
+            if (!ecs.HasComponent<Transform>(GameObject{ 0 }) && ecs.GetPool<Transform>().GetSize() == 0)
                 return;
 
             auto& transformPool = ecs.GetPool<Transform>();
@@ -23,7 +23,7 @@ namespace RenderStar::Common::Component::Systems
             for (auto [entity, transform] : transformPool)
                 BuildLocalMatrix(transform);
 
-            if (ecs.GetPool<Hierarchy>().Size() > 0)
+            if (ecs.GetPool<Hierarchy>().GetSize() > 0)
             {
                 auto& hierarchyPool = ecs.GetPool<Hierarchy>();
 
@@ -46,7 +46,7 @@ namespace RenderStar::Common::Component::Systems
 
     private:
 
-        void BuildLocalMatrix(Transform& transform)
+        static void BuildLocalMatrix(Transform& transform)
         {
             transform.localMatrix = glm::mat4(1.0f);
             transform.localMatrix = glm::translate(transform.localMatrix, transform.position);
@@ -54,9 +54,9 @@ namespace RenderStar::Common::Component::Systems
             transform.localMatrix = glm::scale(transform.localMatrix, transform.scale);
         }
 
-        void UpdateTransformRecursive(ComponentModule& ecs, GameObject entity, const glm::mat4& parentWorldMatrix)
+        static void UpdateTransformRecursive(ComponentModule& ecs, GameObject entity, const glm::mat4& parentWorldMatrix)
         {
-            auto transformOpt = ecs.GetComponent<Transform>(entity);
+            const auto transformOpt = ecs.GetComponent<Transform>(entity);
 
             if (!transformOpt.has_value())
                 return;
@@ -65,18 +65,16 @@ namespace RenderStar::Common::Component::Systems
             transform.worldMatrix = parentWorldMatrix * transform.localMatrix;
             DecomposeWorldMatrix(transform);
 
-            auto hierarchyOpt = ecs.GetComponent<Hierarchy>(entity);
+            const auto hierarchyOpt = ecs.GetComponent<Hierarchy>(entity);
 
             if (!hierarchyOpt.has_value())
                 return;
 
-            Hierarchy& hierarchy = hierarchyOpt.value().get();
-
-            for (GameObject child : hierarchy.children)
+            for (auto& [parent, children] = hierarchyOpt.value().get(); const GameObject child : children)
                 UpdateTransformRecursive(ecs, child, transform.worldMatrix);
         }
 
-        void DecomposeWorldMatrix(Transform& transform)
+        static void DecomposeWorldMatrix(Transform& transform)
         {
             glm::mat4& m = transform.worldMatrix;
 
@@ -90,11 +88,16 @@ namespace RenderStar::Common::Component::Systems
             transform.worldScale.y = glm::length(col1);
             transform.worldScale.z = glm::length(col2);
 
-            if (transform.worldScale.x > 0.0f) col0 /= transform.worldScale.x;
-            if (transform.worldScale.y > 0.0f) col1 /= transform.worldScale.y;
-            if (transform.worldScale.z > 0.0f) col2 /= transform.worldScale.z;
+            if (transform.worldScale.x > 0.0f)
+                col0 /= transform.worldScale.x;
 
-            glm::mat3 rotationMatrix(
+            if (transform.worldScale.y > 0.0f)
+                col1 /= transform.worldScale.y;
+
+            if (transform.worldScale.z > 0.0f)
+                col2 /= transform.worldScale.z;
+
+            const glm::mat3 rotationMatrix(
                 col0.x, col1.x, col2.x,
                 col0.y, col1.y, col2.y,
                 col0.z, col1.z, col2.z

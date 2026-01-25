@@ -161,19 +161,16 @@ IRenderBackend
 ### Adding a New Backend
 
 1. Create a new backend class implementing `IRenderBackend`
-2. Add self-registration in the source file:
+2. Register the backend in `BackendFactory::Initialize()` in `BackendFactory.cpp`:
 ```cpp
-static bool registered = []() {
-    BackendFactory::RegisterBackend(
-        RenderBackend::YOUR_BACKEND,
-        []() { return std::make_unique<YourRenderBackend>(); },
-        CheckYourBackendAvailability,
-        priority);
-    return true;
-}();
+registry[RenderBackend::YOUR_BACKEND] = BackendEntry{
+    []() { return std::make_unique<YourRenderBackend>(); },
+    []() { return CheckYourBackendAvailability(); },
+    priority
+};
 ```
 
-The factory pattern ensures no modifications to existing code are required.
+The factory uses lazy initialization - backends are registered on first use.
 
 ### Vulkan Modules
 

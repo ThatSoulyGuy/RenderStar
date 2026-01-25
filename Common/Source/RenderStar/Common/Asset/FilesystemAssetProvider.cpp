@@ -2,14 +2,11 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 
 namespace RenderStar::Common::Asset
 {
-    FilesystemAssetProvider::FilesystemAssetProvider(std::string_view namespaceId, const std::filesystem::path& basePath)
-        : namespaceId(namespaceId)
-        , basePath(basePath)
-    {
-    }
+    FilesystemAssetProvider::FilesystemAssetProvider(const std::string_view namespaceId, std::filesystem::path basePath) : namespaceId(namespaceId), basePath(std::move(basePath)) { }
 
     std::string FilesystemAssetProvider::GetNamespace() const
     {
@@ -26,13 +23,13 @@ namespace RenderStar::Common::Asset
 
     std::vector<uint8_t> FilesystemAssetProvider::LoadBinary(const AssetLocation& location)
     {
-        auto fullPath = GetFullPath(location);
+        const auto fullPath = GetFullPath(location);
         std::ifstream file(fullPath, std::ios::binary | std::ios::ate);
 
         if (!file.is_open())
             throw std::runtime_error("Failed to open asset: " + location.ToString());
 
-        auto fileSize = file.tellg();
+        const auto fileSize = file.tellg();
         file.seekg(0);
 
         std::vector<uint8_t> data(fileSize);
@@ -58,7 +55,8 @@ namespace RenderStar::Common::Asset
     std::vector<AssetLocation> FilesystemAssetProvider::List(std::string_view pathPrefix) const
     {
         std::vector<AssetLocation> results;
-        auto searchPath = basePath / pathPrefix;
+
+        const auto searchPath = basePath / pathPrefix;
 
         if (!std::filesystem::exists(searchPath))
             return results;
@@ -73,7 +71,7 @@ namespace RenderStar::Common::Asset
         return basePath / location.GetPath();
     }
 
-    void FilesystemAssetProvider::CollectAssets(const std::filesystem::path& directory, std::string_view pathPrefix, std::vector<AssetLocation>& results) const
+    void FilesystemAssetProvider::CollectAssets(const std::filesystem::path& directory, const std::string_view pathPrefix, std::vector<AssetLocation>& results) const
     {
         if (!std::filesystem::is_directory(directory))
             return;

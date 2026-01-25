@@ -14,7 +14,7 @@ namespace RenderStar::Common::Network
     using PacketFactory = std::function<std::unique_ptr<IPacket>()>;
     using PacketHandler = std::function<void(IPacket&)>;
 
-    class PacketModule : public Module::AbstractModule
+    class PacketModule final : public Module::AbstractModule
     {
     public:
 

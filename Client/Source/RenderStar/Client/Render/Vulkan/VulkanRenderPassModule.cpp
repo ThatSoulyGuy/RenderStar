@@ -3,19 +3,14 @@
 
 namespace RenderStar::Client::Render::Vulkan
 {
-    VulkanRenderPassModule::VulkanRenderPassModule()
-        : logger(spdlog::default_logger())
-        , renderPass(VK_NULL_HANDLE)
-    {
-    }
+    VulkanRenderPassModule::VulkanRenderPassModule() : logger(spdlog::default_logger()), renderPass(VK_NULL_HANDLE) { }
 
-    VulkanRenderPassModule::~VulkanRenderPassModule()
-    {
-    }
+    VulkanRenderPassModule::~VulkanRenderPassModule() = default;
 
-    void VulkanRenderPassModule::Create(VkDevice device, VkFormat imageFormat, VkFormat depthFormat)
+    void VulkanRenderPassModule::Create(const VkDevice device, const VkFormat imageFormat, const VkFormat depthFormat)
     {
         VkAttachmentDescription colorAttachment{};
+
         colorAttachment.format = imageFormat;
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -26,6 +21,7 @@ namespace RenderStar::Client::Render::Vulkan
         colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         VkAttachmentDescription depthAttachment{};
+
         depthAttachment.format = depthFormat;
         depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -36,20 +32,24 @@ namespace RenderStar::Client::Render::Vulkan
         depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkAttachmentReference colorAttachmentRef{};
+
         colorAttachmentRef.attachment = 0;
         colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         VkAttachmentReference depthAttachmentRef{};
+
         depthAttachmentRef.attachment = 1;
         depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkSubpassDescription subpass{};
+
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &colorAttachmentRef;
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
         VkSubpassDependency dependency{};
+
         dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass = 0;
         dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
@@ -57,7 +57,7 @@ namespace RenderStar::Client::Render::Vulkan
         dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
         dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-        std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
+        const std::array attachments = { colorAttachment, depthAttachment };
 
         VkRenderPassCreateInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -68,9 +68,7 @@ namespace RenderStar::Client::Render::Vulkan
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
 
-        VkResult result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
-
-        if (result != VK_SUCCESS)
+        if (const VkResult result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass); result != VK_SUCCESS)
         {
             logger->error("Failed to create render pass: {}", static_cast<int>(result));
             return;
@@ -79,11 +77,12 @@ namespace RenderStar::Client::Render::Vulkan
         logger->info("Render pass created with depth attachment");
     }
 
-    void VulkanRenderPassModule::Destroy(VkDevice device)
+    void VulkanRenderPassModule::Destroy(const VkDevice device)
     {
         if (renderPass != VK_NULL_HANDLE)
         {
             vkDestroyRenderPass(device, renderPass, nullptr);
+
             renderPass = VK_NULL_HANDLE;
             logger->info("Render pass destroyed");
         }

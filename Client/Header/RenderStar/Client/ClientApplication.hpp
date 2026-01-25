@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <filesystem>
 
 namespace RenderStar::Common::Module
 {
@@ -25,6 +26,7 @@ namespace RenderStar::Client
 
         void Shutdown();
 
+        std::filesystem::path resourceBasePath;
         std::unique_ptr<Common::Module::ModuleManager> moduleManager;
     };
 }

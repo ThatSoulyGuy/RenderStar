@@ -30,11 +30,12 @@ namespace RenderStar::Common::Module
         template<typename EventBusType>
         std::optional<std::reference_wrapper<EventBusType>> GetEventBus();
 
+        [[nodiscard]]
         int32_t GetTotalModuleCount() const;
 
     private:
 
-        int32_t CountModulesRecursive(IModule& module) const;
+        static int32_t CountModulesRecursive(IModule& module);
 
         ModuleMap& modules;
         EventBusMap& eventBuses;

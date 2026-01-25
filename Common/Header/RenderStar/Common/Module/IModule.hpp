@@ -18,10 +18,12 @@ namespace RenderStar::Common::Module
 
         virtual void SetParent(IModule* parent) = 0;
 
+        [[nodiscard]]
         virtual IModule* GetParent() const = 0;
 
         virtual std::span<std::unique_ptr<IModule>> GetSubModules() = 0;
 
+        [[nodiscard]]
         virtual std::type_index GetTypeIndex() const = 0;
     };
 }

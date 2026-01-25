@@ -6,7 +6,7 @@
 
 using namespace RenderStar::Common::Event;
 
-struct TestEvent : public Event<TestEvent>
+struct TestEvent : public TypedEvent<TestEvent>
 {
     int32_t value;
 
@@ -15,7 +15,7 @@ struct TestEvent : public Event<TestEvent>
     std::string_view GetName() const override { return "TestEvent"; }
 };
 
-struct AnotherTestEvent : public Event<AnotherTestEvent>
+struct AnotherTestEvent : public TypedEvent<AnotherTestEvent>
 {
     std::string message;
 

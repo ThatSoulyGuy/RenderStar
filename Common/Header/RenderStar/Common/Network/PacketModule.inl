@@ -2,20 +2,20 @@
 
 namespace RenderStar::Common::Network
 {
-    template<typename PacketType>
+    template <typename PacketType>
     void PacketModule::RegisterPacket(PacketIdentifier packetId)
     {
-        auto typeIndex = std::type_index(typeid(PacketType));
+        const auto typeIndex = std::type_index(typeid(PacketType));
 
         factories[packetId] = []() { return std::make_unique<PacketType>(); };
-        idToType[packetId] = typeIndex;
-        typeToId[typeIndex] = packetId;
+        idToType.insert_or_assign(packetId, typeIndex);
+        typeToId.insert_or_assign(typeIndex, packetId);
     }
 
-    template<typename PacketType>
+    template <typename PacketType>
     void PacketModule::RegisterHandler(std::function<void(PacketType&)> handler)
     {
-        auto typeIndex = std::type_index(typeid(PacketType));
+        const auto typeIndex = std::type_index(typeid(PacketType));
 
         handlers[typeIndex] = [handler](IPacket& packet)
         {
@@ -23,7 +23,7 @@ namespace RenderStar::Common::Network
         };
     }
 
-    template<typename PacketType>
+    template <typename PacketType>
     std::unique_ptr<PacketType> PacketModule::CreatePacket()
     {
         return std::make_unique<PacketType>();

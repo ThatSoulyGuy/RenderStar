@@ -1,8 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <memory>
-#include <functional>
 
 namespace RenderStar::Common::Module
 {
@@ -26,8 +24,13 @@ namespace RenderStar::Common::Component
 {
     struct GameObject;
     class IComponentPool;
-    template<typename ComponentType> class ComponentPool;
-    template<typename... ComponentTypes> class ComponentView;
+
+    template <typename ComponentType>
+    class ComponentPool;
+
+    template <typename... ComponentTypes>
+    class ComponentView;
+
     class ComponentModule;
 }
 

@@ -10,6 +10,7 @@ namespace RenderStar::Common::Network
 {
     class PacketBuffer
     {
+
     public:
 
         static constexpr size_t DEFAULT_CAPACITY = 256;
@@ -59,10 +60,13 @@ namespace RenderStar::Common::Network
 
         std::vector<std::byte> ReadBytes(size_t length);
 
+        [[nodiscard]]
         std::span<const std::byte> ToSpan() const;
 
+        [[nodiscard]]
         size_t ReadableBytes() const;
 
+        [[nodiscard]]
         size_t WritableBytes() const;
 
         void Reset();
@@ -74,7 +78,8 @@ namespace RenderStar::Common::Network
         void EnsureCapacity(size_t additionalBytes);
 
         std::vector<std::byte> buffer;
-        size_t readPosition;
-        size_t writePosition;
+
+        size_t readPosition{};
+        size_t writePosition{};
     };
 }

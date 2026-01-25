@@ -1,11 +1,8 @@
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderManagerAdapter.hpp"
 
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderProgram.hpp"
-#include "RenderStar/Common/Asset/AssetLocation.hpp"
-#include "RenderStar/Common/Asset/AssetModule.hpp"
-
-#include <fstream>
-#include <sstream>
+#include "RenderStar/Common/Asset/ITextAsset.hpp"
+#include "RenderStar/Common/Asset/IBinaryAsset.hpp"
 
 namespace RenderStar::Client::Render::OpenGL
 {
@@ -38,44 +35,30 @@ namespace RenderStar::Client::Render::OpenGL
         return nullptr;
     }
 
-    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::LoadFromFile(const Common::Asset::AssetModule& assetModule, const Common::Asset::AssetLocation& vertexPath, const Common::Asset::AssetLocation& fragmentPath)
+    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateFromTextAssets(const Common::Asset::ITextAsset& vertexAsset, const Common::Asset::ITextAsset& fragmentAsset)
     {
-        auto readFile = [](const std::string& path) -> std::string {
-            std::ifstream file(path);
-            if (!file.is_open())
-                return "";
-
-            std::stringstream buffer;
-            buffer << file.rdbuf();
-            return buffer.str();
-        };
-
-        std::string vertexSource = readFile(vertexPath.ToFilesystemPath(assetModule.GetBasePath()).string());
-        std::string fragmentSource = readFile(fragmentPath.ToFilesystemPath(assetModule.GetBasePath()).string());
-
-        if (vertexSource.empty())
-        {
-            logger->error("Failed to read vertex shader from: {}", vertexPath.ToFilesystemPath(assetModule.GetBasePath()).string());
-            return nullptr;
-        }
-
-        if (fragmentSource.empty())
-        {
-            logger->error("Failed to read fragment shader from: {}", fragmentPath.ToFilesystemPath(assetModule.GetBasePath()).string());
-            return nullptr;
-        }
-
         ShaderSource source;
-
-        source.vertexSource = std::move(vertexSource);
-        source.fragmentSource = std::move(fragmentSource);
+        source.vertexSource = vertexAsset.GetContent();
+        source.fragmentSource = fragmentAsset.GetContent();
 
         return CreateFromSource(source);
     }
 
-    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::LoadComputeFromFile(const std::string& computePath)
+    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateFromBinaryAssets(const Common::Asset::IBinaryAsset& vertexAsset, const Common::Asset::IBinaryAsset& fragmentAsset)
+    {
+        logger->warn("Binary shader loading not supported in OpenGL adapter - use text assets");
+        return nullptr;
+    }
+
+    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateComputeFromTextAsset(const Common::Asset::ITextAsset& computeAsset)
     {
         logger->warn("Compute shader not yet implemented in OpenGL adapter");
+        return nullptr;
+    }
+
+    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateComputeFromBinaryAsset(const Common::Asset::IBinaryAsset& computeAsset)
+    {
+        logger->warn("Compute shader from binary not supported in OpenGL adapter");
         return nullptr;
     }
 

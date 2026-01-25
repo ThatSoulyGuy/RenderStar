@@ -4,7 +4,7 @@
 #include "RenderStar/Common/Event/EventResult.hpp"
 #include "RenderStar/Common/Network/PacketModule.hpp"
 #include "RenderStar/Common/Network/IPacket.hpp"
-#include "RenderStar/Common/Configuration/ConfigurationFactory.hpp"
+#include "RenderStar/Common/Configuration/ConfigurationModule.hpp"
 #include "RenderStar/Server/Event/Buses/ServerCoreEventBus.hpp"
 #include "RenderStar/Server/Event/Events/ServerPreinitializationEvent.hpp"
 #include "RenderStar/Server/Event/Events/ClientJoinedEvent.hpp"
@@ -28,22 +28,27 @@ namespace RenderStar::Server::Network
         StopServer();
     }
 
-    std::unique_ptr<ServerNetworkModule> ServerNetworkModule::Dedicated()
+    std::unique_ptr<ServerNetworkModule> ServerNetworkModule::Dedicated(Common::Configuration::ConfigurationModule& configModule)
     {
-        auto config = GetConfiguration();
-
         int32_t serverPort = DEFAULT_PORT;
         int32_t maximumPlayers = DEFAULT_MAX_PLAYERS;
 
-        auto portOpt = config->GetInteger("port");
-        if (portOpt.has_value())
-            serverPort = portOpt.value();
+        if (auto configOpt = configModule.For<ServerNetworkModule>("render_star", "server_settings.xml"))
+        {
+            auto& config = *configOpt;
 
-        auto maxPlayersOpt = config->GetInteger("max_players");
-        if (maxPlayersOpt.has_value())
-            maximumPlayers = maxPlayersOpt.value();
+            if (auto portOpt = config->GetInteger("port"))
+                serverPort = *portOpt;
 
-        spdlog::debug("Loaded server configuration: port={}, max_players={}", serverPort, maximumPlayers);
+            if (auto maxPlayersOpt = config->GetInteger("max_players"))
+                maximumPlayers = *maxPlayersOpt;
+
+            spdlog::debug("Loaded server configuration: port={}, max_players={}", serverPort, maximumPlayers);
+        }
+        else
+        {
+            spdlog::info("Using default server configuration: port={}, max_players={}", serverPort, maximumPlayers);
+        }
 
         return std::make_unique<ServerNetworkModule>(ServerMode::DEDICATED, serverPort, maximumPlayers);
     }
@@ -53,7 +58,7 @@ namespace RenderStar::Server::Network
         return std::make_unique<ServerNetworkModule>(ServerMode::LOCAL, localPort, localMaxPlayers);
     }
 
-    std::unique_ptr<ServerNetworkModule> ServerNetworkModule::FromArguments(int argc, char** argv)
+    std::unique_ptr<ServerNetworkModule> ServerNetworkModule::FromArguments(int argc, char** argv, Common::Configuration::ConfigurationModule& configModule)
     {
         ServerMode serverMode = ServerMode::DEDICATED;
         int32_t serverPort = -1;
@@ -89,7 +94,7 @@ namespace RenderStar::Server::Network
             return Local(serverPort, maximumPlayers);
         }
 
-        return Dedicated();
+        return Dedicated(configModule);
     }
 
     void ServerNetworkModule::OnInitialize(Common::Module::ModuleContext& context)
@@ -361,8 +366,4 @@ namespace RenderStar::Server::Network
         return static_cast<int32_t>(connections.size()) >= maxPlayers;
     }
 
-    std::shared_ptr<Common::Configuration::IConfiguration> ServerNetworkModule::GetConfiguration()
-    {
-        return Common::Configuration::ConfigurationFactory::For<ServerNetworkModule>("render_star", "server_settings.xml");
-    }
 }

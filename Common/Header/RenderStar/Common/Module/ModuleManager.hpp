@@ -41,11 +41,7 @@ namespace RenderStar::Common::Module
             std::vector<std::type_index> moduleOrder;
         };
 
-        ModuleManager(
-            std::unordered_map<std::type_index, std::unique_ptr<IModule>> modules,
-            std::unordered_map<std::type_index, std::unique_ptr<Event::IEventBus>> eventBuses,
-            std::vector<std::type_index> moduleOrder
-        );
+        ModuleManager(std::unordered_map<std::type_index, std::unique_ptr<IModule>> modules, std::unordered_map<std::type_index, std::unique_ptr<Event::IEventBus>> eventBuses, std::vector<std::type_index> moduleOrder);
 
         void Start();
 
@@ -55,7 +51,7 @@ namespace RenderStar::Common::Module
 
         bool IsRunning() const;
 
-        ModuleContext& GetContext();
+        ModuleContext& GetContext() const;
 
     private:
 

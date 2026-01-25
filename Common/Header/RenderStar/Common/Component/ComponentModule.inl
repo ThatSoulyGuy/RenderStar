@@ -17,20 +17,19 @@ namespace RenderStar::Common::Component
     }
 
     template<typename ComponentType>
-    void ComponentModule::RemoveComponent(GameObject entity)
+    void ComponentModule::RemoveComponent(const GameObject entity)
     {
-        auto typeIndex = std::type_index(typeid(ComponentType));
-        auto iterator = pools.find(typeIndex);
+        const auto typeIndex = std::type_index(typeid(ComponentType));
 
-        if (iterator != pools.end())
+        if (const auto iterator = pools.find(typeIndex); iterator != pools.end())
             iterator->second->Remove(entity);
     }
 
     template<typename ComponentType>
     std::optional<std::reference_wrapper<ComponentType>> ComponentModule::GetComponent(GameObject entity)
     {
-        auto typeIndex = std::type_index(typeid(ComponentType));
-        auto iterator = pools.find(typeIndex);
+        const auto typeIndex = std::type_index(typeid(ComponentType));
+        const auto iterator = pools.find(typeIndex);
 
         if (iterator == pools.end())
             return std::nullopt;
@@ -39,11 +38,11 @@ namespace RenderStar::Common::Component
         return pool.Get(entity);
     }
 
-    template<typename ComponentType>
+    template <typename ComponentType>
     bool ComponentModule::HasComponent(GameObject entity) const
     {
-        auto typeIndex = std::type_index(typeid(ComponentType));
-        auto iterator = pools.find(typeIndex);
+        const auto typeIndex = std::type_index(typeid(ComponentType));
+        const auto iterator = pools.find(typeIndex);
 
         if (iterator == pools.end())
             return false;
@@ -55,16 +54,16 @@ namespace RenderStar::Common::Component
     ComponentPool<ComponentType>& ComponentModule::GetPool()
     {
         EnsurePoolExists<ComponentType>();
-        auto typeIndex = std::type_index(typeid(ComponentType));
+
+        const auto typeIndex = std::type_index(typeid(ComponentType));
+
         return static_cast<ComponentPool<ComponentType>&>(*pools[typeIndex]);
     }
 
     template<typename ComponentType>
     void ComponentModule::EnsurePoolExists()
     {
-        auto typeIndex = std::type_index(typeid(ComponentType));
-
-        if (!pools.contains(typeIndex))
+        if (const auto typeIndex = std::type_index(typeid(ComponentType)); !pools.contains(typeIndex))
             pools[typeIndex] = std::make_unique<ComponentPool<ComponentType>>();
     }
 }

@@ -17,7 +17,7 @@ namespace RenderStar::Client::Render
         class Mesh;
     }
 
-    class RendererModule : public Common::Module::AbstractModule
+    class RendererModule final : public Common::Module::AbstractModule
     {
     public:
 
@@ -27,8 +27,10 @@ namespace RenderStar::Client::Render
 
         void RenderFrame();
 
+        [[nodiscard]]
         IRenderBackend* GetBackend() const;
 
+        [[nodiscard]]
         RenderBackend GetBackendType() const;
 
     protected:

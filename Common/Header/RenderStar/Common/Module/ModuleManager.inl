@@ -2,6 +2,7 @@
 
 #include "RenderStar/Common/Module/IModule.hpp"
 #include "RenderStar/Common/Event/IEventBus.hpp"
+#include "RenderStar/Common/Utility/TypeName.hpp"
 
 namespace RenderStar::Common::Module
 {
@@ -12,7 +13,7 @@ namespace RenderStar::Common::Module
 
         if (modules.contains(typeIndex))
         {
-            spdlog::error("Module map already contains '{}'!", typeid(ModuleType).name());
+            spdlog::error("Module map already contains '{}'!", Utility::TypeName::Get<ModuleType>());
             return *this;
         }
 
@@ -28,7 +29,7 @@ namespace RenderStar::Common::Module
 
         if (eventBuses.contains(typeIndex))
         {
-            spdlog::error("Event bus map already contains '{}'!", typeid(EventBusType).name());
+            spdlog::error("Event bus map already contains '{}'!", Utility::TypeName::Get<EventBusType>());
             return *this;
         }
 

@@ -60,13 +60,13 @@ namespace RenderStar::Client::Render::Vulkan
 
         void WaitIdle() override;
 
-        void OnResize(int32_t width, int32_t height) override;
+        void OnResize(uint32_t width, uint32_t height) override;
 
         [[nodiscard]]
-        auto GetWidth() const -> int32_t override;
+        uint32_t GetWidth() const override;
 
         [[nodiscard]]
-        int32_t GetHeight() const override;
+        uint32_t GetHeight() const override;
 
         [[nodiscard]]
         int32_t GetCurrentFrame() const override;

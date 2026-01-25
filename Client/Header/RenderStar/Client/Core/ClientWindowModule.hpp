@@ -1,9 +1,7 @@
 #pragma once
 
 #include "RenderStar/Common/Module/AbstractModule.hpp"
-#include "RenderStar/Common/Configuration/IConfiguration.hpp"
 #include "RenderStar/Client/Render/Backend/RenderBackend.hpp"
-#include <memory>
 #include <string>
 
 struct GLFWwindow;
@@ -46,9 +44,7 @@ namespace RenderStar::Client::Core
 
         void DestroyWindow();
 
-        void LoadConfiguration();
-
-        static std::shared_ptr<Common::Configuration::IConfiguration> GetConfiguration();
+        void LoadConfiguration(Common::Module::ModuleContext& context);
 
         GLFWwindow* window;
         std::string title;

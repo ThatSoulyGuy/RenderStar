@@ -14,8 +14,9 @@
 #include "RenderStar/Client/Render/Resource/Mesh.hpp"
 #include "RenderStar/Client/Render/Resource/StandardUniforms.hpp"
 #include "RenderStar/Client/Render/Resource/Vertex.hpp"
+#include "RenderStar/Client/Render/Shader/GlslTransformer.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
-#include "RenderStar/Common/Configuration/ConfigurationFactory.hpp"
+#include "RenderStar/Common/Asset/ITextAsset.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -25,48 +26,6 @@
 
 namespace RenderStar::Client::Render
 {
-    namespace
-    {
-        const char* TEST_VERTEX_SHADER = R"(
-#version 460 core
-layout(location = 0) in vec3 aPosition;
-layout(location = 1) in vec3 aColor;
-
-layout(std140, binding = 0) uniform StandardUniforms
-{
-    mat4 model;
-    mat4 viewProjection;
-    vec4 colorTint;
-};
-
-out vec3 vColor;
-
-void main()
-{
-    gl_Position = viewProjection * model * vec4(aPosition, 1.0);
-    vColor = aColor;
-}
-)";
-
-        const char* TEST_FRAGMENT_SHADER = R"(
-#version 460 core
-in vec3 vColor;
-out vec4 fragColor;
-
-layout(std140, binding = 0) uniform StandardUniforms
-{
-    mat4 model;
-    mat4 viewProjection;
-    vec4 colorTint;
-};
-
-void main()
-{
-    vec3 finalColor = mix(vColor, colorTint.rgb, colorTint.a);
-    fragColor = vec4(finalColor, 1.0);
-}
-)";
-    }
 
     RendererModule::RendererModule() : backend(nullptr), backendType(RenderBackend::OPENGL), testShader(nullptr), testMesh(nullptr), uniformBinding(nullptr), uniformBuffer(nullptr), testGeometryInitialized(false), rotationAngle(0.0f), aspectRatio(16.0f / 9.0f) { }
 
@@ -107,9 +66,9 @@ void main()
         return backendType;
     }
 
-    void RendererModule::OnInitialize(Common::Module::ModuleContext& moduleContext)
+    void RendererModule::OnInitialize(Common::Module::ModuleContext& context)
     {
-        auto windowModule = moduleContext.GetModule<Core::ClientWindowModule>();
+        const auto windowModule = context.GetModule<Core::ClientWindowModule>();
 
         if (!windowModule.has_value())
         {
@@ -128,7 +87,7 @@ void main()
 
         backend->Initialize(windowModule->get().GetWindowHandle(), windowModule->get().GetFramebufferWidth(), windowModule->get().GetFramebufferHeight());
 
-        InitializeTestGeometry(moduleContext);
+        InitializeTestGeometry(context);
 
         logger->info("RendererModule initialized with {} backend", backendType == RenderBackend::OPENGL ? "OpenGL" : "Vulkan");
     }
@@ -145,11 +104,29 @@ void main()
             return;
         }
 
+        const auto assetModule = context.GetModule<Common::Asset::AssetModule>();
+
+        if (!assetModule.has_value())
+        {
+            logger->error("AssetModule not found");
+            return;
+        }
+
+        const auto vertexAsset = assetModule->get().LoadText(Common::Asset::AssetLocation::Parse("renderstar:shader/test.vert"));
+        const auto fragmentAsset = assetModule->get().LoadText(Common::Asset::AssetLocation::Parse("renderstar:shader/test.frag"));
+
+        if (!vertexAsset.IsValid() || !fragmentAsset.IsValid())
+        {
+            logger->error("Failed to load shader assets");
+            return;
+        }
+
         if (backendType == RenderBackend::OPENGL)
         {
             ShaderSource source;
-            source.vertexSource = TEST_VERTEX_SHADER;
-            source.fragmentSource = TEST_FRAGMENT_SHADER;
+
+            source.vertexSource = Shader::GlslTransformer::Transform450To410(vertexAsset.Get()->GetContent(), Shader::ShaderType::VERTEX);
+            source.fragmentSource = Shader::GlslTransformer::Transform450To410(fragmentAsset.Get()->GetContent(), Shader::ShaderType::FRAGMENT);
 
             testShader = shaderManager->CreateFromSource(source);
 
@@ -161,18 +138,7 @@ void main()
         }
         else
         {
-            auto assetModule = context.GetModule<Common::Asset::AssetModule>();
-
-            if (!assetModule.has_value())
-            {
-                logger->error("AssetModule not found");
-                return;
-            }
-
-            testShader = shaderManager->LoadFromFile(
-                assetModule.value().get(),
-                Common::Asset::AssetLocation::Parse("renderstar:shader/test.vert"),
-                Common::Asset::AssetLocation::Parse("renderstar:shader/test.frag"));
+            testShader = shaderManager->CreateFromTextAssets(*vertexAsset.Get(), *fragmentAsset.Get());
 
             if (!testShader || !testShader->IsValid())
             {
@@ -181,7 +147,8 @@ void main()
             }
         }
 
-        std::vector<Vertex> vertices = {
+        const std::vector vertices =
+        {
             Vertex(-0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f),
             Vertex( 0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f),
             Vertex( 0.5f,  0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f),
@@ -192,7 +159,8 @@ void main()
             Vertex(-0.5f,  0.5f,  0.5f, 0.5f, 0.5f, 0.5f, 0.0f, 1.0f)
         };
 
-        std::vector<uint32_t> indices = {
+        const std::vector<uint32_t> indices =
+        {
             0, 2, 1, 0, 3, 2,
             4, 5, 6, 4, 6, 7,
             0, 7, 4, 0, 3, 7,
@@ -220,27 +188,29 @@ void main()
     void RendererModule::RenderTestGeometry()
     {
         rotationAngle += 0.5f;
+
         if (rotationAngle >= 360.0f)
             rotationAngle -= 360.0f;
 
         Components::Camera camera = Components::Camera::CreatePerspective(60.0f, aspectRatio, 0.1f, 100.0f);
 
-        glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
-        glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-        glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+        constexpr auto cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
+        constexpr auto cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+        constexpr auto cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
         camera.viewMatrix = glm::lookAt(cameraPosition, cameraTarget, cameraUp);
 
-        glm::mat4 model = glm::mat4(1.0f);
+        auto model = glm::mat4(1.0f);
         model = glm::rotate(model, glm::radians(rotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::rotate(model, glm::radians(rotationAngle * 0.5f), glm::vec3(1.0f, 0.0f, 0.0f));
 
-        glm::mat4 viewProjection = camera.GetViewProjectionMatrix();
+        const glm::mat4 viewProjection = camera.GetViewProjectionMatrix();
 
-        StandardUniforms uniformData(model, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
+        const StandardUniforms uniformData(model, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
 
         uniformBuffer->SetSubData(&uniformData, StandardUniforms::Size(), 0);
 
-        int32_t frameIndex = backend->GetCurrentFrame();
+        const int32_t frameIndex = backend->GetCurrentFrame();
+
         backend->SubmitDrawCommand(testShader.get(), uniformBinding.get(), frameIndex, testMesh->GetUnderlyingMesh());
         backend->ExecuteDrawCommands();
     }

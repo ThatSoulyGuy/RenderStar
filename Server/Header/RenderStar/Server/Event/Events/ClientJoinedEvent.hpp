@@ -5,7 +5,7 @@
 
 namespace RenderStar::Server::Event::Events
 {
-    struct ClientJoinedEvent : public Common::Event::Event<ClientJoinedEvent>
+    struct ClientJoinedEvent : public Common::Event::TypedEvent<ClientJoinedEvent>
     {
         std::string remoteAddress;
 

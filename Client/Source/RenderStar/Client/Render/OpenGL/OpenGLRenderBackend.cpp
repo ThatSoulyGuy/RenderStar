@@ -8,29 +8,10 @@
 #include "RenderStar/Client/Render/Resource/IShaderProgram.hpp"
 #include "RenderStar/Client/Render/Resource/IUniformBindingHandle.hpp"
 #include "RenderStar/Client/Render/Resource/IMesh.hpp"
-#include "RenderStar/Client/Render/Backend/BackendFactory.hpp"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <glad/gl.h>
-
-namespace
-{
-    bool CheckOpenGLAvailability()
-    {
-        return true;
-    }
-
-    static bool registered = []()
-    {
-        RenderStar::Client::Render::BackendFactory::RegisterBackend(
-            RenderStar::Client::Render::RenderBackend::OPENGL,
-            []() { return std::make_unique<RenderStar::Client::Render::OpenGL::OpenGLRenderBackend>(); },
-            CheckOpenGLAvailability,
-            0);
-        return true;
-    }();
-}
 
 namespace RenderStar::Client::Render::OpenGL
 {
@@ -76,6 +57,7 @@ namespace RenderStar::Client::Render::OpenGL
 
         int major = GLAD_VERSION_MAJOR(version);
         int minor = GLAD_VERSION_MINOR(version);
+
         logger->info("OpenGL {}.{} loaded via GLAD", major, minor);
 
         if (major < 4 || (major == 4 && minor < 6))
@@ -84,13 +66,14 @@ namespace RenderStar::Client::Render::OpenGL
         const char* vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
         const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
         const char* glVersion = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+
         logger->info("OpenGL Vendor: {}", vendor ? vendor : "unknown");
         logger->info("OpenGL Renderer: {}", renderer ? renderer : "unknown");
         logger->info("OpenGL Version: {}", glVersion ? glVersion : "unknown");
 
         glfwSwapInterval(1);
 
-        glViewport(0, 0, width, height);
+        glViewport(0, 0, static_cast<int>(width), static_cast<int>(height));
         glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
         glClearColor(0.39f, 0.58f, 0.93f, 1.0f);
         glEnable(GL_DEPTH_TEST);
@@ -122,7 +105,7 @@ namespace RenderStar::Client::Render::OpenGL
     void OpenGLRenderBackend::BeginFrame()
     {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glViewport(0, 0, width, height);
+        glViewport(0, 0, static_cast<int>(width), static_cast<int>(height));
         glClearColor(0.39f, 0.58f, 0.93f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
@@ -138,19 +121,20 @@ namespace RenderStar::Client::Render::OpenGL
         glFinish();
     }
 
-    void OpenGLRenderBackend::OnResize(int32_t newWidth, int32_t newHeight)
+    void OpenGLRenderBackend::OnResize(const uint32_t width, const uint32_t height)
     {
-        width = newWidth;
-        height = newHeight;
-        glViewport(0, 0, width, height);
+        this->width = width;
+        this->height = height;
+
+        glViewport(0, 0, static_cast<int>(this->width), static_cast<int>(this->height));
     }
 
-    int32_t OpenGLRenderBackend::GetWidth() const
+    uint32_t OpenGLRenderBackend::GetWidth() const
     {
         return width;
     }
 
-    int32_t OpenGLRenderBackend::GetHeight() const
+    uint32_t OpenGLRenderBackend::GetHeight() const
     {
         return height;
     }
@@ -190,23 +174,23 @@ namespace RenderStar::Client::Render::OpenGL
         return commandQueue.get();
     }
 
-    void OpenGLRenderBackend::SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh)
+    void OpenGLRenderBackend::SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, const int32_t frameIndex, IMesh* mesh)
     {
         drawCommands.push_back(OpenGLDrawCommand{ shader, uniformBinding, frameIndex, mesh });
     }
 
     void OpenGLRenderBackend::ExecuteDrawCommands()
     {
-        for (const auto& command : drawCommands)
+        for (const auto& [shader, uniformBinding, frameIndex, mesh] : drawCommands)
         {
-            auto* glShader = static_cast<OpenGLShaderProgram*>(command.shader);
-            auto* glMesh = static_cast<OpenGLMeshAdapter*>(command.mesh);
+            auto* glShader = dynamic_cast<OpenGLShaderProgram*>(shader);
+            auto* glMesh = dynamic_cast<OpenGLMeshAdapter*>(mesh);
 
             if (glShader)
                 glShader->Bind();
 
-            if (command.uniformBinding)
-                command.uniformBinding->Bind(command.frameIndex);
+            if (uniformBinding)
+                uniformBinding->Bind(frameIndex);
 
             if (glMesh && glMesh->IsValid())
             {

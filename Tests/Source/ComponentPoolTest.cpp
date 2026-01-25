@@ -129,14 +129,14 @@ TEST_F(ComponentPoolTest, IterateOverComponents)
 
 TEST_F(ComponentPoolTest, SizeReturnsCorrectValue)
 {
-    EXPECT_EQ(pool.Size(), 0);
+    EXPECT_EQ(pool.GetSize(), 0);
 
     pool.Add(GameObject{0}, TestComponent{10, 1.0f});
-    EXPECT_EQ(pool.Size(), 1);
+    EXPECT_EQ(pool.GetSize(), 1);
 
     pool.Add(GameObject{1}, TestComponent{20, 2.0f});
-    EXPECT_EQ(pool.Size(), 2);
+    EXPECT_EQ(pool.GetSize(), 2);
 
     pool.Remove(GameObject{0});
-    EXPECT_EQ(pool.Size(), 1);
+    EXPECT_EQ(pool.GetSize(), 1);
 }

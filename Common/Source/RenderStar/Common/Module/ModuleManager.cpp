@@ -1,39 +1,24 @@
 #include "RenderStar/Common/Module/ModuleManager.hpp"
-#include "RenderStar/Common/Module/IModule.hpp"
 #include "RenderStar/Common/Event/IEventBus.hpp"
+#include "RenderStar/Common/Module/IModule.hpp"
+#include <memory>
+#include <ranges>
 
 namespace RenderStar::Common::Module
 {
     std::unique_ptr<ModuleManager> ModuleManager::Builder::Build()
     {
-        return std::unique_ptr<ModuleManager>(new ModuleManager(
-            std::move(modules),
-            std::move(eventBuses),
-            std::move(moduleOrder)
-        ));
+        return std::make_unique<ModuleManager>(std::move(modules),std::move(eventBuses),std::move(moduleOrder));
     }
 
-    ModuleManager::ModuleManager(
-        std::unordered_map<std::type_index, std::unique_ptr<IModule>> modules,
-        std::unordered_map<std::type_index, std::unique_ptr<Event::IEventBus>> eventBuses,
-        std::vector<std::type_index> moduleOrder
-    )
-        : logger(spdlog::default_logger())
-        , modules(std::move(modules))
-        , eventBuses(std::move(eventBuses))
-        , moduleOrder(std::move(moduleOrder))
-        , context(nullptr)
-        , isRunning(false)
-        , shutdownLatch(1)
+    ModuleManager::ModuleManager(std::unordered_map<std::type_index, std::unique_ptr<IModule>> modules,std::unordered_map<std::type_index, std::unique_ptr<Event::IEventBus>> eventBuses, std::vector<std::type_index> moduleOrder) : logger(spdlog::default_logger()), modules(std::move(modules)), eventBuses(std::move(eventBuses)), moduleOrder(std::move(moduleOrder)), context(nullptr), isRunning(false), shutdownLatch(1)
     {
         context = std::make_unique<ModuleContext>(this->modules, this->eventBuses);
     }
 
     void ModuleManager::Start()
     {
-        bool expected = false;
-
-        if (!isRunning.compare_exchange_strong(expected, true))
+        if (bool expected = false; !isRunning.compare_exchange_strong(expected, true))
         {
             logger->warn("ModuleManager is already running!");
             return;
@@ -41,7 +26,7 @@ namespace RenderStar::Common::Module
 
         logger->info("Starting {} event bus(es)...", eventBuses.size());
 
-        for (auto& [key, bus] : eventBuses)
+        for (const auto& bus : eventBuses | std::views::values)
             bus->Start();
 
         logger->info("Registering {} top-level module(s)...", moduleOrder.size());
@@ -49,9 +34,7 @@ namespace RenderStar::Common::Module
         for (const auto& typeIndex : moduleOrder)
             modules[typeIndex]->OnRegistration(*context);
 
-        int32_t totalModules = context->GetTotalModuleCount();
-
-        if (totalModules > static_cast<int32_t>(modules.size()))
+        if (int32_t totalModules = context->GetTotalModuleCount(); totalModules > static_cast<int32_t>(modules.size()))
             logger->info("ModuleManager started successfully ({} modules total, including sub-modules)", totalModules);
         else
             logger->info("ModuleManager started successfully");
@@ -61,7 +44,7 @@ namespace RenderStar::Common::Module
     {
         Event::IEventBus* mainThreadBus = nullptr;
 
-        for (auto& [key, bus] : eventBuses)
+        for (const auto& bus : eventBuses | std::views::values)
         {
             if (bus->RunsOnMainThread())
             {
@@ -73,8 +56,11 @@ namespace RenderStar::Common::Module
         if (mainThreadBus != nullptr)
         {
             logger->info("Running main thread event bus...");
+
             mainThreadBus->Run();
+
             logger->info("Main thread event bus exited, shutting down...");
+
             Shutdown();
         }
         else
@@ -86,9 +72,7 @@ namespace RenderStar::Common::Module
 
     void ModuleManager::Shutdown()
     {
-        bool expected = true;
-
-        if (!isRunning.compare_exchange_strong(expected, false))
+        if (bool expected = true; !isRunning.compare_exchange_strong(expected, false))
         {
             logger->warn("ModuleManager is not running!");
             return;
@@ -96,7 +80,7 @@ namespace RenderStar::Common::Module
 
         logger->info("Shutting down ModuleManager...");
 
-        for (auto& [key, bus] : eventBuses)
+        for (const auto& bus : eventBuses | std::views::values)
             bus->Shutdown();
 
         shutdownLatch.count_down();
@@ -109,7 +93,7 @@ namespace RenderStar::Common::Module
         return isRunning.load();
     }
 
-    ModuleContext& ModuleManager::GetContext()
+    ModuleContext& ModuleManager::GetContext() const
     {
         return *context;
     }

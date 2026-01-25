@@ -45,11 +45,7 @@ namespace RenderStar::Client::Render::Vulkan
         }
     }
 
-    VulkanShaderModule::VulkanShaderModule()
-        : logger(spdlog::default_logger()->clone("VulkanShaderModule"))
-        , device(VK_NULL_HANDLE)
-    {
-    }
+    VulkanShaderModule::VulkanShaderModule() : logger(spdlog::default_logger()->clone("VulkanShaderModule")), device(VK_NULL_HANDLE) { }
 
     VulkanShaderModule::~VulkanShaderModule()
     {
@@ -71,7 +67,7 @@ namespace RenderStar::Client::Render::Vulkan
         logger->info("Vulkan shader module destroyed");
     }
 
-    VulkanShader VulkanShaderModule::LoadShaderFromSpirv(const std::vector<uint32_t>& spirvCode, VulkanShaderStage stage)
+    VulkanShader VulkanShaderModule::LoadShaderFromSpirv(const std::vector<uint32_t>& spirvCode, const VulkanShaderStage stage) const
     {
         VulkanShader shader{};
         shader.stage = stage;
@@ -81,9 +77,7 @@ namespace RenderStar::Client::Render::Vulkan
         createInfo.codeSize = spirvCode.size() * sizeof(uint32_t);
         createInfo.pCode = spirvCode.data();
 
-        VkResult result = vkCreateShaderModule(device, &createInfo, nullptr, &shader.module);
-
-        if (result != VK_SUCCESS)
+        if (const VkResult result = vkCreateShaderModule(device, &createInfo, nullptr, &shader.module); result != VK_SUCCESS)
         {
             logger->error("Failed to create shader module from SPIR-V");
             throw std::runtime_error("Failed to create shader module");
@@ -92,7 +86,7 @@ namespace RenderStar::Client::Render::Vulkan
         return shader;
     }
 
-    VulkanShader VulkanShaderModule::LoadShaderFromGlsl(const std::string& glslSource, VulkanShaderStage stage, const std::string& filename)
+    VulkanShader VulkanShaderModule::LoadShaderFromGlsl(const std::string& glslSource, const VulkanShaderStage stage, const std::string& filename)
     {
         std::vector<uint32_t> spirv = CompileGlslToSpirv(glslSource, stage, filename);
         return LoadShaderFromSpirv(spirv, stage);
@@ -109,7 +103,9 @@ namespace RenderStar::Client::Render::Vulkan
         }
 
         std::stringstream buffer;
+
         buffer << file.rdbuf();
+
         std::string glslSource = buffer.str();
 
         file.close();
@@ -119,7 +115,7 @@ namespace RenderStar::Client::Render::Vulkan
         return LoadShaderFromGlsl(glslSource, stage, filePath);
     }
 
-    std::vector<uint32_t> VulkanShaderModule::CompileGlslToSpirv(const std::string& glslSource, VulkanShaderStage stage, const std::string& filename)
+    std::vector<uint32_t> VulkanShaderModule::CompileGlslToSpirv(const std::string& glslSource, VulkanShaderStage stage, const std::string& filename) const
     {
         std::filesystem::path tempDir = std::filesystem::temp_directory_path();
         std::filesystem::path inputPath = tempDir / ("shader_input_" + std::to_string(std::hash<std::string>{}(filename)) + ".glsl");
@@ -127,15 +123,18 @@ namespace RenderStar::Client::Render::Vulkan
 
         {
             std::ofstream inputFile(inputPath);
+
             if (!inputFile.is_open())
             {
                 logger->error("Failed to create temporary shader file: {}", inputPath.string());
                 throw std::runtime_error("Failed to create temporary shader file");
             }
+
             inputFile << glslSource;
         }
 
         std::string stageFlag;
+
         switch (stage)
         {
             case VulkanShaderStage::VERTEX:
@@ -159,22 +158,25 @@ namespace RenderStar::Client::Render::Vulkan
         if (result != 0)
         {
             std::filesystem::remove(outputPath);
+
             logger->error("Shader compilation failed for {}: {}", filename, compileOutput);
+
             throw std::runtime_error("Shader compilation failed: " + compileOutput);
         }
 
         std::ifstream spirvFile(outputPath, std::ios::ate | std::ios::binary);
+
         if (!spirvFile.is_open())
         {
             logger->error("Failed to read compiled shader: {}", outputPath.string());
             throw std::runtime_error("Failed to read compiled shader");
         }
 
-        size_t fileSize = static_cast<size_t>(spirvFile.tellg());
+        size_t fileSize = spirvFile.tellg();
         std::vector<uint32_t> spirvCode(fileSize / sizeof(uint32_t));
 
         spirvFile.seekg(0);
-        spirvFile.read(reinterpret_cast<char*>(spirvCode.data()), fileSize);
+        spirvFile.read(reinterpret_cast<char*>(spirvCode.data()), static_cast<long long>(fileSize));
         spirvFile.close();
 
         std::filesystem::remove(outputPath);
@@ -184,7 +186,7 @@ namespace RenderStar::Client::Render::Vulkan
         return spirvCode;
     }
 
-    void VulkanShaderModule::DestroyShader(VulkanShader& shader)
+    void VulkanShaderModule::DestroyShader(VulkanShader& shader) const
     {
         if (shader.module != VK_NULL_HANDLE)
         {
@@ -193,7 +195,7 @@ namespace RenderStar::Client::Render::Vulkan
         }
     }
 
-    VkPipelineShaderStageCreateInfo VulkanShaderModule::GetShaderStageInfo(const VulkanShader& shader) const
+    VkPipelineShaderStageCreateInfo VulkanShaderModule::GetShaderStageInfo(const VulkanShader& shader)
     {
         VkPipelineShaderStageCreateInfo stageInfo{};
         stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -204,7 +206,7 @@ namespace RenderStar::Client::Render::Vulkan
         return stageInfo;
     }
 
-    VkShaderStageFlagBits VulkanShaderModule::GetVkShaderStage(VulkanShaderStage stage) const
+    VkShaderStageFlagBits VulkanShaderModule::GetVkShaderStage(const VulkanShaderStage stage)
     {
         switch (stage)
         {

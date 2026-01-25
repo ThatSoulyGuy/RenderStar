@@ -30,7 +30,7 @@ namespace RenderStar::Client::Render::Systems
 
         auto& cameraPool = componentModule.GetPool<Camera>();
 
-        if (cameraPool.Size() == 0)
+        if (cameraPool.GetSize() == 0)
             return;
 
         for (auto [entity, camera] : cameraPool)

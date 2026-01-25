@@ -16,6 +16,7 @@ namespace RenderStar::Common::Component
             return { INVALID_ID };
         }
 
+        [[nodiscard]]
         constexpr bool IsValid() const noexcept
         {
             return id >= 0;

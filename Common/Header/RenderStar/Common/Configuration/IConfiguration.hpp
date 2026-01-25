@@ -13,14 +13,19 @@ namespace RenderStar::Common::Configuration
 
         virtual ~IConfiguration() = default;
 
+        [[nodiscard]]
         virtual std::optional<std::string> GetString(const std::string& path) const = 0;
 
+        [[nodiscard]]
         virtual std::optional<int32_t> GetInteger(const std::string& path) const = 0;
 
+        [[nodiscard]]
         virtual std::optional<float> GetFloat(const std::string& path) const = 0;
 
+        [[nodiscard]]
         virtual std::optional<bool> GetBoolean(const std::string& path) const = 0;
 
+        [[nodiscard]]
         virtual std::vector<std::string> GetStringList(const std::string& path) const = 0;
 
         virtual void SetString(const std::string& path, const std::string& value) = 0;

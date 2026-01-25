@@ -1,14 +1,23 @@
 #include "RenderStar/Client/Render/Backend/BackendFactory.hpp"
+#include "RenderStar/Client/Render/OpenGL/OpenGLRenderBackend.hpp"
+#include "RenderStar/Client/Render/Vulkan/VulkanRenderBackend.hpp"
+
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
+#include <functional>
 #include <unordered_map>
-#include <algorithm>
 
 namespace RenderStar::Client::Render
 {
+    using BackendCreator = std::function<std::unique_ptr<IRenderBackend>()>;
+    using BackendAvailabilityChecker = std::function<bool()>;
+
     struct BackendEntry
     {
         BackendCreator creator;
         BackendAvailabilityChecker checker;
-        int32_t priority;
+        int32_t priority{};
     };
 
     static std::unordered_map<RenderBackend, BackendEntry>& GetRegistry()
@@ -17,29 +26,50 @@ namespace RenderStar::Client::Render
         return registry;
     }
 
-    void BackendFactory::RegisterBackend(
-        RenderBackend type,
-        BackendCreator creator,
-        BackendAvailabilityChecker checker,
-        int32_t priority)
+    bool BackendFactory::initialized = false;
+
+    void BackendFactory::Initialize()
     {
-        GetRegistry()[type] = BackendEntry{ std::move(creator), std::move(checker), priority };
+        if (initialized)
+            return;
+
+        auto& registry = GetRegistry();
+
+        registry[RenderBackend::OPENGL] = BackendEntry
+        {
+            [] { return std::make_unique<OpenGL::OpenGLRenderBackend>(); },
+            [] { return true; },
+            0
+        };
+
+        registry[RenderBackend::VULKAN] = BackendEntry
+        {
+            [] { return std::make_unique<Vulkan::VulkanRenderBackend>(); },
+            [] { return glfwVulkanSupported() == GLFW_TRUE; },
+            100
+        };
+
+        initialized = true;
     }
 
-    std::unique_ptr<IRenderBackend> BackendFactory::Create(RenderBackend backendType)
+    std::unique_ptr<IRenderBackend> BackendFactory::Create(const RenderBackend backendType)
     {
+        Initialize();
+
         auto& registry = GetRegistry();
-        auto it = registry.find(backendType);
-        if (it != registry.end() && it->second.creator)
-            return it->second.creator();
+
+        if (const auto iterator = registry.find(backendType); iterator != registry.end() && iterator->second.creator)
+            return iterator->second.creator();
 
         return nullptr;
     }
 
     RenderBackend BackendFactory::DetectBestBackend()
     {
+        Initialize();
+
         auto& registry = GetRegistry();
-        RenderBackend best = RenderBackend::OPENGL;
+        auto best = RenderBackend::OPENGL;
         int32_t bestPriority = -1;
 
         for (const auto& [type, entry] : registry)
@@ -54,22 +84,25 @@ namespace RenderStar::Client::Render
         return best;
     }
 
-    bool BackendFactory::IsBackendAvailable(RenderBackend backendType)
+    bool BackendFactory::IsBackendAvailable(const RenderBackend backendType)
     {
+        Initialize();
+
         auto& registry = GetRegistry();
-        auto it = registry.find(backendType);
-        if (it != registry.end() && it->second.checker)
-            return it->second.checker();
+
+        if (const auto iterator = registry.find(backendType); iterator != registry.end() && iterator->second.checker)
+            return iterator->second.checker();
 
         return false;
     }
 
     std::vector<RenderBackend> BackendFactory::GetAvailableBackends()
     {
-        std::vector<RenderBackend> result;
-        auto& registry = GetRegistry();
+        Initialize();
 
-        for (const auto& [type, entry] : registry)
+        std::vector<RenderBackend> result;
+
+        for (auto& registry = GetRegistry(); const auto& [type, entry] : registry)
         {
             if (entry.checker && entry.checker())
                 result.push_back(type);
