@@ -101,7 +101,8 @@ namespace RenderStar::Server::Network
     {
         RegisterSubModule<Common::Network::PacketModule>(std::make_unique<Common::Network::PacketModule>());
 
-        auto eventBus = context.GetEventBus<Event::Buses::ServerCoreEventBus>();
+        const auto eventBus = context.GetEventBus<Event::Buses::ServerCoreEventBus>();
+
         if (eventBus.has_value())
         {
             coreEventBus = &eventBus->get();

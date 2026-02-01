@@ -12,26 +12,12 @@
 
 namespace RenderStar::Client::Render::Vulkan
 {
-    VulkanRenderBackend::VulkanRenderBackend()
-        : logger(spdlog::default_logger())
-        , window(nullptr)
-        , width(0)
-        , height(0)
-        , currentFrame(0)
-        , currentImageIndex(0)
-        , initialized(false)
-        , framebufferResized(false)
-        , capabilities(BackendCapabilities::ForVulkan())
-        , depthImage(VK_NULL_HANDLE)
-        , depthImageMemory(VK_NULL_HANDLE)
-        , depthImageView(VK_NULL_HANDLE)
-    {
-    }
+    VulkanRenderBackend::VulkanRenderBackend() : logger(spdlog::default_logger()), window(nullptr), width(0), height(0), currentFrame(0), currentImageIndex(0), initialized(false), framebufferResized(false), capabilities(BackendCapabilities::ForVulkan()), depthImage(VK_NULL_HANDLE), depthImageMemory(VK_NULL_HANDLE), depthImageView(VK_NULL_HANDLE) { }
 
     VulkanRenderBackend::~VulkanRenderBackend()
     {
         if (initialized)
-            Destroy();
+            VulkanRenderBackend::Destroy();
     }
 
     RenderBackend VulkanRenderBackend::GetType() const
@@ -51,9 +37,9 @@ namespace RenderStar::Client::Render::Vulkan
         height = initialHeight;
 
 #ifdef RENDERSTAR_ENABLE_VALIDATION
-        bool enableValidation = true;
+        constexpr bool enableValidation = true;
 #else
-        bool enableValidation = false;
+        constexpr bool enableValidation = false;
 #endif
 
         instanceModule.Create(enableValidation);
@@ -66,15 +52,7 @@ namespace RenderStar::Client::Render::Vulkan
             deviceModule.GetDevice()
         );
 
-        swapchainModule.Create(
-            deviceModule.GetPhysicalDevice(),
-            deviceModule.GetDevice(),
-            surfaceModule.GetSurface(),
-            width,
-            height,
-            deviceModule.GetGraphicsQueueFamily(),
-            deviceModule.GetPresentQueueFamily()
-        );
+        swapchainModule.Create(deviceModule.GetPhysicalDevice(), deviceModule.GetDevice(), surfaceModule.GetSurface(), width, height, deviceModule.GetGraphicsQueueFamily(), deviceModule.GetPresentQueueFamily());
 
         CreateDepthResources();
 
@@ -364,18 +342,18 @@ namespace RenderStar::Client::Render::Vulkan
     {
         VkCommandBuffer commandBuffer = commandModule.GetCommandBuffer(currentFrame);
 
-        for (const auto& command : drawCommands)
+        for (const auto& [shader, uniformBinding, frameIndex, mesh] : drawCommands)
         {
-            auto* vulkanShader = static_cast<VulkanShaderProgram*>(command.shader);
-            auto* vulkanMesh = static_cast<VulkanMesh*>(command.mesh);
-            auto* vulkanBinding = static_cast<VulkanUniformBinding*>(command.uniformBinding);
+            auto* vulkanShader = dynamic_cast<VulkanShaderProgram*>(shader);
+            auto* vulkanMesh = dynamic_cast<VulkanMesh*>(mesh);
+            const auto* vulkanBinding = dynamic_cast<VulkanUniformBinding*>(uniformBinding);
 
             if (vulkanShader)
                 vulkanShader->BindPipeline(commandBuffer);
 
-            if (vulkanShader && vulkanBinding && command.frameIndex >= 0 && command.frameIndex < vulkanBinding->GetFrameCount())
+            if (vulkanShader && vulkanBinding && frameIndex >= 0 && frameIndex < vulkanBinding->GetFrameCount())
             {
-                VkDescriptorSet descriptorSet = vulkanBinding->GetDescriptorSets()[command.frameIndex];
+                VkDescriptorSet descriptorSet = vulkanBinding->GetDescriptorSets()[frameIndex];
                 vulkanShader->BindDescriptorSet(commandBuffer, descriptorSet);
             }
 
@@ -388,7 +366,7 @@ namespace RenderStar::Client::Render::Vulkan
 
     void VulkanRenderBackend::CreateDepthResources()
     {
-        VkDevice device = deviceModule.GetDevice();
+        const VkDevice device = deviceModule.GetDevice();
         int32_t swapWidth = swapchainModule.GetWidth();
         int32_t swapHeight = swapchainModule.GetHeight();
 
@@ -408,6 +386,7 @@ namespace RenderStar::Client::Render::Vulkan
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
         VkResult result = vkCreateImage(device, &imageInfo, nullptr, &depthImage);
+
         if (result != VK_SUCCESS)
         {
             logger->error("Failed to create depth image: {}", static_cast<int>(result));
@@ -421,10 +400,10 @@ namespace RenderStar::Client::Render::Vulkan
         vkGetPhysicalDeviceMemoryProperties(deviceModule.GetPhysicalDevice(), &memProperties);
 
         uint32_t memoryTypeIndex = UINT32_MAX;
+
         for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
         {
-            if ((memRequirements.memoryTypeBits & (1 << i)) &&
-                (memProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT))
+            if (memRequirements.memoryTypeBits & 1 << i && memProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
             {
                 memoryTypeIndex = i;
                 break;
@@ -443,6 +422,7 @@ namespace RenderStar::Client::Render::Vulkan
         allocInfo.memoryTypeIndex = memoryTypeIndex;
 
         result = vkAllocateMemory(device, &allocInfo, nullptr, &depthImageMemory);
+
         if (result != VK_SUCCESS)
         {
             logger->error("Failed to allocate depth image memory: {}", static_cast<int>(result));
@@ -463,6 +443,7 @@ namespace RenderStar::Client::Render::Vulkan
         viewInfo.subresourceRange.layerCount = 1;
 
         result = vkCreateImageView(device, &viewInfo, nullptr, &depthImageView);
+
         if (result != VK_SUCCESS)
         {
             logger->error("Failed to create depth image view: {}", static_cast<int>(result));
@@ -474,7 +455,7 @@ namespace RenderStar::Client::Render::Vulkan
 
     void VulkanRenderBackend::DestroyDepthResources()
     {
-        VkDevice device = deviceModule.GetDevice();
+        const VkDevice device = deviceModule.GetDevice();
 
         if (depthImageView != VK_NULL_HANDLE)
         {

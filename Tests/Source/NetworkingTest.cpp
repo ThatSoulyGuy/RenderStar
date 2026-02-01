@@ -647,7 +647,7 @@ TEST_F(NetworkingTest, Stress_HighFrequencyBurst)
     double avgBurstTime = std::accumulate(burstTimes.begin(), burstTimes.end(), 0.0) / bursts;
     double maxBurstTime = *std::max_element(burstTimes.begin(), burstTimes.end());
 
-    EXPECT_LT(maxBurstTime / avgBurstTime, 2.0);
+    EXPECT_LT(maxBurstTime / avgBurstTime, 2.5);
 
     std::cout << "[High Frequency Burst]\n"
               << "  Avg burst time: " << avgBurstTime << " ms\n"

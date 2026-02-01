@@ -1,16 +1,20 @@
 #include "RenderStar/Client/ClientApplication.hpp"
-#include "RenderStar/Client/Core/ClientWindowModule.hpp"
+
 #include "RenderStar/Client/Core/ClientLifecycleModule.hpp"
-#include "RenderStar/Client/Render/RendererModule.hpp"
-#include "RenderStar/Client/Network/ClientNetworkModule.hpp"
+#include "RenderStar/Client/Core/ClientWindowModule.hpp"
 #include "RenderStar/Client/Event/Buses/ClientCoreEventBus.hpp"
 #include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
-#include "RenderStar/Common/Module/ModuleManager.hpp"
+#include "RenderStar/Client/Event/Events/ClientEvents.hpp"
+#include "RenderStar/Client/Network/ClientNetworkModule.hpp"
+#include "RenderStar/Client/Render/RendererModule.hpp"
+#include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Configuration/ConfigurationModule.hpp"
+#include "RenderStar/Common/Module/ModuleManager.hpp"
 #include "RenderStar/Common/Time/TimeModule.hpp"
-#include "RenderStar/Common/Asset/AssetModule.hpp"
+
 #include <spdlog/spdlog.h>
+
 #include <filesystem>
 
 namespace RenderStar::Client
@@ -49,10 +53,13 @@ namespace RenderStar::Client
             .Module(std::make_unique<Common::Time::TimeModule>())
             .Module(std::make_unique<Common::Component::ComponentModule>())
             .Module(std::make_unique<Core::ClientWindowModule>())
-            .Module(std::make_unique<Core::ClientLifecycleModule>())
             .Module(std::make_unique<Render::RendererModule>())
             .Module(std::make_unique<Network::ClientNetworkModule>())
+            .Module(std::make_unique<Core::ClientLifecycleModule>())
             .Build();
+
+        moduleManager->GetContext().GetEventBus<Event::ClientCoreEventBus>().value().get().Publish(Event::Events::ClientPreinitializationEvent());
+        moduleManager->GetContext().GetEventBus<Event::ClientCoreEventBus>().value().get().Publish(Event::Events::ClientInitializationEvent());
     }
 
     void ClientApplication::Shutdown()

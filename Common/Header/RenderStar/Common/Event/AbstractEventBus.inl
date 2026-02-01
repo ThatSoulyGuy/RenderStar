@@ -3,7 +3,7 @@
 namespace RenderStar::Common::Event
 {
     template <typename EventType>
-    void AbstractEventBus::Subscribe(std::function<EventResult(const EventType&)> handler,HandlerPriority priority)
+    void AbstractEventBus::Subscribe(std::function<EventResult(const EventType&)> handler, HandlerPriority priority)
     {
         auto wrappedHandler = [handler](const IEvent& event) -> EventResult
         {

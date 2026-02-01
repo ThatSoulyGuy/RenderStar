@@ -1,6 +1,8 @@
 #include "RenderStar/Client/Render/RendererModule.hpp"
 
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
+#include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
+#include "RenderStar/Client/Event/Events/ClientEvents.hpp"
 #include "RenderStar/Client/Render/Backend/BackendFactory.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
 #include "RenderStar/Client/Render/Components/Camera.hpp"
@@ -14,7 +16,6 @@
 #include "RenderStar/Client/Render/Resource/Mesh.hpp"
 #include "RenderStar/Client/Render/Resource/StandardUniforms.hpp"
 #include "RenderStar/Client/Render/Resource/Vertex.hpp"
-#include "RenderStar/Client/Render/Shader/GlslTransformer.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Common/Asset/ITextAsset.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
@@ -27,33 +28,15 @@
 namespace RenderStar::Client::Render
 {
 
-    RendererModule::RendererModule() : backend(nullptr), backendType(RenderBackend::OPENGL), testShader(nullptr), testMesh(nullptr), uniformBinding(nullptr), uniformBuffer(nullptr), testGeometryInitialized(false), rotationAngle(0.0f), aspectRatio(16.0f / 9.0f) { }
+    RendererModule::RendererModule() : backend(nullptr), backendType(RenderBackend::OPENGL) { }
 
     RendererModule::~RendererModule()
     {
         if (backend != nullptr)
             backend->WaitIdle();
 
-        uniformBinding.reset();
-        uniformBuffer.reset();
-        testShader.reset();
-        testMesh.reset();
-
         if (backend != nullptr)
             backend->Destroy();
-    }
-
-    void RendererModule::RenderFrame()
-    {
-        if (backend == nullptr || !backend->IsInitialized())
-            return;
-
-        backend->BeginFrame();
-
-        if (testGeometryInitialized)
-            RenderTestGeometry();
-
-        backend->EndFrame();
     }
 
     IRenderBackend* RendererModule::GetBackend() const
@@ -87,131 +70,16 @@ namespace RenderStar::Client::Render
 
         backend->Initialize(windowModule->get().GetWindowHandle(), windowModule->get().GetFramebufferWidth(), windowModule->get().GetFramebufferHeight());
 
-        InitializeTestGeometry(context);
+        const auto eventBus = context.GetEventBus<Event::ClientRenderEventBus>();
+
+        if (!eventBus.has_value())
+        {
+            logger->error("ClientCoreEventBus not found");
+            return;
+        }
+
+        eventBus.value().get().Publish(Event::Events::ClientRendererInitializedEvent(backend.get()));
 
         logger->info("RendererModule initialized with {} backend", backendType == RenderBackend::OPENGL ? "OpenGL" : "Vulkan");
-    }
-
-    void RendererModule::InitializeTestGeometry(Common::Module::ModuleContext& context)
-    {
-        IShaderManager* shaderManager = backend->GetShaderManager();
-        IBufferManager* bufferManager = backend->GetBufferManager();
-        IUniformManager* uniformManager = backend->GetUniformManager();
-
-        if (!shaderManager || !bufferManager || !uniformManager)
-        {
-            logger->error("Failed to get managers from backend");
-            return;
-        }
-
-        const auto assetModule = context.GetModule<Common::Asset::AssetModule>();
-
-        if (!assetModule.has_value())
-        {
-            logger->error("AssetModule not found");
-            return;
-        }
-
-        const auto vertexAsset = assetModule->get().LoadText(Common::Asset::AssetLocation::Parse("renderstar:shader/test.vert"));
-        const auto fragmentAsset = assetModule->get().LoadText(Common::Asset::AssetLocation::Parse("renderstar:shader/test.frag"));
-
-        if (!vertexAsset.IsValid() || !fragmentAsset.IsValid())
-        {
-            logger->error("Failed to load shader assets");
-            return;
-        }
-
-        if (backendType == RenderBackend::OPENGL)
-        {
-            ShaderSource source;
-
-            source.vertexSource = Shader::GlslTransformer::Transform450To410(vertexAsset.Get()->GetContent(), Shader::ShaderType::VERTEX);
-            source.fragmentSource = Shader::GlslTransformer::Transform450To410(fragmentAsset.Get()->GetContent(), Shader::ShaderType::FRAGMENT);
-
-            testShader = shaderManager->CreateFromSource(source);
-
-            if (!testShader || !testShader->IsValid())
-            {
-                logger->error("Failed to compile OpenGL test shader");
-                return;
-            }
-        }
-        else
-        {
-            testShader = shaderManager->CreateFromTextAssets(*vertexAsset.Get(), *fragmentAsset.Get());
-
-            if (!testShader || !testShader->IsValid())
-            {
-                logger->error("Failed to load Vulkan test shader");
-                return;
-            }
-        }
-
-        const std::vector vertices =
-        {
-            Vertex(-0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f),
-            Vertex( 0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f),
-            Vertex( 0.5f,  0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f),
-            Vertex(-0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f),
-            Vertex(-0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f),
-            Vertex( 0.5f, -0.5f,  0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f),
-            Vertex( 0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f),
-            Vertex(-0.5f,  0.5f,  0.5f, 0.5f, 0.5f, 0.5f, 0.0f, 1.0f)
-        };
-
-        const std::vector<uint32_t> indices =
-        {
-            0, 2, 1, 0, 3, 2,
-            4, 5, 6, 4, 6, 7,
-            0, 7, 4, 0, 3, 7,
-            1, 2, 6, 1, 6, 5,
-            3, 6, 2, 3, 7, 6,
-            0, 1, 5, 0, 5, 4
-        };
-
-        testMesh = std::make_unique<Resource::Mesh>(*bufferManager, Vertex::LAYOUT, PrimitiveType::TRIANGLES);
-        testMesh->SetVertices(vertices);
-        testMesh->SetIndices(indices);
-
-        uniformBuffer = bufferManager->CreateUniformBuffer(StandardUniforms::Size());
-        uniformBinding = uniformManager->CreateBindingForShader(testShader.get());
-
-        if (uniformBinding)
-            uniformBinding->UpdateBuffer(0, uniformBuffer.get(), StandardUniforms::Size());
-
-        aspectRatio = static_cast<float>(backend->GetWidth()) / static_cast<float>(backend->GetHeight());
-
-        testGeometryInitialized = true;
-        logger->info("Test geometry initialized successfully");
-    }
-
-    void RendererModule::RenderTestGeometry()
-    {
-        rotationAngle += 0.5f;
-
-        if (rotationAngle >= 360.0f)
-            rotationAngle -= 360.0f;
-
-        Components::Camera camera = Components::Camera::CreatePerspective(60.0f, aspectRatio, 0.1f, 100.0f);
-
-        constexpr auto cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
-        constexpr auto cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-        constexpr auto cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-        camera.viewMatrix = glm::lookAt(cameraPosition, cameraTarget, cameraUp);
-
-        auto model = glm::mat4(1.0f);
-        model = glm::rotate(model, glm::radians(rotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(rotationAngle * 0.5f), glm::vec3(1.0f, 0.0f, 0.0f));
-
-        const glm::mat4 viewProjection = camera.GetViewProjectionMatrix();
-
-        const StandardUniforms uniformData(model, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
-
-        uniformBuffer->SetSubData(&uniformData, StandardUniforms::Size(), 0);
-
-        const int32_t frameIndex = backend->GetCurrentFrame();
-
-        backend->SubmitDrawCommand(testShader.get(), uniformBinding.get(), frameIndex, testMesh->GetUnderlyingMesh());
-        backend->ExecuteDrawCommands();
     }
 }

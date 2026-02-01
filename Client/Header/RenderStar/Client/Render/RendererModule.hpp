@@ -3,7 +3,6 @@
 #include "RenderStar/Common/Module/AbstractModule.hpp"
 #include "RenderStar/Client/Render/Backend/RenderBackend.hpp"
 #include <memory>
-#include <cstdint>
 
 namespace RenderStar::Client::Render
 {
@@ -19,13 +18,12 @@ namespace RenderStar::Client::Render
 
     class RendererModule final : public Common::Module::AbstractModule
     {
+
     public:
 
         RendererModule();
 
         ~RendererModule() override;
-
-        void RenderFrame();
 
         [[nodiscard]]
         IRenderBackend* GetBackend() const;
@@ -39,19 +37,7 @@ namespace RenderStar::Client::Render
 
     private:
 
-        void InitializeTestGeometry(Common::Module::ModuleContext& context);
-        void RenderTestGeometry();
-
         std::unique_ptr<IRenderBackend> backend;
         RenderBackend backendType;
-
-        std::unique_ptr<IShaderProgram> testShader;
-        std::unique_ptr<Resource::Mesh> testMesh;
-        std::unique_ptr<IUniformBindingHandle> uniformBinding;
-        std::unique_ptr<IBufferHandle> uniformBuffer;
-
-        bool testGeometryInitialized;
-        float rotationAngle;
-        float aspectRatio;
     };
 }

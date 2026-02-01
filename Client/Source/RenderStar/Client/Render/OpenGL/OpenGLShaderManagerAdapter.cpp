@@ -1,15 +1,13 @@
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderManagerAdapter.hpp"
 
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderProgram.hpp"
+#include "RenderStar/Client/Render/Shader/GlslTransformer.hpp"
 #include "RenderStar/Common/Asset/ITextAsset.hpp"
 #include "RenderStar/Common/Asset/IBinaryAsset.hpp"
 
 namespace RenderStar::Client::Render::OpenGL
 {
-    OpenGLShaderManagerAdapter::OpenGLShaderManagerAdapter()
-        : logger(spdlog::default_logger())
-    {
-    }
+    OpenGLShaderManagerAdapter::OpenGLShaderManagerAdapter() : logger(spdlog::default_logger()) { }
 
     OpenGLShaderManagerAdapter::~OpenGLShaderManagerAdapter()
     {
@@ -29,7 +27,7 @@ namespace RenderStar::Client::Render::OpenGL
         return program;
     }
 
-    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateFromBinary(const ShaderBinary& binary)
+    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateFromBinary(const ShaderBinary&)
     {
         logger->warn("Binary shader loading not supported in OpenGL adapter");
         return nullptr;
@@ -38,31 +36,29 @@ namespace RenderStar::Client::Render::OpenGL
     std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateFromTextAssets(const Common::Asset::ITextAsset& vertexAsset, const Common::Asset::ITextAsset& fragmentAsset)
     {
         ShaderSource source;
-        source.vertexSource = vertexAsset.GetContent();
-        source.fragmentSource = fragmentAsset.GetContent();
+        source.vertexSource = Shader::GlslTransformer::Transform450To410(vertexAsset.GetContent(), Shader::ShaderType::VERTEX);
+        source.fragmentSource = Shader::GlslTransformer::Transform450To410(fragmentAsset.GetContent(), Shader::ShaderType::FRAGMENT);
 
         return CreateFromSource(source);
     }
 
-    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateFromBinaryAssets(const Common::Asset::IBinaryAsset& vertexAsset, const Common::Asset::IBinaryAsset& fragmentAsset)
+    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateFromBinaryAssets(const Common::Asset::IBinaryAsset&, const Common::Asset::IBinaryAsset&)
     {
         logger->warn("Binary shader loading not supported in OpenGL adapter - use text assets");
         return nullptr;
     }
 
-    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateComputeFromTextAsset(const Common::Asset::ITextAsset& computeAsset)
+    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateComputeFromTextAsset(const Common::Asset::ITextAsset&)
     {
         logger->warn("Compute shader not yet implemented in OpenGL adapter");
         return nullptr;
     }
 
-    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateComputeFromBinaryAsset(const Common::Asset::IBinaryAsset& computeAsset)
+    std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateComputeFromBinaryAsset(const Common::Asset::IBinaryAsset&)
     {
         logger->warn("Compute shader from binary not supported in OpenGL adapter");
         return nullptr;
     }
 
-    void OpenGLShaderManagerAdapter::DestroyShader(IShaderProgram* shader)
-    {
-    }
+    void OpenGLShaderManagerAdapter::DestroyShader(IShaderProgram*) { }
 }
