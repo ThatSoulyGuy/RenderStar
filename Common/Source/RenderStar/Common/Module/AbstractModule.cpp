@@ -18,6 +18,18 @@ namespace RenderStar::Common::Module
             subModule->OnRegistration(moduleContext);
     }
 
+    void AbstractModule::OnShutdown()
+    {
+        if (!initialized)
+            return;
+
+        for (auto it = subModules.rbegin(); it != subModules.rend(); ++it)
+            (*it)->OnShutdown();
+
+        OnCleanup();
+        initialized = false;
+    }
+
     void AbstractModule::SetParent(IModule* parentModule)
     {
         parent = parentModule;

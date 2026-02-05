@@ -17,6 +17,8 @@ namespace RenderStar::Common::Module
 
         void OnRegistration(ModuleContext& context) final;
 
+        void OnShutdown() override;
+
         void SetParent(IModule* parent) override;
 
         [[nodiscard]]
@@ -36,6 +38,8 @@ namespace RenderStar::Common::Module
     protected:
 
         virtual void OnInitialize(ModuleContext& context) = 0;
+
+        virtual void OnCleanup() { }
 
         std::shared_ptr<spdlog::logger> logger;
         ModuleContext* context;

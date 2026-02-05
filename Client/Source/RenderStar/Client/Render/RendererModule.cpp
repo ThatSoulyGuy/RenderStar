@@ -78,8 +78,18 @@ namespace RenderStar::Client::Render
             return;
         }
 
+        logger->info("Publishing ClientRendererInitializedEvent with backend={}", static_cast<void*>(backend.get()));
         eventBus.value().get().Publish(Event::Events::ClientRendererInitializedEvent(backend.get()));
 
         logger->info("RendererModule initialized with {} backend", backendType == RenderBackend::OPENGL ? "OpenGL" : "Vulkan");
+    }
+
+    void RendererModule::OnCleanup()
+    {
+        if (backend != nullptr)
+        {
+            logger->info("Waiting for GPU to finish before cleanup...");
+            backend->WaitIdle();
+        }
     }
 }

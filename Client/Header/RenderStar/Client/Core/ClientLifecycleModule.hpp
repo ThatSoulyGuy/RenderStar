@@ -23,6 +23,7 @@ namespace RenderStar::Client::Core
     protected:
 
         void OnInitialize(Common::Module::ModuleContext& context) override;
+        void OnCleanup() override;
 
     private:
 

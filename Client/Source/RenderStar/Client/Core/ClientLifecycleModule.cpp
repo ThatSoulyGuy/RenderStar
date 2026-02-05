@@ -1,5 +1,4 @@
 #include "RenderStar/Client/Core/ClientLifecycleModule.hpp"
-
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
 #include "RenderStar/Client/Event/Buses/ClientCoreEventBus.hpp"
 #include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
@@ -30,8 +29,22 @@ namespace RenderStar::Client::Core
         logger->info("ClientLifecycleModule initialized");
     }
 
+    void ClientLifecycleModule::OnCleanup()
+    {
+        logger->info("ClientLifecycleModule cleaning up render resources...");
+
+        testUniformBinding.reset();
+        testUniformBuffer.reset();
+        testMesh.reset();
+        testShader.reset();
+
+        logger->info("ClientLifecycleModule cleanup complete");
+    }
+
     Common::Event::EventResult ClientLifecycleModule::OnRenderInitializeEvent(Common::Module::ModuleContext& context, IRenderBackend* backend)
     {
+        logger->info("OnRenderInitializeEvent called, backend={}", static_cast<void*>(backend));
+
         const auto assetModule = context.GetModule<Common::Asset::AssetModule>();
 
         if (!assetModule.has_value())
@@ -99,6 +112,9 @@ namespace RenderStar::Client::Core
         if (backend == nullptr || !backend->IsInitialized())
             return Common::Event::EventResult::Failure("Renderer backend was not in a proper state");
 
+        if (testUniformBinding == nullptr || testUniformBuffer == nullptr)
+            return Common::Event::EventResult::Failure("Renderer objects were not initialized");
+
         backend->BeginFrame();
 
         testRotationAngle += 0.5f;
@@ -150,15 +166,19 @@ namespace RenderStar::Client::Core
             return;
         }
 
-        renderEventBus.value().get().Subscribe<Event::Events::ClientRendererInitializedEvent>([this, &context](const auto& event)
+        logger->info("Subscribing to ClientRendererInitializedEvent");
+
+        renderEventBus.value().get().Subscribe<Event::Events::ClientRendererInitializedEvent>([this](const auto& event)
         {
-            return OnRenderInitializeEvent(context, event.backend);
+            return OnRenderInitializeEvent(*this->context, event.backend);
         });
 
         renderEventBus.value().get().Subscribe<Event::Events::ClientRenderFrameEvent>([this](const auto& event)
         {
             return OnRenderFrameEvent(event.backend);
         });
+
+        logger->info("Event subscriptions set up");
     }
 
     void ClientLifecycleModule::SetupMainLoop() const

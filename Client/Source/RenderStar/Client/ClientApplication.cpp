@@ -53,9 +53,9 @@ namespace RenderStar::Client
             .Module(std::make_unique<Common::Time::TimeModule>())
             .Module(std::make_unique<Common::Component::ComponentModule>())
             .Module(std::make_unique<Core::ClientWindowModule>())
+            .Module(std::make_unique<Core::ClientLifecycleModule>())
             .Module(std::make_unique<Render::RendererModule>())
             .Module(std::make_unique<Network::ClientNetworkModule>())
-            .Module(std::make_unique<Core::ClientLifecycleModule>())
             .Build();
 
         moduleManager->GetContext().GetEventBus<Event::ClientCoreEventBus>().value().get().Publish(Event::Events::ClientPreinitializationEvent());

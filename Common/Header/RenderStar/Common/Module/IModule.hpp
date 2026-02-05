@@ -16,6 +16,8 @@ namespace RenderStar::Common::Module
 
         virtual void OnRegistration(ModuleContext& context) = 0;
 
+        virtual void OnShutdown() = 0;
+
         virtual void SetParent(IModule* parent) = 0;
 
         [[nodiscard]]

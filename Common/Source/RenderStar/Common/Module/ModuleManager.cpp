@@ -83,6 +83,11 @@ namespace RenderStar::Common::Module
         for (const auto& bus : eventBuses | std::views::values)
             bus->Shutdown();
 
+        logger->info("Shutting down {} module(s) in reverse order...", moduleOrder.size());
+
+        for (auto it = moduleOrder.rbegin(); it != moduleOrder.rend(); ++it)
+            modules[*it]->OnShutdown();
+
         shutdownLatch.count_down();
 
         logger->info("ModuleManager shut down successfully");

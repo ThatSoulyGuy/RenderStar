@@ -34,6 +34,7 @@ namespace RenderStar::Client::Render
     protected:
 
         void OnInitialize(Common::Module::ModuleContext& context) override;
+        void OnCleanup() override;
 
     private:
 
