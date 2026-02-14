@@ -1,5 +1,6 @@
 #include "RenderStar/Client/Core/ClientLifecycleModule.hpp"
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
+#include "RenderStar/Client/Input/ClientInputModule.hpp"
 #include "RenderStar/Client/Event/Buses/ClientCoreEventBus.hpp"
 #include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
 #include "RenderStar/Client/Event/Events/ClientEvents.hpp"
@@ -202,6 +203,7 @@ namespace RenderStar::Client::Core
         logger->info("Setting up tick handler on ClientCoreEventBus");
 
         const auto windowModule = context->GetModule<ClientWindowModule>();
+        const auto inputModule = context->GetModule<Input::ClientInputModule>();
         const auto timeModule = context->GetModule<Common::Time::TimeModule>();
         const auto componentModule = context->GetModule<Common::Component::ComponentModule>();
         const auto rendererModule = context->GetModule<RendererModule>();
@@ -221,6 +223,9 @@ namespace RenderStar::Client::Core
         coreEventBus->get().SetTickHandler([=]
         {
             windowModule->get().Tick();
+
+            if (inputModule.has_value())
+                inputModule->get().Tick();
 
             if (windowModule->get().ShouldClose())
             {
