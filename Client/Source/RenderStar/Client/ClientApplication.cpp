@@ -11,6 +11,7 @@
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Configuration/ConfigurationModule.hpp"
 #include "RenderStar/Common/Module/ModuleManager.hpp"
+#include "RenderStar/Common/Scene/SceneModule.hpp"
 #include "RenderStar/Common/Time/TimeModule.hpp"
 
 #include <spdlog/spdlog.h>
@@ -52,6 +53,7 @@ namespace RenderStar::Client
             .Module(std::make_unique<Common::Asset::AssetModule>(resourceBasePath))
             .Module(std::make_unique<Common::Time::TimeModule>())
             .Module(std::make_unique<Common::Component::ComponentModule>())
+            .Module(std::make_unique<Common::Scene::SceneModule>())
             .Module(std::make_unique<Core::ClientWindowModule>())
             .Module(std::make_unique<Core::ClientLifecycleModule>())
             .Module(std::make_unique<Render::RendererModule>())
