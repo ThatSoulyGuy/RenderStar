@@ -10,7 +10,7 @@ namespace RenderStar::Client::Event
         return "ClientCoreEventBus";
     }
 
-    ClientRenderEventBus::ClientRenderEventBus() : AbstractEventBus(false) { }
+    ClientRenderEventBus::ClientRenderEventBus() : AbstractEventBus(true) { }
 
     std::string_view ClientRenderEventBus::GetBusName() const
     {

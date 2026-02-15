@@ -13,30 +13,20 @@ struct TestComponent
 class ComponentPoolTest : public ::testing::Test
 {
 protected:
-
     ComponentPool<TestComponent> pool;
-
-    void SetUp() override
-    {
-    }
 };
 
-TEST_F(ComponentPoolTest, AddComponentToEntity)
+TEST_F(ComponentPoolTest, AddAndHas)
 {
     GameObject entity{0};
-    TestComponent component{42, 1.5f};
-
-    pool.Add(entity, component);
-
+    pool.Add(entity, TestComponent{42, 1.5f});
     EXPECT_TRUE(pool.Has(entity));
 }
 
-TEST_F(ComponentPoolTest, GetComponentReturnsCorrectValue)
+TEST_F(ComponentPoolTest, GetReturnsCorrectValue)
 {
     GameObject entity{0};
-    TestComponent component{42, 1.5f};
-
-    pool.Add(entity, component);
+    pool.Add(entity, TestComponent{42, 1.5f});
     auto retrieved = pool.Get(entity);
 
     ASSERT_TRUE(retrieved.has_value());
@@ -44,72 +34,48 @@ TEST_F(ComponentPoolTest, GetComponentReturnsCorrectValue)
     EXPECT_FLOAT_EQ(retrieved->get().multiplier, 1.5f);
 }
 
-TEST_F(ComponentPoolTest, RemoveComponentFromEntity)
+TEST_F(ComponentPoolTest, RemoveEntity)
 {
     GameObject entity{0};
-    TestComponent component{42, 1.5f};
-
-    pool.Add(entity, component);
+    pool.Add(entity, TestComponent{42, 1.5f});
     pool.Remove(entity);
-
     EXPECT_FALSE(pool.Has(entity));
 }
 
-TEST_F(ComponentPoolTest, GetNonExistentComponentReturnsEmpty)
+TEST_F(ComponentPoolTest, GetNonExistentReturnsEmpty)
 {
-    GameObject entity{0};
-    auto retrieved = pool.Get(entity);
-
+    auto retrieved = pool.Get(GameObject{99});
     EXPECT_FALSE(retrieved.has_value());
 }
 
-TEST_F(ComponentPoolTest, MultipleEntitiesHaveCorrectComponents)
+TEST_F(ComponentPoolTest, MultipleEntities)
 {
-    GameObject entity1{0};
-    GameObject entity2{1};
-    GameObject entity3{2};
+    pool.Add(GameObject{0}, TestComponent{10, 1.0f});
+    pool.Add(GameObject{1}, TestComponent{20, 2.0f});
+    pool.Add(GameObject{2}, TestComponent{30, 3.0f});
 
-    pool.Add(entity1, TestComponent{10, 1.0f});
-    pool.Add(entity2, TestComponent{20, 2.0f});
-    pool.Add(entity3, TestComponent{30, 3.0f});
+    ASSERT_TRUE(pool.Get(GameObject{0}).has_value());
+    ASSERT_TRUE(pool.Get(GameObject{1}).has_value());
+    ASSERT_TRUE(pool.Get(GameObject{2}).has_value());
 
-    auto comp1 = pool.Get(entity1);
-    auto comp2 = pool.Get(entity2);
-    auto comp3 = pool.Get(entity3);
-
-    ASSERT_TRUE(comp1.has_value());
-    ASSERT_TRUE(comp2.has_value());
-    ASSERT_TRUE(comp3.has_value());
-
-    EXPECT_EQ(comp1->get().value, 10);
-    EXPECT_EQ(comp2->get().value, 20);
-    EXPECT_EQ(comp3->get().value, 30);
+    EXPECT_EQ(pool.Get(GameObject{0})->get().value, 10);
+    EXPECT_EQ(pool.Get(GameObject{1})->get().value, 20);
+    EXPECT_EQ(pool.Get(GameObject{2})->get().value, 30);
 }
 
-TEST_F(ComponentPoolTest, RemoveMiddleEntityMaintainsOthers)
+TEST_F(ComponentPoolTest, RemoveMiddlePreservesOthers)
 {
-    GameObject entity1{0};
-    GameObject entity2{1};
-    GameObject entity3{2};
+    pool.Add(GameObject{0}, TestComponent{10, 1.0f});
+    pool.Add(GameObject{1}, TestComponent{20, 2.0f});
+    pool.Add(GameObject{2}, TestComponent{30, 3.0f});
 
-    pool.Add(entity1, TestComponent{10, 1.0f});
-    pool.Add(entity2, TestComponent{20, 2.0f});
-    pool.Add(entity3, TestComponent{30, 3.0f});
+    pool.Remove(GameObject{1});
 
-    pool.Remove(entity2);
-
-    EXPECT_TRUE(pool.Has(entity1));
-    EXPECT_FALSE(pool.Has(entity2));
-    EXPECT_TRUE(pool.Has(entity3));
-
-    auto comp1 = pool.Get(entity1);
-    auto comp3 = pool.Get(entity3);
-
-    ASSERT_TRUE(comp1.has_value());
-    ASSERT_TRUE(comp3.has_value());
-
-    EXPECT_EQ(comp1->get().value, 10);
-    EXPECT_EQ(comp3->get().value, 30);
+    EXPECT_TRUE(pool.Has(GameObject{0}));
+    EXPECT_FALSE(pool.Has(GameObject{1}));
+    EXPECT_TRUE(pool.Has(GameObject{2}));
+    EXPECT_EQ(pool.Get(GameObject{0})->get().value, 10);
+    EXPECT_EQ(pool.Get(GameObject{2})->get().value, 30);
 }
 
 TEST_F(ComponentPoolTest, IterateOverComponents)
@@ -119,15 +85,13 @@ TEST_F(ComponentPoolTest, IterateOverComponents)
     pool.Add(GameObject{2}, TestComponent{30, 3.0f});
 
     int32_t sum = 0;
-    for (auto entry : pool)
-    {
-        sum += entry.component.value;
-    }
+    for (auto [entity, component] : pool)
+        sum += component.value;
 
     EXPECT_EQ(sum, 60);
 }
 
-TEST_F(ComponentPoolTest, SizeReturnsCorrectValue)
+TEST_F(ComponentPoolTest, SizeTracksCorrectly)
 {
     EXPECT_EQ(pool.GetSize(), 0);
 
@@ -139,4 +103,37 @@ TEST_F(ComponentPoolTest, SizeReturnsCorrectValue)
 
     pool.Remove(GameObject{0});
     EXPECT_EQ(pool.GetSize(), 1);
+}
+
+TEST_F(ComponentPoolTest, ModifyThroughGetReference)
+{
+    pool.Add(GameObject{0}, TestComponent{10, 1.0f});
+
+    auto retrieved = pool.Get(GameObject{0});
+    ASSERT_TRUE(retrieved.has_value());
+    retrieved->get().value = 99;
+
+    auto again = pool.Get(GameObject{0});
+    EXPECT_EQ(again->get().value, 99);
+}
+
+TEST_F(ComponentPoolTest, ReaddAfterRemove)
+{
+    pool.Add(GameObject{0}, TestComponent{10, 1.0f});
+    pool.Remove(GameObject{0});
+    pool.Add(GameObject{0}, TestComponent{99, 9.0f});
+
+    EXPECT_TRUE(pool.Has(GameObject{0}));
+    EXPECT_EQ(pool.Get(GameObject{0})->get().value, 99);
+}
+
+TEST_F(ComponentPoolTest, HasReturnsFalseForNonExistent)
+{
+    EXPECT_FALSE(pool.Has(GameObject{999}));
+}
+
+TEST_F(ComponentPoolTest, RemoveFromEmptyPoolIsSafe)
+{
+    pool.Remove(GameObject{0});
+    EXPECT_EQ(pool.GetSize(), 0);
 }

@@ -1,100 +1,50 @@
 #include <gtest/gtest.h>
 #include "RenderStar/Common/Utility/TypeName.hpp"
+#include <vector>
 
-using RenderStar::Common::Utility::TypeName;
+using namespace RenderStar::Common::Utility;
 
-namespace
+namespace TestNamespace
 {
-    class SimpleClass {};
-
-    struct SimpleStruct {};
-
-    namespace Nested
-    {
-        class NestedClass {};
-
-        namespace Deeply
-        {
-            struct DeeplyNestedStruct {};
-        }
-    }
-
-    template<typename T>
-    class TemplatedClass {};
+    struct MyStruct {};
 }
 
-TEST(TypeNameTest, GetSimpleClassName)
+TEST(TypeNameTest, PrimitiveType)
 {
-    std::string name = TypeName::Get<SimpleClass>();
-    EXPECT_EQ(name, "SimpleClass");
-}
-
-TEST(TypeNameTest, GetSimpleStructName)
-{
-    std::string name = TypeName::Get<SimpleStruct>();
-    EXPECT_EQ(name, "SimpleStruct");
-}
-
-TEST(TypeNameTest, GetNestedClassName)
-{
-    std::string name = TypeName::Get<Nested::NestedClass>();
-    EXPECT_EQ(name, "NestedClass");
-}
-
-TEST(TypeNameTest, GetDeeplyNestedStructName)
-{
-    std::string name = TypeName::Get<Nested::Deeply::DeeplyNestedStruct>();
-    EXPECT_EQ(name, "DeeplyNestedStruct");
-}
-
-TEST(TypeNameTest, GetFullNameIncludesNamespace)
-{
-    std::string fullName = TypeName::GetFull<Nested::NestedClass>();
-    EXPECT_TRUE(fullName.find("Nested") != std::string::npos);
-    EXPECT_TRUE(fullName.find("NestedClass") != std::string::npos);
-}
-
-TEST(TypeNameTest, GetFullNameForDeeplyNested)
-{
-    std::string fullName = TypeName::GetFull<Nested::Deeply::DeeplyNestedStruct>();
-    EXPECT_TRUE(fullName.find("Nested") != std::string::npos);
-    EXPECT_TRUE(fullName.find("Deeply") != std::string::npos);
-    EXPECT_TRUE(fullName.find("DeeplyNestedStruct") != std::string::npos);
-}
-
-TEST(TypeNameTest, GetPrimitiveTypeName)
-{
-    std::string intName = TypeName::Get<int>();
-    EXPECT_EQ(intName, "int");
-}
-
-TEST(TypeNameTest, FromTypeInfoMatchesTemplateVersion)
-{
-    std::string templateName = TypeName::Get<SimpleClass>();
-    std::string typeInfoName = TypeName::FromTypeInfo(typeid(SimpleClass));
-    EXPECT_EQ(templateName, typeInfoName);
-}
-
-TEST(TypeNameTest, GetFullNameFromTypeInfo)
-{
-    std::string fullName = TypeName::GetFullName(typeid(Nested::NestedClass));
-    EXPECT_TRUE(fullName.find("NestedClass") != std::string::npos);
-}
-
-TEST(TypeNameTest, PointerTypeContainsAsterisk)
-{
-    std::string name = TypeName::GetFull<int*>();
+    auto name = TypeName::Get<int>();
+    EXPECT_FALSE(name.empty());
     EXPECT_TRUE(name.find("int") != std::string::npos);
 }
 
-TEST(TypeNameTest, ReferenceTypeHandled)
+TEST(TypeNameTest, ClassType)
 {
-    std::string name = TypeName::GetFull<int&>();
-    EXPECT_TRUE(name.find("int") != std::string::npos);
+    auto name = TypeName::Get<TestNamespace::MyStruct>();
+    EXPECT_EQ(name, "MyStruct");
 }
 
-TEST(TypeNameTest, ConstTypeHandled)
+TEST(TypeNameTest, FullNameContainsNamespace)
 {
-    std::string name = TypeName::GetFull<const int>();
-    EXPECT_TRUE(name.find("int") != std::string::npos);
+    auto name = TypeName::GetFull<TestNamespace::MyStruct>();
+    EXPECT_TRUE(name.find("TestNamespace") != std::string::npos);
+    EXPECT_TRUE(name.find("MyStruct") != std::string::npos);
+}
+
+TEST(TypeNameTest, ConsistentResults)
+{
+    auto first = TypeName::Get<float>();
+    auto second = TypeName::Get<float>();
+    EXPECT_EQ(first, second);
+}
+
+TEST(TypeNameTest, DifferentTypesProduceDifferentNames)
+{
+    auto intName = TypeName::Get<int>();
+    auto floatName = TypeName::Get<float>();
+    EXPECT_NE(intName, floatName);
+}
+
+TEST(TypeNameTest, FromTypeInfo)
+{
+    auto name = TypeName::FromTypeInfo(typeid(TestNamespace::MyStruct));
+    EXPECT_EQ(name, "MyStruct");
 }

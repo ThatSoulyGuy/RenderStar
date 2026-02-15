@@ -46,10 +46,22 @@ namespace RenderStar::Common::Module
 
         for (const auto& bus : eventBuses | std::views::values)
         {
-            if (bus->RunsOnMainThread())
+            if (bus->RunsOnMainThread() && bus->HasTickHandler())
             {
                 mainThreadBus = bus.get();
                 break;
+            }
+        }
+
+        if (mainThreadBus == nullptr)
+        {
+            for (const auto& bus : eventBuses | std::views::values)
+            {
+                if (bus->RunsOnMainThread())
+                {
+                    mainThreadBus = bus.get();
+                    break;
+                }
             }
         }
 

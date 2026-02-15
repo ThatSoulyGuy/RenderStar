@@ -58,6 +58,11 @@ namespace RenderStar::Common::Event
         return mainThread;
     }
 
+    bool AbstractEventBus::HasTickHandler() const
+    {
+        return static_cast<bool>(tickHandler);
+    }
+
     void AbstractEventBus::SubscribeRaw(const std::type_index eventType, EventHandlerFunction handler, const HandlerPriority priority)
     {
         std::lock_guard lock(queueMutex);

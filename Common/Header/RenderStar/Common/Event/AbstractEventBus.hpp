@@ -30,6 +30,8 @@ namespace RenderStar::Common::Event
 
         bool RunsOnMainThread() const override;
 
+        bool HasTickHandler() const override;
+
         void SubscribeRaw(std::type_index eventType, EventHandlerFunction handler, HandlerPriority priority) override;
 
         void PublishRaw(std::unique_ptr<IEvent> event, EventPriority priority) override;

@@ -16,6 +16,11 @@ namespace RenderStar::Client::Core
         DestroyWindow();
     }
 
+    void ClientWindowModule::OnCleanup()
+    {
+        DestroyWindow();
+    }
+
     void ClientWindowModule::Tick()
     {
         glfwPollEvents();

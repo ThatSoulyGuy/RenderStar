@@ -1,4 +1,4 @@
-#include "RenderStar/Common/Component/Systems/TransformComponentSystem.hpp"
+#include "RenderStar/Common/Component/Affectors/TransformAffector.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Component/Components/Transform.hpp"
 #include "RenderStar/Common/Component/Components/Hierarchy.hpp"
@@ -6,9 +6,9 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
-namespace RenderStar::Common::Component::Systems
+namespace RenderStar::Common::Component::Affectors
 {
-    void TransformComponentSystem::Run(ComponentModule& componentModule)
+    void TransformAffector::Affect(ComponentModule& componentModule)
     {
         auto& transformPool = componentModule.GetPool<Transform>();
 

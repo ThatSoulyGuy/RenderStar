@@ -6,7 +6,11 @@ namespace RenderStar::Common::Module
     void AbstractModule::RegisterSubModule(std::unique_ptr<SubModuleType> subModule)
     {
         subModule->SetParent(this);
+        IModule* raw = subModule.get();
         subModules.push_back(std::move(subModule));
+
+        if (initialized && context != nullptr)
+            raw->OnRegistration(*context);
     }
 
     template <typename SubModuleType>

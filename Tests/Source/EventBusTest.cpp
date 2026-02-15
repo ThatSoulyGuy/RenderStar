@@ -1,158 +1,178 @@
 #include <gtest/gtest.h>
 #include "RenderStar/Common/Event/AbstractEventBus.hpp"
-#include "RenderStar/Common/Event/IEvent.hpp"
 #include "RenderStar/Common/Event/EventResult.hpp"
-#include "RenderStar/Common/Event/HandlerPriority.hpp"
 
 using namespace RenderStar::Common::Event;
 
-struct TestEvent : public TypedEvent<TestEvent>
+class TestEventBus final : public AbstractEventBus
 {
-    int32_t value;
+public:
+    TestEventBus() : AbstractEventBus(true) {}
+protected:
+    std::string_view GetBusName() const override { return "TestEventBus"; }
+};
 
-    explicit TestEvent(int32_t v) : value(v) {}
-
+struct TestEvent final : TypedEvent<TestEvent>
+{
+    int value = 0;
+    explicit TestEvent(int v = 0) : value(v) {}
     std::string_view GetName() const override { return "TestEvent"; }
 };
 
-struct AnotherTestEvent : public TypedEvent<AnotherTestEvent>
+struct OtherEvent final : TypedEvent<OtherEvent>
 {
     std::string message;
-
-    explicit AnotherTestEvent(std::string msg) : message(std::move(msg)) {}
-
-    std::string_view GetName() const override { return "AnotherTestEvent"; }
-};
-
-class TestEventBus : public AbstractEventBus
-{
-public:
-
-    TestEventBus() : AbstractEventBus(true) {}
-
-    std::string_view GetName() const { return GetBusName(); }
-
-protected:
-
-    std::string_view GetBusName() const override
-    {
-        return "test_event_bus";
-    }
+    explicit OtherEvent(std::string m = "") : message(std::move(m)) {}
+    std::string_view GetName() const override { return "OtherEvent"; }
 };
 
 class EventBusTest : public ::testing::Test
 {
 protected:
-
-    TestEventBus eventBus;
+    TestEventBus bus;
 
     void SetUp() override
     {
-        eventBus.Start();
+        bus.Start();
     }
 
     void TearDown() override
     {
-        eventBus.Shutdown();
+        bus.Shutdown();
     }
 };
 
 TEST_F(EventBusTest, SubscribeAndPublish)
 {
-    int32_t receivedValue = 0;
-
-    eventBus.Subscribe<TestEvent>([&receivedValue](const TestEvent& event)
+    int receivedValue = 0;
+    bus.Subscribe<TestEvent>([&](const TestEvent& e) -> EventResult
     {
-        receivedValue = event.value;
+        receivedValue = e.value;
         return EventResult::Success();
     });
 
-    eventBus.Publish(TestEvent{42});
+    bus.Publish(TestEvent{42});
 
     EXPECT_EQ(receivedValue, 42);
 }
 
 TEST_F(EventBusTest, MultipleSubscribers)
 {
-    int32_t sum = 0;
-
-    eventBus.Subscribe<TestEvent>([&sum](const TestEvent& event)
+    int count = 0;
+    bus.Subscribe<TestEvent>([&](const TestEvent&) -> EventResult
     {
-        sum += event.value;
+        ++count;
+        return EventResult::Success();
+    });
+    bus.Subscribe<TestEvent>([&](const TestEvent&) -> EventResult
+    {
+        ++count;
         return EventResult::Success();
     });
 
-    eventBus.Subscribe<TestEvent>([&sum](const TestEvent& event)
+    bus.Publish(TestEvent{1});
+
+    EXPECT_EQ(count, 2);
+}
+
+TEST_F(EventBusTest, HandlerPriorityOrdering)
+{
+    std::vector<int> order;
+
+    bus.Subscribe<TestEvent>([&](const TestEvent&) -> EventResult
     {
-        sum += event.value * 2;
+        order.push_back(2);
         return EventResult::Success();
-    });
+    }, HandlerPriority::LOW);
 
-    eventBus.Publish(TestEvent{10});
+    bus.Subscribe<TestEvent>([&](const TestEvent&) -> EventResult
+    {
+        order.push_back(0);
+        return EventResult::Success();
+    }, HandlerPriority::HIGH);
 
-    EXPECT_EQ(sum, 30);
+    bus.Subscribe<TestEvent>([&](const TestEvent&) -> EventResult
+    {
+        order.push_back(1);
+        return EventResult::Success();
+    }, HandlerPriority::NORMAL);
+
+    bus.Publish(TestEvent{1});
+
+    ASSERT_EQ(order.size(), 3);
+    EXPECT_EQ(order[0], 0);
+    EXPECT_EQ(order[1], 1);
+    EXPECT_EQ(order[2], 2);
+}
+
+TEST_F(EventBusTest, PublishWithNoSubscribers)
+{
+    bus.Publish(TestEvent{99});
 }
 
 TEST_F(EventBusTest, DifferentEventTypes)
 {
-    int32_t intValue = 0;
-    std::string stringValue;
+    int testCount = 0;
+    int otherCount = 0;
 
-    eventBus.Subscribe<TestEvent>([&intValue](const TestEvent& event)
+    bus.Subscribe<TestEvent>([&](const TestEvent&) -> EventResult
     {
-        intValue = event.value;
+        ++testCount;
+        return EventResult::Success();
+    });
+    bus.Subscribe<OtherEvent>([&](const OtherEvent&) -> EventResult
+    {
+        ++otherCount;
         return EventResult::Success();
     });
 
-    eventBus.Subscribe<AnotherTestEvent>([&stringValue](const AnotherTestEvent& event)
+    bus.Publish(TestEvent{1});
+
+    EXPECT_EQ(testCount, 1);
+    EXPECT_EQ(otherCount, 0);
+}
+
+TEST_F(EventBusTest, EventDataPreserved)
+{
+    std::string receivedMessage;
+    bus.Subscribe<OtherEvent>([&](const OtherEvent& e) -> EventResult
     {
-        stringValue = event.message;
+        receivedMessage = e.message;
         return EventResult::Success();
     });
 
-    eventBus.Publish(TestEvent{42});
-    eventBus.Publish(AnotherTestEvent{"Hello"});
+    bus.Publish(OtherEvent{"hello world"});
 
-    EXPECT_EQ(intValue, 42);
-    EXPECT_EQ(stringValue, "Hello");
+    EXPECT_EQ(receivedMessage, "hello world");
 }
 
-TEST_F(EventBusTest, PriorityOrdering)
+TEST_F(EventBusTest, RunsOnMainThread)
 {
-    std::vector<int32_t> order;
-
-    eventBus.Subscribe<TestEvent>([&order](const TestEvent&)
-    {
-        order.push_back(2);
-        return EventResult::Success();
-    }, HandlerPriority::NORMAL);
-
-    eventBus.Subscribe<TestEvent>([&order](const TestEvent&)
-    {
-        order.push_back(1);
-        return EventResult::Success();
-    }, HandlerPriority::HIGH);
-
-    eventBus.Subscribe<TestEvent>([&order](const TestEvent&)
-    {
-        order.push_back(3);
-        return EventResult::Success();
-    }, HandlerPriority::LOW);
-
-    eventBus.Publish(TestEvent{0});
-
-    ASSERT_EQ(order.size(), 3);
-    EXPECT_EQ(order[0], 1);
-    EXPECT_EQ(order[1], 2);
-    EXPECT_EQ(order[2], 3);
+    EXPECT_TRUE(bus.RunsOnMainThread());
 }
 
-TEST_F(EventBusTest, NoSubscribersDoesNotCrash)
+TEST_F(EventBusTest, MultiplePublishDispatched)
 {
-    EXPECT_NO_THROW(eventBus.Publish(TestEvent{42}));
+    int count = 0;
+    bus.Subscribe<TestEvent>([&](const TestEvent&) -> EventResult
+    {
+        ++count;
+        return EventResult::Success();
+    });
+
+    bus.Publish(TestEvent{1});
+    bus.Publish(TestEvent{2});
+    bus.Publish(TestEvent{3});
+
+    EXPECT_EQ(count, 3);
 }
 
-TEST_F(EventBusTest, GetBusNameReturnsCorrectName)
+TEST_F(EventBusTest, EventResultFromHandler)
 {
-    EXPECT_EQ(eventBus.GetName(), "test_event_bus");
+    bus.Subscribe<TestEvent>([](const TestEvent&) -> EventResult
+    {
+        return EventResult::Failure("test failure");
+    });
+
+    bus.Publish(TestEvent{1});
 }

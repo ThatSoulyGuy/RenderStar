@@ -1,4 +1,5 @@
 #include "RenderStar/Common/Component/ComponentModule.hpp"
+#include "RenderStar/Common/Component/AbstractAffector.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
 #include <algorithm>
 
@@ -58,15 +59,13 @@ namespace RenderStar::Common::Component
         return std::nullopt;
     }
 
-    void ComponentModule::RegisterSystem(ComponentSystemFunction system)
+    void ComponentModule::RunAffectors()
     {
-        systems.push_back(std::move(system));
-    }
-
-    void ComponentModule::RunSystems()
-    {
-        for (auto& system : systems)
-            system(*this);
+        for (auto& subModule : subModules)
+        {
+            if (auto* affector = dynamic_cast<AbstractAffector*>(subModule.get()))
+                affector->Affect(*this);
+        }
     }
 
     void ComponentModule::OnInitialize(Module::ModuleContext& moduleContext)

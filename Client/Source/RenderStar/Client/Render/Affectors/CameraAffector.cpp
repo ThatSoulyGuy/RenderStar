@@ -1,27 +1,21 @@
-#include "RenderStar/Client/Render/Systems/CameraComponentSystem.hpp"
+#include "RenderStar/Client/Render/Affectors/CameraAffector.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Component/Components/Transform.hpp"
 #include "RenderStar/Client/Render/Components/Camera.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
-namespace RenderStar::Client::Render::Systems
+namespace RenderStar::Client::Render::Affectors
 {
     using namespace RenderStar::Common::Component;
     using namespace RenderStar::Client::Render::Components;
 
-    CameraComponentSystem::CameraComponentSystem()
-        : viewportWidth(1280)
-        , viewportHeight(720)
-    {
-    }
-
-    void CameraComponentSystem::SetViewportSize(int32_t width, int32_t height)
+    void CameraAffector::SetViewportSize(const int32_t width, const int32_t height)
     {
         viewportWidth = width;
         viewportHeight = height;
     }
 
-    void CameraComponentSystem::Run(ComponentModule& componentModule)
+    void CameraAffector::Affect(ComponentModule& componentModule)
     {
         float defaultAspect = 16.0f / 9.0f;
 
@@ -95,7 +89,6 @@ namespace RenderStar::Client::Render::Systems
                 }
             }
 
-            camera.projectionMatrix[1][1] *= -1.0f;
         }
     }
 }

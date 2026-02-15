@@ -3,6 +3,7 @@
 #include "RenderStar/Client/Render/Resource/IShaderProgram.hpp"
 #include "RenderStar/Client/Render/Resource/IUniformBindingHandle.hpp"
 #include "RenderStar/Client/Render/Resource/Mesh.hpp"
+#include "RenderStar/Common/Component/GameObject.hpp"
 #include "RenderStar/Common/Module/AbstractModule.hpp"
 
 namespace RenderStar::Client::Render
@@ -39,6 +40,7 @@ namespace RenderStar::Client::Core
         std::unique_ptr<Render::IBufferHandle> testUniformBuffer;
 
         float testRotationAngle = 0.0f;
-        float testAspectRatio = 0.0f;
+
+        Common::Component::GameObject playerEntity = Common::Component::GameObject::Invalid();
     };
 }

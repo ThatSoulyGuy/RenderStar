@@ -1,9 +1,12 @@
 #include "RenderStar/Client/Core/ClientLifecycleModule.hpp"
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
+#include "RenderStar/Client/Gameplay/PlayerController.hpp"
+#include "RenderStar/Client/Gameplay/PlayerControllerAffector.hpp"
 #include "RenderStar/Client/Input/ClientInputModule.hpp"
 #include "RenderStar/Client/Event/Buses/ClientCoreEventBus.hpp"
 #include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
 #include "RenderStar/Client/Event/Events/ClientEvents.hpp"
+#include "RenderStar/Client/Render/Affectors/CameraAffector.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
 #include "RenderStar/Client/Render/Components/Camera.hpp"
 #include "RenderStar/Client/Render/RendererModule.hpp"
@@ -14,7 +17,9 @@
 #include "RenderStar/Client/Render/Resource/StandardUniforms.hpp"
 #include "RenderStar/Client/Render/Resource/Vertex.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
+#include "RenderStar/Common/Component/Affectors/TransformAffector.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
+#include "RenderStar/Common/Component/Components/Transform.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
 #include "RenderStar/Common/Time/TimeModule.hpp"
 
@@ -101,7 +106,8 @@ namespace RenderStar::Client::Core
         if (testUniformBinding)
             testUniformBinding->UpdateBuffer(0, testUniformBuffer.get(), StandardUniforms::Size());
 
-        testAspectRatio = static_cast<float>(backend->GetWidth()) / static_cast<float>(backend->GetHeight());
+        if (auto cameraAffector = context.GetModule<Render::Affectors::CameraAffector>(); cameraAffector.has_value())
+            cameraAffector->get().SetViewportSize(backend->GetWidth(), backend->GetHeight());
 
         logger->info("Test geometry initialized successfully");
 
@@ -123,19 +129,18 @@ namespace RenderStar::Client::Core
         if (testRotationAngle >= 360.0f)
             testRotationAngle -= 360.0f;
 
-        Components::Camera camera = Components::Camera::CreatePerspective(60.0f, testAspectRatio, 0.1f, 100.0f);
+        glm::mat4 viewProjection(1.0f);
 
-        constexpr auto cameraPosition = glm::vec3(0.0f, 0.0f, 3.0f);
-        constexpr auto cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-        constexpr auto cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
-        camera.viewMatrix = glm::lookAt(cameraPosition, cameraTarget, cameraUp);
+        if (const auto componentModule = context->GetModule<Common::Component::ComponentModule>(); componentModule.has_value() && playerEntity.IsValid())
+        {
+            if (auto cameraOpt = componentModule->get().GetComponent<Components::Camera>(playerEntity); cameraOpt.has_value())
+                viewProjection = cameraOpt->get().GetViewProjectionMatrix();
+        }
 
         auto model = glm::mat4(1.0f);
 
         model = glm::rotate(model, glm::radians(testRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
         model = glm::rotate(model, glm::radians(testRotationAngle * 0.5f), glm::vec3(1.0f, 0.0f, 0.0f));
-
-        const glm::mat4 viewProjection = camera.GetViewProjectionMatrix();
 
         const StandardUniforms uniformData(model, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
 
@@ -180,6 +185,40 @@ namespace RenderStar::Client::Core
         });
 
         logger->info("Event subscriptions set up");
+
+        const auto componentModule = context.GetModule<Common::Component::ComponentModule>();
+        const auto windowModule = context.GetModule<ClientWindowModule>();
+
+        if (!componentModule.has_value())
+        {
+            logger->error("ComponentModule not found");
+            return;
+        }
+
+        componentModule->get().RegisterSubModule(std::make_unique<Gameplay::PlayerControllerAffector>());
+        componentModule->get().RegisterSubModule(std::make_unique<Common::Component::Affectors::TransformAffector>());
+        componentModule->get().RegisterSubModule(std::make_unique<Render::Affectors::CameraAffector>());
+
+        if (windowModule.has_value())
+        {
+            if (auto cameraAffector = context.GetModule<Render::Affectors::CameraAffector>(); cameraAffector.has_value())
+                cameraAffector->get().SetViewportSize(static_cast<int32_t>(windowModule->get().GetWidth()), static_cast<int32_t>(windowModule->get().GetHeight()));
+        }
+
+        playerEntity = componentModule->get().CreateEntity("Player");
+
+        auto& transform = componentModule->get().AddComponent<Common::Component::Transform>(playerEntity);
+        transform.position = glm::vec3(0.0f, 2.0f, 5.0f);
+
+        auto& camera = componentModule->get().AddComponent<Components::Camera>(playerEntity);
+        camera.projectionType = Components::ProjectionType::PERSPECTIVE;
+        camera.fieldOfView = 60.0f;
+        camera.nearPlane = 0.1f;
+        camera.farPlane = 100.0f;
+
+        componentModule->get().AddComponent<Gameplay::PlayerController>(playerEntity);
+
+        logger->info("Player entity created and affectors registered");
     }
 
     void ClientLifecycleModule::SetupMainLoop() const
@@ -239,9 +278,12 @@ namespace RenderStar::Client::Core
                 timeModule->get().Tick();
 
             if (componentModule.has_value())
-                componentModule->get().RunSystems();
+                componentModule->get().RunAffectors();
 
             renderEventBus.value().get().Publish(Event::Events::ClientRenderFrameEvent(rendererModule.value().get().GetBackend()));
+
+            if (inputModule.has_value())
+                inputModule->get().EndFrame();
         });
     }
 }

@@ -1,49 +1,52 @@
 #include <gtest/gtest.h>
 #include "RenderStar/Common/Component/GameObject.hpp"
+#include <unordered_map>
 
 using namespace RenderStar::Common::Component;
 
-class GameObjectTest : public ::testing::Test
+TEST(GameObjectTest, DefaultConstructionIsInvalid)
 {
-protected:
-
-    void SetUp() override
-    {
-    }
-};
-
-TEST_F(GameObjectTest, DefaultConstructionIsInvalid)
-{
-    GameObject object{GameObject::INVALID_ID};
-    EXPECT_FALSE(object.IsValid());
+    GameObject entity{};
+    EXPECT_EQ(entity.id, 0);
 }
 
-TEST_F(GameObjectTest, ValidIdIsValid)
+TEST(GameObjectTest, ExplicitIdConstruction)
 {
-    GameObject object{0};
-    EXPECT_TRUE(object.IsValid());
-
-    GameObject object2{100};
-    EXPECT_TRUE(object2.IsValid());
+    GameObject entity{42};
+    EXPECT_EQ(entity.id, 42);
 }
 
-TEST_F(GameObjectTest, NegativeIdIsInvalid)
+TEST(GameObjectTest, InvalidIdConstant)
 {
-    GameObject object{-1};
-    EXPECT_FALSE(object.IsValid());
-
-    GameObject object2{-100};
-    EXPECT_FALSE(object2.IsValid());
+    EXPECT_EQ(GameObject::INVALID_ID, -1);
 }
 
-TEST_F(GameObjectTest, InvalidFactoryMethod)
+TEST(GameObjectTest, InvalidFactoryReturnsInvalid)
 {
-    GameObject object = GameObject::Invalid();
-    EXPECT_FALSE(object.IsValid());
-    EXPECT_EQ(object.id, GameObject::INVALID_ID);
+    auto entity = GameObject::Invalid();
+    EXPECT_EQ(entity.id, GameObject::INVALID_ID);
+    EXPECT_FALSE(entity.IsValid());
 }
 
-TEST_F(GameObjectTest, EqualityComparison)
+TEST(GameObjectTest, IsValidForPositiveId)
+{
+    GameObject entity{0};
+    EXPECT_TRUE(entity.IsValid());
+
+    GameObject entity2{100};
+    EXPECT_TRUE(entity2.IsValid());
+}
+
+TEST(GameObjectTest, IsValidFalseForNegativeId)
+{
+    GameObject entity{-1};
+    EXPECT_FALSE(entity.IsValid());
+
+    GameObject entity2{-42};
+    EXPECT_FALSE(entity2.IsValid());
+}
+
+TEST(GameObjectTest, EqualityOperator)
 {
     GameObject a{5};
     GameObject b{5};
@@ -53,42 +56,31 @@ TEST_F(GameObjectTest, EqualityComparison)
     EXPECT_NE(a, c);
 }
 
-TEST_F(GameObjectTest, OrderingComparison)
+TEST(GameObjectTest, SpaceshipOrdering)
 {
-    GameObject a{5};
-    GameObject b{10};
-    GameObject c{5};
+    GameObject a{1};
+    GameObject b{2};
 
-    EXPECT_LT(a, b);
-    EXPECT_GT(b, a);
-    EXPECT_LE(a, c);
-    EXPECT_GE(b, a);
+    EXPECT_TRUE(a < b);
+    EXPECT_TRUE(b > a);
+    EXPECT_TRUE(a <= b);
+    EXPECT_TRUE(a <= a);
 }
 
-TEST_F(GameObjectTest, InvalidIdConstant)
+TEST(GameObjectTest, HashableInUnorderedMap)
 {
-    EXPECT_EQ(GameObject::INVALID_ID, -1);
+    std::unordered_map<int32_t, std::string> map;
+    GameObject entity{7};
+    map[entity.id] = "test";
+
+    EXPECT_EQ(map[7], "test");
 }
 
-TEST_F(GameObjectTest, CanBeUsedInContainer)
+TEST(GameObjectTest, CopySemantics)
 {
-    std::vector<GameObject> objects;
-    objects.push_back(GameObject{0});
-    objects.push_back(GameObject{1});
-    objects.push_back(GameObject{2});
+    GameObject original{42};
+    GameObject copy = original;
 
-    EXPECT_EQ(objects.size(), 3);
-    EXPECT_EQ(objects[0].id, 0);
-    EXPECT_EQ(objects[1].id, 1);
-    EXPECT_EQ(objects[2].id, 2);
-}
-
-TEST_F(GameObjectTest, CanBeUsedAsMapKey)
-{
-    std::map<GameObject, int32_t> objectMap;
-    objectMap[GameObject{0}] = 100;
-    objectMap[GameObject{5}] = 500;
-
-    EXPECT_EQ(objectMap[GameObject{0}], 100);
-    EXPECT_EQ(objectMap[GameObject{5}], 500);
+    EXPECT_EQ(copy.id, 42);
+    EXPECT_EQ(original, copy);
 }

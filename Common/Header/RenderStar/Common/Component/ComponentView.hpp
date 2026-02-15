@@ -35,6 +35,11 @@ namespace RenderStar::Common::Component
                 return *this;
             }
 
+            bool operator==(const Iterator& other) const
+            {
+                return index == other.index;
+            }
+
             bool operator!=(const Iterator& other) const
             {
                 return index != other.index;
@@ -44,6 +49,9 @@ namespace RenderStar::Common::Component
 
             void AdvanceToValid()
             {
+                if (view.smallestPool == nullptr)
+                    return;
+
                 int32_t size = view.smallestPool->GetSize();
 
                 while (index < size)

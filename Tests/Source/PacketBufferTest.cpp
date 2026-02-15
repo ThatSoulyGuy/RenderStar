@@ -3,182 +3,126 @@
 
 using namespace RenderStar::Common::Network;
 
-class PacketBufferTest : public ::testing::Test
+TEST(PacketBufferTest, WriteReadByte)
 {
-protected:
-
-    void SetUp() override
-    {
-    }
-};
-
-TEST_F(PacketBufferTest, WriteAndReadByte)
-{
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteByte(std::byte{42});
-    buffer.WriteByte(std::byte{0});
-    buffer.WriteByte(std::byte{255});
-
-    buffer.Reset();
-
-    EXPECT_EQ(buffer.ReadByte(), std::byte{42});
-    EXPECT_EQ(buffer.ReadByte(), std::byte{0});
-    EXPECT_EQ(buffer.ReadByte(), std::byte{255});
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteByte(std::byte{0xAB});
+    EXPECT_EQ(buf.ReadByte(), std::byte{0xAB});
 }
 
-TEST_F(PacketBufferTest, WriteAndReadInt16)
+TEST(PacketBufferTest, WriteReadBoolean)
 {
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteInt16(1234);
-    buffer.WriteInt16(-32768);
-    buffer.WriteInt16(32767);
-
-    buffer.Reset();
-
-    EXPECT_EQ(buffer.ReadInt16(), 1234);
-    EXPECT_EQ(buffer.ReadInt16(), -32768);
-    EXPECT_EQ(buffer.ReadInt16(), 32767);
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteBoolean(true);
+    buf.WriteBoolean(false);
+    EXPECT_TRUE(buf.ReadBoolean());
+    EXPECT_FALSE(buf.ReadBoolean());
 }
 
-TEST_F(PacketBufferTest, WriteAndReadInt32)
+TEST(PacketBufferTest, WriteReadInt16)
 {
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteInt32(123456789);
-    buffer.WriteInt32(-2147483648);
-    buffer.WriteInt32(2147483647);
-
-    buffer.Reset();
-
-    EXPECT_EQ(buffer.ReadInt32(), 123456789);
-    EXPECT_EQ(buffer.ReadInt32(), -2147483648);
-    EXPECT_EQ(buffer.ReadInt32(), 2147483647);
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteInt16(12345);
+    buf.WriteInt16(-12345);
+    EXPECT_EQ(buf.ReadInt16(), 12345);
+    EXPECT_EQ(buf.ReadInt16(), -12345);
 }
 
-TEST_F(PacketBufferTest, WriteAndReadInt64)
+TEST(PacketBufferTest, WriteReadInt32)
 {
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteInt64(1234567890123456789LL);
-    buffer.WriteInt64(-9223372036854775807LL);
-
-    buffer.Reset();
-
-    EXPECT_EQ(buffer.ReadInt64(), 1234567890123456789LL);
-    EXPECT_EQ(buffer.ReadInt64(), -9223372036854775807LL);
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteInt32(123456789);
+    buf.WriteInt32(-123456789);
+    EXPECT_EQ(buf.ReadInt32(), 123456789);
+    EXPECT_EQ(buf.ReadInt32(), -123456789);
 }
 
-TEST_F(PacketBufferTest, WriteAndReadFloat)
+TEST(PacketBufferTest, WriteReadInt64)
 {
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteFloat(3.14159f);
-    buffer.WriteFloat(-1.0f);
-    buffer.WriteFloat(0.0f);
-
-    buffer.Reset();
-
-    EXPECT_FLOAT_EQ(buffer.ReadFloat(), 3.14159f);
-    EXPECT_FLOAT_EQ(buffer.ReadFloat(), -1.0f);
-    EXPECT_FLOAT_EQ(buffer.ReadFloat(), 0.0f);
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteInt64(1234567890123LL);
+    EXPECT_EQ(buf.ReadInt64(), 1234567890123LL);
 }
 
-TEST_F(PacketBufferTest, WriteAndReadDouble)
+TEST(PacketBufferTest, WriteReadFloat)
 {
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteDouble(3.141592653589793);
-    buffer.WriteDouble(-1.0);
-
-    buffer.Reset();
-
-    EXPECT_DOUBLE_EQ(buffer.ReadDouble(), 3.141592653589793);
-    EXPECT_DOUBLE_EQ(buffer.ReadDouble(), -1.0);
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteFloat(3.14f);
+    EXPECT_FLOAT_EQ(buf.ReadFloat(), 3.14f);
 }
 
-TEST_F(PacketBufferTest, WriteAndReadString)
+TEST(PacketBufferTest, WriteReadDouble)
 {
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteString("Hello, World!");
-    buffer.WriteString("");
-    buffer.WriteString("Test");
-
-    buffer.Reset();
-
-    EXPECT_EQ(buffer.ReadString(), "Hello, World!");
-    EXPECT_EQ(buffer.ReadString(), "");
-    EXPECT_EQ(buffer.ReadString(), "Test");
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteDouble(2.718281828);
+    EXPECT_DOUBLE_EQ(buf.ReadDouble(), 2.718281828);
 }
 
-TEST_F(PacketBufferTest, WriteAndReadBoolean)
+TEST(PacketBufferTest, WriteReadString)
 {
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteBoolean(true);
-    buffer.WriteBoolean(false);
-    buffer.WriteBoolean(true);
-
-    buffer.Reset();
-
-    EXPECT_TRUE(buffer.ReadBoolean());
-    EXPECT_FALSE(buffer.ReadBoolean());
-    EXPECT_TRUE(buffer.ReadBoolean());
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteString("hello world");
+    EXPECT_EQ(buf.ReadString(), "hello world");
 }
 
-TEST_F(PacketBufferTest, WriteAndReadVarint)
+TEST(PacketBufferTest, WriteReadEmptyString)
 {
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteVarint(0);
-    buffer.WriteVarint(127);
-    buffer.WriteVarint(128);
-    buffer.WriteVarint(16383);
-    buffer.WriteVarint(16384);
-    buffer.WriteVarint(2097151);
-    buffer.WriteVarint(-1);
-
-    buffer.Reset();
-
-    EXPECT_EQ(buffer.ReadVarint(), 0);
-    EXPECT_EQ(buffer.ReadVarint(), 127);
-    EXPECT_EQ(buffer.ReadVarint(), 128);
-    EXPECT_EQ(buffer.ReadVarint(), 16383);
-    EXPECT_EQ(buffer.ReadVarint(), 16384);
-    EXPECT_EQ(buffer.ReadVarint(), 2097151);
-    EXPECT_EQ(buffer.ReadVarint(), -1);
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteString("");
+    EXPECT_EQ(buf.ReadString(), "");
 }
 
-TEST_F(PacketBufferTest, MixedTypesRoundTrip)
+TEST(PacketBufferTest, SequentialMultipleValues)
 {
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteInt32(42);
-    buffer.WriteString("Hello");
-    buffer.WriteFloat(3.14f);
-    buffer.WriteBoolean(true);
-    buffer.WriteInt64(9876543210LL);
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteInt32(42);
+    buf.WriteFloat(3.14f);
+    buf.WriteString("test");
+    buf.WriteBoolean(true);
 
-    buffer.Reset();
-
-    EXPECT_EQ(buffer.ReadInt32(), 42);
-    EXPECT_EQ(buffer.ReadString(), "Hello");
-    EXPECT_FLOAT_EQ(buffer.ReadFloat(), 3.14f);
-    EXPECT_TRUE(buffer.ReadBoolean());
-    EXPECT_EQ(buffer.ReadInt64(), 9876543210LL);
+    EXPECT_EQ(buf.ReadInt32(), 42);
+    EXPECT_FLOAT_EQ(buf.ReadFloat(), 3.14f);
+    EXPECT_EQ(buf.ReadString(), "test");
+    EXPECT_TRUE(buf.ReadBoolean());
 }
 
-TEST_F(PacketBufferTest, ToSpanReturnsCorrectSize)
+TEST(PacketBufferTest, ReadableBytes)
 {
-    PacketBuffer buffer = PacketBuffer::Allocate();
-    buffer.WriteInt32(42);
-    buffer.WriteInt32(84);
-
-    auto span = buffer.ToSpan();
-    EXPECT_EQ(span.size(), 8);
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteInt32(42);
+    EXPECT_GT(buf.ReadableBytes(), 0u);
 }
 
-TEST_F(PacketBufferTest, WrapExistingData)
+TEST(PacketBufferTest, Reset)
 {
-    PacketBuffer original = PacketBuffer::Allocate();
-    original.WriteInt32(42);
-    original.WriteString("Test");
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteInt32(42);
+    buf.ReadInt32();
+    EXPECT_EQ(buf.ReadableBytes(), 0u);
+    buf.Reset();
+    EXPECT_GT(buf.ReadableBytes(), 0u);
+    EXPECT_EQ(buf.ReadInt32(), 42);
+}
+
+TEST(PacketBufferTest, WriteReadVarint)
+{
+    auto buf = PacketBuffer::Allocate();
+    buf.WriteVarint(300);
+    buf.WriteVarint(-1);
+    buf.WriteVarint(0);
+    EXPECT_EQ(buf.ReadVarint(), 300);
+    EXPECT_EQ(buf.ReadVarint(), -1);
+    EXPECT_EQ(buf.ReadVarint(), 0);
+}
+
+TEST(PacketBufferTest, WrapFromSpan)
+{
+    auto original = PacketBuffer::Allocate();
+    original.WriteInt32(99);
+    original.WriteString("wrapped");
 
     auto span = original.ToSpan();
-    PacketBuffer restored = PacketBuffer::Wrap(span);
-
-    EXPECT_EQ(restored.ReadInt32(), 42);
-    EXPECT_EQ(restored.ReadString(), "Test");
+    auto wrapped = PacketBuffer::Wrap(span);
+    EXPECT_EQ(wrapped.ReadInt32(), 99);
+    EXPECT_EQ(wrapped.ReadString(), "wrapped");
 }

@@ -30,6 +30,8 @@ namespace RenderStar::Client::Input
 
         void Tick();
 
+        void EndFrame();
+
         [[nodiscard]]
         bool IsKeyPressed(KeyCode key) const;
 
@@ -57,6 +59,13 @@ namespace RenderStar::Client::Input
         [[nodiscard]]
         glm::dvec2 GetScrollDelta() const;
 
+        void LockCursor();
+
+        void UnlockCursor();
+
+        [[nodiscard]]
+        bool IsCursorLocked() const;
+
         void RegisterCombo(const std::string& name, KeyCombo combo);
 
         void UnregisterCombo(const std::string& name);
@@ -77,8 +86,8 @@ namespace RenderStar::Client::Input
 
     private:
 
-        void InstallCallbacks(GLFWwindow* window);
-        void RemoveCallbacks(GLFWwindow* window);
+        static void InstallCallbacks(GLFWwindow* window);
+        static void RemoveCallbacks(GLFWwindow* window);
 
         [[nodiscard]]
         KeyModifier GetCurrentModifiers() const;
@@ -96,5 +105,6 @@ namespace RenderStar::Client::Input
         std::unordered_map<std::string, bool> comboTriggered;
 
         GLFWwindow* windowHandle = nullptr;
+        bool cursorLocked = false;
     };
 }

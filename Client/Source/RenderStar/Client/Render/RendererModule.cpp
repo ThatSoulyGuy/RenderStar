@@ -30,14 +30,7 @@ namespace RenderStar::Client::Render
 
     RendererModule::RendererModule() : backend(nullptr), backendType(RenderBackend::OPENGL) { }
 
-    RendererModule::~RendererModule()
-    {
-        if (backend != nullptr)
-            backend->WaitIdle();
-
-        if (backend != nullptr)
-            backend->Destroy();
-    }
+    RendererModule::~RendererModule() = default;
 
     IRenderBackend* RendererModule::GetBackend() const
     {
@@ -90,6 +83,7 @@ namespace RenderStar::Client::Render
         {
             logger->info("Waiting for GPU to finish before cleanup...");
             backend->WaitIdle();
+            backend->Destroy();
         }
     }
 }

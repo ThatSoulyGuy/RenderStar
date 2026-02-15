@@ -6,13 +6,12 @@
 #include <memory>
 #include <typeindex>
 #include <unordered_map>
-#include <functional>
 #include <optional>
 #include <string>
 
 namespace RenderStar::Common::Component
 {
-    using ComponentSystemFunction = std::function<void(class ComponentModule&)>;
+    class AbstractAffector;
 
     class ComponentModule final : public Module::AbstractModule
     {
@@ -50,9 +49,7 @@ namespace RenderStar::Common::Component
         template<typename ComponentType>
         ComponentPool<ComponentType>& GetPool();
 
-        void RegisterSystem(ComponentSystemFunction system);
-
-        void RunSystems();
+        void RunAffectors();
 
     protected:
 
@@ -67,7 +64,6 @@ namespace RenderStar::Common::Component
         std::vector<GameObject> entities;
         std::unordered_map<std::type_index, std::unique_ptr<IComponentPool>> pools;
         ComponentPool<std::string> namePool;
-        std::vector<ComponentSystemFunction> systems;
     };
 }
 
