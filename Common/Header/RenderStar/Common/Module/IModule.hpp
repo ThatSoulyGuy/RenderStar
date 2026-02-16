@@ -3,6 +3,7 @@
 #include <memory>
 #include <span>
 #include <typeindex>
+#include <vector>
 
 namespace RenderStar::Common::Module
 {
@@ -16,6 +17,8 @@ namespace RenderStar::Common::Module
 
         virtual void OnRegistration(ModuleContext& context) = 0;
 
+        virtual void OnPrepareShutdown() = 0;
+
         virtual void OnShutdown() = 0;
 
         virtual void SetParent(IModule* parent) = 0;
@@ -27,5 +30,8 @@ namespace RenderStar::Common::Module
 
         [[nodiscard]]
         virtual std::type_index GetTypeIndex() const = 0;
+
+        [[nodiscard]]
+        virtual std::vector<std::type_index> GetDependencies() const = 0;
     };
 }

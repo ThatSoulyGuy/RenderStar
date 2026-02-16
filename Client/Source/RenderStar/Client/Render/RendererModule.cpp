@@ -77,13 +77,23 @@ namespace RenderStar::Client::Render
         logger->info("RendererModule initialized with {} backend", backendType == RenderBackend::OPENGL ? "OpenGL" : "Vulkan");
     }
 
-    void RendererModule::OnCleanup()
+    void RendererModule::OnPreCleanup()
     {
         if (backend != nullptr)
         {
             logger->info("Waiting for GPU to finish before cleanup...");
             backend->WaitIdle();
-            backend->Destroy();
         }
+    }
+
+    void RendererModule::OnCleanup()
+    {
+        if (backend != nullptr)
+            backend->Destroy();
+    }
+
+    std::vector<std::type_index> RendererModule::GetDependencies() const
+    {
+        return DependsOn<Core::ClientWindowModule>();
     }
 }

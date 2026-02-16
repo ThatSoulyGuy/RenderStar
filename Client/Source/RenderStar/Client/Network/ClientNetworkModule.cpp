@@ -135,18 +135,39 @@ namespace RenderStar::Client::Network
         if (!packetModule)
             return;
 
-        const std::span dataSpan(reinterpret_cast<const std::byte*>(receiveBuffer.data()), bytesReceived);
-        Common::Network::PacketBuffer buffer = Common::Network::PacketBuffer::Wrap(dataSpan);
+        accumulationBuffer.insert(accumulationBuffer.end(),
+            receiveBuffer.begin(),
+            receiveBuffer.begin() + bytesReceived);
 
-        const auto packet = packetModule->Deserialize(buffer);
-
-        if (!packet)
+        while (accumulationBuffer.size() >= 4)
         {
-            logger->warn("Failed to deserialize packet from server");
-            return;
-        }
+            uint32_t packetLength =
+                (static_cast<uint32_t>(accumulationBuffer[0]) << 24) |
+                (static_cast<uint32_t>(accumulationBuffer[1]) << 16) |
+                (static_cast<uint32_t>(accumulationBuffer[2]) << 8) |
+                static_cast<uint32_t>(accumulationBuffer[3]);
 
-        packetModule->HandlePacket(*packet);
+            if (accumulationBuffer.size() < 4 + packetLength)
+                break;
+
+            const std::span dataSpan(
+                reinterpret_cast<const std::byte*>(accumulationBuffer.data() + 4),
+                packetLength);
+            Common::Network::PacketBuffer buffer = Common::Network::PacketBuffer::Wrap(dataSpan);
+
+            const auto packet = packetModule->Deserialize(buffer);
+
+            if (!packet)
+            {
+                logger->warn("Failed to deserialize packet from server");
+                accumulationBuffer.erase(accumulationBuffer.begin(), accumulationBuffer.begin() + 4 + packetLength);
+                continue;
+            }
+
+            packetModule->HandlePacket(*packet);
+
+            accumulationBuffer.erase(accumulationBuffer.begin(), accumulationBuffer.begin() + 4 + packetLength);
+        }
     }
 
     void ClientNetworkModule::HandleDisconnect(const std::string& reason)
@@ -276,5 +297,10 @@ namespace RenderStar::Client::Network
             localServerMaxPlayers = *maxPlayersOpt;
 
         logger->debug("Loaded configuration: connection_timeout={}ms, local_max_players={}", connectionTimeoutMs, localServerMaxPlayers);
+    }
+
+    std::vector<std::type_index> ClientNetworkModule::GetDependencies() const
+    {
+        return DependsOn<Common::Configuration::ConfigurationModule>();
     }
 }

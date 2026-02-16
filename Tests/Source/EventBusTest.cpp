@@ -176,3 +176,63 @@ TEST_F(EventBusTest, EventResultFromHandler)
 
     bus.Publish(TestEvent{1});
 }
+
+TEST_F(EventBusTest, DeferredEventsQueuedUntilFlush)
+{
+    int receivedValue = 0;
+
+    bus.SetDeferred(true);
+    bus.Publish(TestEvent{42});
+
+    bus.Subscribe<TestEvent>([&](const TestEvent& e) -> EventResult
+    {
+        receivedValue = e.value;
+        return EventResult::Success();
+    });
+
+    EXPECT_EQ(receivedValue, 0);
+
+    bus.FlushDeferred();
+
+    EXPECT_EQ(receivedValue, 42);
+}
+
+TEST_F(EventBusTest, DeferredFlushDispatchesMultipleEvents)
+{
+    std::vector<int> received;
+
+    bus.SetDeferred(true);
+    bus.Publish(TestEvent{1});
+    bus.Publish(TestEvent{2});
+    bus.Publish(TestEvent{3});
+
+    bus.Subscribe<TestEvent>([&](const TestEvent& e) -> EventResult
+    {
+        received.push_back(e.value);
+        return EventResult::Success();
+    });
+
+    bus.FlushDeferred();
+
+    ASSERT_EQ(received.size(), 3);
+    EXPECT_EQ(received[0], 1);
+    EXPECT_EQ(received[1], 2);
+    EXPECT_EQ(received[2], 3);
+}
+
+TEST_F(EventBusTest, AfterFlushPublishesDispatchNormally)
+{
+    int count = 0;
+
+    bus.SetDeferred(true);
+    bus.Subscribe<TestEvent>([&](const TestEvent&) -> EventResult
+    {
+        ++count;
+        return EventResult::Success();
+    });
+    bus.FlushDeferred();
+
+    bus.Publish(TestEvent{1});
+
+    EXPECT_EQ(count, 1);
+}

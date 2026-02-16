@@ -17,6 +17,8 @@ namespace RenderStar::Common::Module
 
         void OnRegistration(ModuleContext& context) final;
 
+        void OnPrepareShutdown() override;
+
         void OnShutdown() override;
 
         void SetParent(IModule* parent) override;
@@ -35,11 +37,19 @@ namespace RenderStar::Common::Module
         template<typename SubModuleType>
         std::optional<std::reference_wrapper<SubModuleType>> GetSubModule();
 
+        [[nodiscard]]
+        std::vector<std::type_index> GetDependencies() const override { return {}; }
+
     protected:
 
         virtual void OnInitialize(ModuleContext& context) = 0;
 
+        virtual void OnPreCleanup() { }
+
         virtual void OnCleanup() { }
+
+        template<typename... Deps>
+        static std::vector<std::type_index> DependsOn();
 
         std::shared_ptr<spdlog::logger> logger;
         ModuleContext* context;

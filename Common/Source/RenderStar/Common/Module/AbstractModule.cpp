@@ -18,6 +18,17 @@ namespace RenderStar::Common::Module
             subModule->OnRegistration(moduleContext);
     }
 
+    void AbstractModule::OnPrepareShutdown()
+    {
+        if (!initialized)
+            return;
+
+        OnPreCleanup();
+
+        for (const auto& subModule : subModules)
+            subModule->OnPrepareShutdown();
+    }
+
     void AbstractModule::OnShutdown()
     {
         if (!initialized)

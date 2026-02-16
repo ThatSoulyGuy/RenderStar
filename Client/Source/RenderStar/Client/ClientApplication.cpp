@@ -5,6 +5,7 @@
 #include "RenderStar/Client/Event/Buses/ClientCoreEventBus.hpp"
 #include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
 #include "RenderStar/Client/Event/Events/ClientEvents.hpp"
+#include "RenderStar/Client/Gameplay/ClientPlayerModule.hpp"
 #include "RenderStar/Client/Input/ClientInputModule.hpp"
 #include "RenderStar/Client/Network/ClientNetworkModule.hpp"
 #include "RenderStar/Client/Render/RendererModule.hpp"
@@ -57,9 +58,10 @@ namespace RenderStar::Client
             .Module(std::make_unique<Common::Scene::SceneModule>())
             .Module(std::make_unique<Core::ClientWindowModule>())
             .Module(std::make_unique<Input::ClientInputModule>())
-            .Module(std::make_unique<Core::ClientLifecycleModule>())
             .Module(std::make_unique<Render::RendererModule>())
             .Module(std::make_unique<Network::ClientNetworkModule>())
+            .Module(std::make_unique<Gameplay::ClientPlayerModule>())
+            .Module(std::make_unique<Core::ClientLifecycleModule>())
             .Build();
 
         moduleManager->GetContext().GetEventBus<Event::ClientCoreEventBus>().value().get().Publish(Event::Events::ClientPreinitializationEvent());

@@ -43,6 +43,8 @@ namespace RenderStar::Common::Module
 
         ModuleManager(std::unordered_map<std::type_index, std::unique_ptr<IModule>> modules, std::unordered_map<std::type_index, std::unique_ptr<Event::IEventBus>> eventBuses, std::vector<std::type_index> moduleOrder);
 
+        ~ModuleManager();
+
         void Start();
 
         void RunMainLoop();
@@ -54,6 +56,8 @@ namespace RenderStar::Common::Module
         ModuleContext& GetContext() const;
 
     private:
+
+        std::vector<std::type_index> ResolveModuleOrder();
 
         std::shared_ptr<spdlog::logger> logger;
         std::unordered_map<std::type_index, std::unique_ptr<IModule>> modules;

@@ -31,9 +31,13 @@ namespace RenderStar::Client::Render
         [[nodiscard]]
         RenderBackend GetBackendType() const;
 
+        [[nodiscard]]
+        std::vector<std::type_index> GetDependencies() const override;
+
     protected:
 
         void OnInitialize(Common::Module::ModuleContext& context) override;
+        void OnPreCleanup() override;
         void OnCleanup() override;
 
     private:

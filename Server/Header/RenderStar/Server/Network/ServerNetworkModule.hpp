@@ -4,6 +4,7 @@
 #include "RenderStar/Server/Network/ServerMode.hpp"
 #include "RenderStar/Server/Network/ClientConnection.hpp"
 #include <asio.hpp>
+#include <functional>
 #include <memory>
 #include <atomic>
 #include <thread>
@@ -31,6 +32,8 @@ namespace RenderStar::Server::Network
     {
     public:
 
+        using PacketReceivedCallback = std::function<void(std::shared_ptr<ClientConnection>, Common::Network::IPacket&)>;
+
         static constexpr int32_t DEFAULT_PORT = 25565;
         static constexpr int32_t DEFAULT_MAX_PLAYERS = 20;
 
@@ -57,6 +60,8 @@ namespace RenderStar::Server::Network
         void Disconnect(ClientConnection& connection, const std::string& reason);
 
         Common::Network::PacketModule* GetPacketModule() const;
+
+        void SetPacketReceivedCallback(PacketReceivedCallback callback);
 
         ServerMode GetMode() const;
 
@@ -100,5 +105,6 @@ namespace RenderStar::Server::Network
         std::thread networkThread;
         std::unordered_map<TcpSocket*, ConnectionPointer> connections;
         std::mutex connectionsMutex;
+        PacketReceivedCallback packetReceivedCallback;
     };
 }

@@ -4,6 +4,7 @@
 #include "RenderStar/Common/Configuration/ConfigurationModule.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Server/Core/ServerLifecycleModule.hpp"
+#include "RenderStar/Server/Core/ServerPlayerModule.hpp"
 #include "RenderStar/Server/Event/Buses/ServerCoreEventBus.hpp"
 #include "RenderStar/Server/Event/Events/ServerPreinitializationEvent.hpp"
 #include "RenderStar/Server/Event/Events/ServerInitializationEvent.hpp"
@@ -27,6 +28,7 @@ namespace RenderStar::Server
             .Module<Network::ServerNetworkModule>(Network::ServerNetworkModule::FromArguments(argc, argv, configModuleRef))
             .Module<Common::Component::ComponentModule>(std::make_unique<Common::Component::ComponentModule>())
             .Module<Core::ServerLifecycleModule>(std::make_unique<Core::ServerLifecycleModule>())
+            .Module<Core::ServerPlayerModule>(std::make_unique<Core::ServerPlayerModule>())
             .Build();
 
         manager->Start();

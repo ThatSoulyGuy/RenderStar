@@ -5,10 +5,13 @@
 #include "RenderStar/Client/Render/Resource/Mesh.hpp"
 #include "RenderStar/Common/Component/GameObject.hpp"
 #include "RenderStar/Common/Module/AbstractModule.hpp"
+#include <vector>
 
 namespace RenderStar::Client::Render
 {
     class IRenderBackend;
+    class IBufferManager;
+    class IUniformManager;
 }
 
 namespace RenderStar::Common::Event
@@ -18,8 +21,19 @@ namespace RenderStar::Common::Event
 
 namespace RenderStar::Client::Core
 {
+    struct UniformSlot
+    {
+        std::unique_ptr<Render::IBufferHandle> buffer;
+        std::unique_ptr<Render::IUniformBindingHandle> binding;
+    };
+
     class ClientLifecycleModule final : public Common::Module::AbstractModule
     {
+
+    public:
+
+        [[nodiscard]]
+        std::vector<std::type_index> GetDependencies() const override;
 
     protected:
 
@@ -31,13 +45,18 @@ namespace RenderStar::Client::Core
         Common::Event::EventResult OnRenderInitializeEvent(Common::Module::ModuleContext&, Render::IRenderBackend*);
         Common::Event::EventResult OnRenderFrameEvent(Render::IRenderBackend*);
 
+        UniformSlot& AcquireUniformSlot();
+
         void SetupGameplayLogic(Common::Module::ModuleContext& context);
         void SetupMainLoop() const;
 
         std::unique_ptr<Render::IShaderProgram> testShader;
         std::unique_ptr<Render::Resource::Mesh> testMesh;
-        std::unique_ptr<Render::IUniformBindingHandle> testUniformBinding;
-        std::unique_ptr<Render::IBufferHandle> testUniformBuffer;
+
+        std::vector<UniformSlot> uniformPool;
+        size_t uniformPoolIndex = 0;
+        Render::IBufferManager* cachedBufferManager = nullptr;
+        Render::IUniformManager* cachedUniformManager = nullptr;
 
         float testRotationAngle = 0.0f;
 

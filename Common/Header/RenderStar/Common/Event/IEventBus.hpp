@@ -36,5 +36,8 @@ namespace RenderStar::Common::Event
         virtual void PublishRaw(std::unique_ptr<IEvent> event,EventPriority priority) = 0;
 
         virtual void SetTickHandler(TickHandlerFunction handler) = 0;
+
+        virtual void SetDeferred(bool deferred) = 0;
+        virtual void FlushDeferred() = 0;
     };
 }

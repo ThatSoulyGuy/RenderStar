@@ -26,4 +26,10 @@ namespace RenderStar::Common::Module
 
         return std::nullopt;
     }
+
+    template<typename... Deps>
+    std::vector<std::type_index> AbstractModule::DependsOn()
+    {
+        return { std::type_index(typeid(Deps))... };
+    }
 }

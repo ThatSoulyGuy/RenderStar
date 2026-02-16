@@ -2,8 +2,9 @@
 
 namespace RenderStar::Server::Event::Events
 {
-    ClientJoinedEvent::ClientJoinedEvent(std::string address)
+    ClientJoinedEvent::ClientJoinedEvent(std::string address, std::shared_ptr<Network::ClientConnection> conn)
         : remoteAddress(std::move(address))
+        , connection(std::move(conn))
     {
     }
 }

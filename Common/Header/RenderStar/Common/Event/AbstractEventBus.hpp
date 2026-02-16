@@ -38,6 +38,9 @@ namespace RenderStar::Common::Event
 
         void SetTickHandler(TickHandlerFunction handler) override;
 
+        void SetDeferred(bool deferred) override;
+        void FlushDeferred() override;
+
         template <typename EventType>
         void Subscribe(std::function<EventResult(const EventType&)> handler, HandlerPriority priority = HandlerPriority::NORMAL);
 
@@ -87,6 +90,8 @@ namespace RenderStar::Common::Event
         TickHandlerFunction tickHandler;
 
         bool mainThread;
+        std::atomic<bool> deferred = false;
+        std::vector<PrioritizedEvent> deferredEvents;
     };
 }
 

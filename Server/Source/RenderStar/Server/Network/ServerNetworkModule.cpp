@@ -177,6 +177,8 @@ namespace RenderStar::Server::Network
                 return;
             }
 
+            ConnectionPointer connection;
+
             {
                 std::lock_guard<std::mutex> lock(connectionsMutex);
                 if (static_cast<int32_t>(connections.size()) >= maxPlayers)
@@ -187,17 +189,17 @@ namespace RenderStar::Server::Network
                     return;
                 }
 
-                auto connection = std::make_shared<ClientConnection>(socket);
+                connection = std::make_shared<ClientConnection>(socket);
                 connections[socket.get()] = connection;
 
                 logger->info("Client connected from {} ({}/{})",
                     connection->remoteAddress, connections.size(), maxPlayers);
 
-                if (coreEventBus)
-                    coreEventBus->Publish(Event::Events::ClientJoinedEvent(connection->remoteAddress));
-
                 ReadFromClient(connection);
             }
+
+            if (coreEventBus)
+                coreEventBus->Publish(Event::Events::ClientJoinedEvent(connection->remoteAddress, connection));
 
             AcceptConnections();
         });
@@ -229,37 +231,66 @@ namespace RenderStar::Server::Network
         if (!packetModule)
             return;
 
-        std::span<const std::byte> dataSpan(
-            reinterpret_cast<const std::byte*>(connection->receiveBuffer.data()),
-            bytesReceived);
-        Common::Network::PacketBuffer buffer = Common::Network::PacketBuffer::Wrap(dataSpan);
+        auto& accumulation = connection->accumulationBuffer;
+        accumulation.insert(accumulation.end(),
+            connection->receiveBuffer.begin(),
+            connection->receiveBuffer.begin() + bytesReceived);
 
-        auto packet = packetModule->Deserialize(buffer);
-        if (!packet)
+        while (accumulation.size() >= 4)
         {
-            logger->warn("Failed to deserialize packet from {}", connection->remoteAddress);
-            return;
-        }
+            uint32_t packetLength =
+                (static_cast<uint32_t>(accumulation[0]) << 24) |
+                (static_cast<uint32_t>(accumulation[1]) << 16) |
+                (static_cast<uint32_t>(accumulation[2]) << 8) |
+                static_cast<uint32_t>(accumulation[3]);
 
-        packetModule->HandlePacket(*packet);
+            if (accumulation.size() < 4 + packetLength)
+                break;
+
+            std::span<const std::byte> dataSpan(
+                reinterpret_cast<const std::byte*>(accumulation.data() + 4),
+                packetLength);
+            Common::Network::PacketBuffer buffer = Common::Network::PacketBuffer::Wrap(dataSpan);
+
+            auto packet = packetModule->Deserialize(buffer);
+            if (!packet)
+            {
+                logger->warn("Failed to deserialize packet from {}", connection->remoteAddress);
+                accumulation.erase(accumulation.begin(), accumulation.begin() + 4 + packetLength);
+                continue;
+            }
+
+            if (packetReceivedCallback)
+                packetReceivedCallback(connection, *packet);
+            else
+                packetModule->HandlePacket(*packet);
+
+            accumulation.erase(accumulation.begin(), accumulation.begin() + 4 + packetLength);
+        }
     }
 
     void ServerNetworkModule::RemoveConnection(ConnectionPointer connection)
     {
-        std::lock_guard<std::mutex> lock(connectionsMutex);
+        bool removed = false;
+        std::string address;
 
-        auto iterator = connections.find(connection->socket.get());
-        if (iterator != connections.end())
         {
-            std::string address = connection->remoteAddress;
-            connection->Close();
-            connections.erase(iterator);
+            std::lock_guard<std::mutex> lock(connectionsMutex);
 
-            logger->info("Client disconnected from {} ({}/{})", address, connections.size(), maxPlayers);
+            auto iterator = connections.find(connection->socket.get());
+            if (iterator != connections.end())
+            {
+                address = connection->remoteAddress;
+                connection->Close();
+                connections.erase(iterator);
+                removed = true;
 
-            if (coreEventBus)
-                coreEventBus->Publish(Event::Events::ClientLeftEvent(address, "Disconnected"));
+                logger->info("Client disconnected from {} ({}/{})", address, connections.size(), maxPlayers);
+            }
         }
+
+        if (removed && coreEventBus)
+            coreEventBus->Publish(Event::Events::ClientLeftEvent(address, "Disconnected", connection));
     }
 
     bool ServerNetworkModule::Send(ClientConnection& connection, const Common::Network::IPacket& packet)
@@ -311,20 +342,33 @@ namespace RenderStar::Server::Network
 
     void ServerNetworkModule::Disconnect(ClientConnection& connection, const std::string& reason)
     {
-        std::lock_guard<std::mutex> lock(connectionsMutex);
+        bool removed = false;
+        std::string address;
+        ConnectionPointer connectionPtr;
 
-        auto iterator = connections.find(connection.socket.get());
-        if (iterator != connections.end())
         {
-            std::string address = connection.remoteAddress;
-            connection.Close();
-            connections.erase(iterator);
+            std::lock_guard<std::mutex> lock(connectionsMutex);
 
-            logger->info("Client disconnected from {}: {} ({}/{})", address, reason, connections.size(), maxPlayers);
+            auto iterator = connections.find(connection.socket.get());
+            if (iterator != connections.end())
+            {
+                address = connection.remoteAddress;
+                connectionPtr = iterator->second;
+                connection.Close();
+                connections.erase(iterator);
+                removed = true;
 
-            if (coreEventBus)
-                coreEventBus->Publish(Event::Events::ClientLeftEvent(address, reason));
+                logger->info("Client disconnected from {}: {} ({}/{})", address, reason, connections.size(), maxPlayers);
+            }
         }
+
+        if (removed && coreEventBus)
+            coreEventBus->Publish(Event::Events::ClientLeftEvent(address, reason, connectionPtr));
+    }
+
+    void ServerNetworkModule::SetPacketReceivedCallback(PacketReceivedCallback callback)
+    {
+        packetReceivedCallback = std::move(callback);
     }
 
     Common::Network::PacketModule* ServerNetworkModule::GetPacketModule() const

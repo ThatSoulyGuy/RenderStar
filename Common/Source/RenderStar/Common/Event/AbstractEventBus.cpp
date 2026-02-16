@@ -75,6 +75,13 @@ namespace RenderStar::Common::Event
 
     void AbstractEventBus::PublishRaw(std::unique_ptr<IEvent> event, const EventPriority priority)
     {
+        if (deferred.load())
+        {
+            std::lock_guard lock(queueMutex);
+            deferredEvents.push_back({ std::move(event), priority });
+            return;
+        }
+
         if (mainThread)
         {
             DispatchEvent(*event);
@@ -92,6 +99,32 @@ namespace RenderStar::Common::Event
     void AbstractEventBus::SetTickHandler(TickHandlerFunction handler)
     {
         tickHandler = std::move(handler);
+    }
+
+    void AbstractEventBus::SetDeferred(const bool value)
+    {
+        deferred.store(value);
+    }
+
+    void AbstractEventBus::FlushDeferred()
+    {
+        deferred.store(false);
+
+        std::vector<PrioritizedEvent> pending;
+
+        {
+            std::lock_guard lock(queueMutex);
+            pending = std::move(deferredEvents);
+            deferredEvents.clear();
+        }
+
+        std::sort(pending.begin(), pending.end(), [](const PrioritizedEvent& a, const PrioritizedEvent& b)
+        {
+            return static_cast<int32_t>(a.priority) < static_cast<int32_t>(b.priority);
+        });
+
+        for (const auto& entry : pending)
+            DispatchEvent(*entry.event);
     }
 
     void AbstractEventBus::ProcessEvents()

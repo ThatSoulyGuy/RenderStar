@@ -1,5 +1,6 @@
 #include "RenderStar/Client/Core/ClientLifecycleModule.hpp"
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
+#include "RenderStar/Client/Gameplay/ClientPlayerModule.hpp"
 #include "RenderStar/Client/Gameplay/PlayerController.hpp"
 #include "RenderStar/Client/Gameplay/PlayerControllerAffector.hpp"
 #include "RenderStar/Client/Input/ClientInputModule.hpp"
@@ -39,8 +40,9 @@ namespace RenderStar::Client::Core
     {
         logger->info("ClientLifecycleModule cleaning up render resources...");
 
-        testUniformBinding.reset();
-        testUniformBuffer.reset();
+        uniformPool.clear();
+        cachedBufferManager = nullptr;
+        cachedUniformManager = nullptr;
         testMesh.reset();
         testShader.reset();
 
@@ -100,11 +102,8 @@ namespace RenderStar::Client::Core
         testMesh->SetVertices(vertices);
         testMesh->SetIndices(indices);
 
-        testUniformBuffer = bufferManager->CreateUniformBuffer(StandardUniforms::Size());
-        testUniformBinding = uniformManager->CreateBindingForShader(testShader.get());
-
-        if (testUniformBinding)
-            testUniformBinding->UpdateBuffer(0, testUniformBuffer.get(), StandardUniforms::Size());
+        cachedBufferManager = bufferManager;
+        cachedUniformManager = uniformManager;
 
         if (auto cameraAffector = context.GetModule<Render::Affectors::CameraAffector>(); cameraAffector.has_value())
             cameraAffector->get().SetViewportSize(backend->GetWidth(), backend->GetHeight());
@@ -119,10 +118,11 @@ namespace RenderStar::Client::Core
         if (backend == nullptr || !backend->IsInitialized())
             return Common::Event::EventResult::Failure("Renderer backend was not in a proper state");
 
-        if (testUniformBinding == nullptr || testUniformBuffer == nullptr)
-            return Common::Event::EventResult::Failure("Renderer objects were not initialized");
+        if (!cachedBufferManager || !cachedUniformManager)
+            return Common::Event::EventResult::Failure("Renderer managers were not initialized");
 
         backend->BeginFrame();
+        uniformPoolIndex = 0;
 
         testRotationAngle += 0.5f;
 
@@ -143,17 +143,68 @@ namespace RenderStar::Client::Core
         model = glm::rotate(model, glm::radians(testRotationAngle * 0.5f), glm::vec3(1.0f, 0.0f, 0.0f));
 
         const StandardUniforms uniformData(model, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
-
-        testUniformBuffer->SetSubData(&uniformData, StandardUniforms::Size(), 0);
-
         const int32_t frameIndex = backend->GetCurrentFrame();
 
-        backend->SubmitDrawCommand(testShader.get(), testUniformBinding.get(), frameIndex, testMesh->GetUnderlyingMesh());
+        auto& cubeSlot = AcquireUniformSlot();
+        cubeSlot.buffer->SetSubData(&uniformData, StandardUniforms::Size(), 0);
+        backend->SubmitDrawCommand(testShader.get(), cubeSlot.binding.get(), frameIndex, testMesh->GetUnderlyingMesh());
         backend->ExecuteDrawCommands();
+
+        if (auto playerModuleOpt = context->GetModule<Gameplay::ClientPlayerModule>(); playerModuleOpt.has_value())
+        {
+            auto& playerModule = playerModuleOpt->get();
+
+            if (const auto componentModule = context->GetModule<Common::Component::ComponentModule>(); componentModule.has_value() && playerEntity.IsValid())
+            {
+                if (auto transformOpt = componentModule->get().GetComponent<Common::Component::Transform>(playerEntity); transformOpt.has_value())
+                {
+                    float yaw = -90.0f;
+                    float pitch = 0.0f;
+
+                    if (auto controllerOpt = componentModule->get().GetComponent<Gameplay::PlayerController>(playerEntity); controllerOpt.has_value())
+                    {
+                        yaw = controllerOpt->get().yaw;
+                        pitch = controllerOpt->get().pitch;
+                    }
+
+                    const auto& pos = transformOpt->get().position;
+                    playerModule.SendLocalPosition(pos.x, pos.y, pos.z, yaw, pitch);
+                }
+            }
+
+            for (const auto& [id, remote] : playerModule.GetRemotePlayers())
+            {
+                auto remoteModel = glm::translate(glm::mat4(1.0f), remote.position);
+                remoteModel = glm::rotate(remoteModel, glm::radians(remote.yaw + 90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+                const StandardUniforms remoteUniforms(remoteModel, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+
+                auto& remoteSlot = AcquireUniformSlot();
+                remoteSlot.buffer->SetSubData(&remoteUniforms, StandardUniforms::Size(), 0);
+                backend->SubmitDrawCommand(testShader.get(), remoteSlot.binding.get(), frameIndex, testMesh->GetUnderlyingMesh());
+                backend->ExecuteDrawCommands();
+            }
+        }
 
         backend->EndFrame();
 
         return Common::Event::EventResult::Success();
+    }
+
+    UniformSlot& ClientLifecycleModule::AcquireUniformSlot()
+    {
+        if (uniformPoolIndex < uniformPool.size())
+            return uniformPool[uniformPoolIndex++];
+
+        UniformSlot slot;
+        slot.buffer = cachedBufferManager->CreateUniformBuffer(StandardUniforms::Size());
+        slot.binding = cachedUniformManager->CreateBindingForShader(testShader.get());
+
+        if (slot.binding)
+            slot.binding->UpdateBuffer(0, slot.buffer.get(), StandardUniforms::Size());
+
+        uniformPool.push_back(std::move(slot));
+        return uniformPool[uniformPoolIndex++];
     }
 
     void ClientLifecycleModule::SetupGameplayLogic(Common::Module::ModuleContext& context)
@@ -285,5 +336,16 @@ namespace RenderStar::Client::Core
             if (inputModule.has_value())
                 inputModule->get().EndFrame();
         });
+    }
+
+    std::vector<std::type_index> ClientLifecycleModule::GetDependencies() const
+    {
+        return DependsOn<
+            Render::RendererModule,
+            Common::Component::ComponentModule,
+            ClientWindowModule,
+            Input::ClientInputModule,
+            Common::Time::TimeModule,
+            Gameplay::ClientPlayerModule>();
     }
 }

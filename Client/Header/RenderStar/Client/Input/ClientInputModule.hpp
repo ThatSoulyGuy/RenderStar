@@ -78,6 +78,9 @@ namespace RenderStar::Client::Input
         void OnCursorPos(double xPos, double yPos);
         void OnScroll(double xOffset, double yOffset);
 
+        [[nodiscard]]
+        std::vector<std::type_index> GetDependencies() const override;
+
     protected:
 
         void OnInitialize(Common::Module::ModuleContext& context) override;

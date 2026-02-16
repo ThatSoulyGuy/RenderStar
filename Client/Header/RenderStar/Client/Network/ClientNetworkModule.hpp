@@ -56,6 +56,9 @@ namespace RenderStar::Client::Network
 
         int32_t GetLocalServerMaxPlayers() const;
 
+        [[nodiscard]]
+        std::vector<std::type_index> GetDependencies() const override;
+
     protected:
 
         void OnInitialize(Common::Module::ModuleContext& context) override;
@@ -86,5 +89,6 @@ namespace RenderStar::Client::Network
         std::unique_ptr<TcpSocket> socket;
         std::thread networkThread;
         std::array<uint8_t, RECEIVE_BUFFER_SIZE> receiveBuffer;
+        std::vector<uint8_t> accumulationBuffer;
     };
 }

@@ -15,6 +15,7 @@ namespace RenderStar::Server::Network
         SocketPointer socket;
         std::string remoteAddress;
         std::vector<uint8_t> receiveBuffer;
+        std::vector<uint8_t> accumulationBuffer;
 
         static constexpr size_t RECEIVE_BUFFER_SIZE = 65536;
 

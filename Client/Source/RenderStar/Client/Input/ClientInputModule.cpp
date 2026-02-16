@@ -303,4 +303,9 @@ namespace RenderStar::Client::Input
 
         return mods;
     }
+
+    std::vector<std::type_index> ClientInputModule::GetDependencies() const
+    {
+        return DependsOn<Core::ClientWindowModule>();
+    }
 }
