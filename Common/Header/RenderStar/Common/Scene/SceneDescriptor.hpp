@@ -11,6 +11,7 @@ namespace RenderStar::Common::Scene
         std::string version{ "1.0" };
         std::string author;
         std::string description;
+        std::string mapGeometryFile;
 
         std::filesystem::path filePath;
     };

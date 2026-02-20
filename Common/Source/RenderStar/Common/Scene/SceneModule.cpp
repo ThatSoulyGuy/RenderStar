@@ -1,6 +1,10 @@
 #include "RenderStar/Common/Scene/SceneModule.hpp"
 #include "RenderStar/Common/Scene/EntityIdRemapper.hpp"
+#include "RenderStar/Common/Scene/MapbinLoader.hpp"
 #include "RenderStar/Common/Scene/SceneEvents.hpp"
+#include "RenderStar/Common/Asset/AssetModule.hpp"
+#include "RenderStar/Common/Asset/IBinaryAsset.hpp"
+#include "RenderStar/Common/Asset/AssetLocation.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Event/IEventBus.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
@@ -128,6 +132,9 @@ namespace RenderStar::Common::Scene
 
         ReadEntities(root);
 
+        if (!descriptor.mapGeometryFile.empty())
+            LoadMapGeometry(descriptor.mapGeometryFile);
+
         currentScene = descriptor;
 
         logger->info("Scene '{}' loaded from {} ({} entities)", descriptor.name, filePath, ownedEntities.size());
@@ -148,6 +155,7 @@ namespace RenderStar::Common::Scene
         ownedEntities.clear();
         preservedComponents.clear();
         currentScene.reset();
+        mapGeometry.reset();
 
         logger->info("Scene cleared");
 
@@ -163,6 +171,21 @@ namespace RenderStar::Common::Scene
     bool SceneModule::HasActiveScene() const
     {
         return currentScene.has_value();
+    }
+
+    void SceneModule::SetMapGeometry(MapbinScene geometry)
+    {
+        mapGeometry = std::move(geometry);
+    }
+
+    const std::optional<MapbinScene>& SceneModule::GetMapGeometry() const
+    {
+        return mapGeometry;
+    }
+
+    bool SceneModule::HasMapGeometry() const
+    {
+        return mapGeometry.has_value();
     }
 
     void SceneModule::SetEventBus(Event::IEventBus* bus)
@@ -184,6 +207,12 @@ namespace RenderStar::Common::Scene
             auto descNode = root.append_child("Description");
             descNode.text().set(descriptor.description.c_str());
         }
+
+        if (!descriptor.mapGeometryFile.empty())
+        {
+            auto mapNode = root.append_child("MapGeometry");
+            mapNode.text().set(descriptor.mapGeometryFile.c_str());
+        }
     }
 
     void SceneModule::ReadMetadata(const pugi::xml_node& root, SceneDescriptor& descriptor) const
@@ -194,6 +223,9 @@ namespace RenderStar::Common::Scene
 
         if (const auto descNode = root.child("Description"); !descNode.empty())
             descriptor.description = descNode.text().as_string("");
+
+        if (const auto mapNode = root.child("MapGeometry"); !mapNode.empty())
+            descriptor.mapGeometryFile = mapNode.text().as_string("");
     }
 
     void SceneModule::WriteEntities(pugi::xml_node& root)
@@ -283,6 +315,48 @@ namespace RenderStar::Common::Scene
 
         // Pass 3: Remap entity references
         RemapEntityReferences(remapper);
+    }
+
+    void SceneModule::LoadMapGeometry(const std::string& assetPath)
+    {
+        if (!context)
+        {
+            logger->error("No module context available for loading map geometry");
+            return;
+        }
+
+        auto assetModuleOpt = context->GetModule<Asset::AssetModule>();
+
+        if (!assetModuleOpt.has_value())
+        {
+            logger->error("AssetModule not found, cannot load map geometry");
+            return;
+        }
+
+        auto binaryAsset = assetModuleOpt->get().LoadBinary(Asset::AssetLocation::Parse(assetPath));
+
+        if (!binaryAsset.IsValid())
+        {
+            logger->error("Failed to load map geometry file: {}", assetPath);
+            return;
+        }
+
+        auto scene = MapbinLoader::Load(binaryAsset.Get()->GetDataView());
+
+        if (!scene.has_value())
+        {
+            logger->error("Failed to parse mapbin file: {}", assetPath);
+            return;
+        }
+
+        mapGeometry = std::move(scene.value());
+
+        size_t totalVertices = 0;
+
+        for (const auto& group : mapGeometry->groups)
+            totalVertices += group.vertexCount;
+
+        logger->info("Loaded map geometry: {} groups, {} total vertices", mapGeometry->groups.size(), totalVertices);
     }
 
     void SceneModule::RemapEntityReferences(const EntityIdRemapper& remapper)

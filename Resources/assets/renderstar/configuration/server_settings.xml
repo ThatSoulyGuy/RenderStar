@@ -6,4 +6,7 @@
         <max_players>20</max_players>
         <motd>"A RenderStar Server"</motd>
     </ServerNetworkModule>
+    <ServerSceneModule>
+        <scene_file>renderstar:scene/test.mapbin</scene_file>
+    </ServerSceneModule>
 </render_star>

@@ -3,6 +3,7 @@
 #include "RenderStar/Common/Module/AbstractModule.hpp"
 #include "RenderStar/Common/Scene/SceneDescriptor.hpp"
 #include "RenderStar/Common/Scene/ComponentSerializerRegistry.hpp"
+#include "RenderStar/Common/Scene/MapbinLoader.hpp"
 #include <optional>
 #include <string>
 #include <unordered_set>
@@ -54,6 +55,14 @@ namespace RenderStar::Common::Scene
         [[nodiscard]]
         bool HasActiveScene() const;
 
+        void SetMapGeometry(MapbinScene geometry);
+
+        [[nodiscard]]
+        const std::optional<MapbinScene>& GetMapGeometry() const;
+
+        [[nodiscard]]
+        bool HasMapGeometry() const;
+
         void SetEventBus(Event::IEventBus* bus);
 
     protected:
@@ -67,6 +76,7 @@ namespace RenderStar::Common::Scene
         void WriteEntities(pugi::xml_node& root);
         void ReadEntities(const pugi::xml_node& root);
         void RemapEntityReferences(const EntityIdRemapper& remapper);
+        void LoadMapGeometry(const std::string& assetPath);
 
         Component::ComponentModule* componentModule;
         Event::IEventBus* eventBus;
@@ -74,6 +84,7 @@ namespace RenderStar::Common::Scene
         ComponentSerializerRegistry registry;
         std::unordered_set<int32_t> ownedEntities;
         std::unordered_map<int32_t, std::vector<std::string>> preservedComponents;
+        std::optional<MapbinScene> mapGeometry;
     };
 }
 

@@ -27,11 +27,6 @@ namespace RenderStar::Client::Gameplay
             return;
         }
 
-        packetModule->RegisterPacket<Common::Network::Packets::PlayerAssignPacket>(1);
-        packetModule->RegisterPacket<Common::Network::Packets::PlayerSpawnPacket>(2);
-        packetModule->RegisterPacket<Common::Network::Packets::PlayerDespawnPacket>(3);
-        packetModule->RegisterPacket<Common::Network::Packets::PlayerPositionPacket>(4);
-
         packetModule->RegisterHandler<Common::Network::Packets::PlayerAssignPacket>(
             [this](Common::Network::Packets::PlayerAssignPacket& packet)
             {

@@ -33,11 +33,6 @@ namespace RenderStar::Server::Core
             return;
         }
 
-        packetModule->RegisterPacket<Common::Network::Packets::PlayerAssignPacket>(1);
-        packetModule->RegisterPacket<Common::Network::Packets::PlayerSpawnPacket>(2);
-        packetModule->RegisterPacket<Common::Network::Packets::PlayerDespawnPacket>(3);
-        packetModule->RegisterPacket<Common::Network::Packets::PlayerPositionPacket>(4);
-
         networkModule->SetPacketReceivedCallback(
             [this](std::shared_ptr<Network::ClientConnection> connection, Common::Network::IPacket& packet)
             {

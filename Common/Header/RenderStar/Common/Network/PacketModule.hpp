@@ -3,6 +3,7 @@
 #include "RenderStar/Common/Module/AbstractModule.hpp"
 #include "RenderStar/Common/Network/IPacket.hpp"
 #include "RenderStar/Common/Network/PacketBuffer.hpp"
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <typeindex>
@@ -19,7 +20,7 @@ namespace RenderStar::Common::Network
     public:
 
         template<typename PacketType>
-        void RegisterPacket(PacketIdentifier packetId);
+        void RegisterPacket();
 
         template<typename PacketType>
         void RegisterHandler(std::function<void(PacketType&)> handler);
@@ -41,6 +42,9 @@ namespace RenderStar::Common::Network
 
     private:
 
+        void RegisterAllPackets();
+
+        PacketIdentifier nextId = 1;
         std::unordered_map<PacketIdentifier, PacketFactory> factories;
         std::unordered_map<PacketIdentifier, std::type_index> idToType;
         std::unordered_map<std::type_index, PacketIdentifier> typeToId;

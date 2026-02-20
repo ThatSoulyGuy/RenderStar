@@ -3,9 +3,14 @@
 namespace RenderStar::Common::Network
 {
     template <typename PacketType>
-    void PacketModule::RegisterPacket(PacketIdentifier packetId)
+    void PacketModule::RegisterPacket()
     {
         const auto typeIndex = std::type_index(typeid(PacketType));
+
+        if (typeToId.contains(typeIndex))
+            return;
+
+        PacketIdentifier packetId = nextId++;
 
         factories[packetId] = []() { return std::make_unique<PacketType>(); };
         idToType.insert_or_assign(packetId, typeIndex);

@@ -1,4 +1,5 @@
 #include "RenderStar/Client/Core/ClientLifecycleModule.hpp"
+#include "RenderStar/Client/Core/ClientSceneModule.hpp"
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
 #include "RenderStar/Client/Gameplay/ClientPlayerModule.hpp"
 #include "RenderStar/Client/Gameplay/PlayerController.hpp"
@@ -40,6 +41,7 @@ namespace RenderStar::Client::Core
     {
         logger->info("ClientLifecycleModule cleaning up render resources...");
 
+        sceneMeshes.clear();
         uniformPool.clear();
         cachedBufferManager = nullptr;
         cachedUniformManager = nullptr;
@@ -113,6 +115,29 @@ namespace RenderStar::Client::Core
         return Common::Event::EventResult::Success();
     }
 
+    void ClientLifecycleModule::BuildSceneMeshes()
+    {
+        const auto sceneModuleOpt = context->GetModule<ClientSceneModule>();
+
+        if (!sceneModuleOpt.has_value() || !sceneModuleOpt->get().HasPendingSceneData())
+            return;
+
+        const auto groups = sceneModuleOpt->get().TakePendingSceneData();
+        sceneMeshes.clear();
+
+        for (const auto& group : groups)
+        {
+            auto mesh = std::make_unique<Resource::Mesh>(*cachedBufferManager, Vertex::LAYOUT, PrimitiveType::TRIANGLES);
+
+            mesh->SetVertexData(group.vertexData.data(), group.vertexData.size() * sizeof(float));
+            mesh->SetIndexData(group.indices.data(), group.indices.size() * sizeof(uint32_t), IndexType::UINT32);
+
+            sceneMeshes.push_back(std::move(mesh));
+        }
+
+        logger->info("Built {} scene meshes", sceneMeshes.size());
+    }
+
     Common::Event::EventResult ClientLifecycleModule::OnRenderFrameEvent(IRenderBackend* backend)
     {
         if (backend == nullptr || !backend->IsInitialized())
@@ -123,6 +148,8 @@ namespace RenderStar::Client::Core
 
         backend->BeginFrame();
         uniformPoolIndex = 0;
+
+        BuildSceneMeshes();
 
         testRotationAngle += 0.5f;
 
@@ -145,9 +172,10 @@ namespace RenderStar::Client::Core
         const StandardUniforms uniformData(model, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
         const int32_t frameIndex = backend->GetCurrentFrame();
 
-        auto& cubeSlot = AcquireUniformSlot();
-        cubeSlot.buffer->SetSubData(&uniformData, StandardUniforms::Size(), 0);
-        backend->SubmitDrawCommand(testShader.get(), cubeSlot.binding.get(), frameIndex, testMesh->GetUnderlyingMesh());
+        auto& [cubeBuffer, cubeBinding] = AcquireUniformSlot();
+
+        cubeBuffer->SetSubData(&uniformData, StandardUniforms::Size(), 0);
+        backend->SubmitDrawCommand(testShader.get(), cubeBinding.get(), frameIndex, testMesh->GetUnderlyingMesh());
         backend->ExecuteDrawCommands();
 
         if (auto playerModuleOpt = context->GetModule<Gameplay::ClientPlayerModule>(); playerModuleOpt.has_value())
@@ -179,11 +207,23 @@ namespace RenderStar::Client::Core
 
                 const StandardUniforms remoteUniforms(remoteModel, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
 
-                auto& remoteSlot = AcquireUniformSlot();
-                remoteSlot.buffer->SetSubData(&remoteUniforms, StandardUniforms::Size(), 0);
-                backend->SubmitDrawCommand(testShader.get(), remoteSlot.binding.get(), frameIndex, testMesh->GetUnderlyingMesh());
+                auto& [remoteBuffer, remoteBinding] = AcquireUniformSlot();
+
+                remoteBuffer->SetSubData(&remoteUniforms, StandardUniforms::Size(), 0);
+                backend->SubmitDrawCommand(testShader.get(), remoteBinding.get(), frameIndex, testMesh->GetUnderlyingMesh());
                 backend->ExecuteDrawCommands();
             }
+        }
+
+        for (const auto& sceneMesh : sceneMeshes)
+        {
+            const StandardUniforms sceneUniforms(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f)), viewProjection, glm::vec4(0.0f));
+
+            auto& [sceneBuffer, sceneBinding] = AcquireUniformSlot();
+
+            sceneBuffer->SetSubData(&sceneUniforms, StandardUniforms::Size(), 0);
+            backend->SubmitDrawCommand(testShader.get(), sceneBinding.get(), frameIndex, sceneMesh->GetUnderlyingMesh());
+            backend->ExecuteDrawCommands();
         }
 
         backend->EndFrame();
@@ -346,6 +386,7 @@ namespace RenderStar::Client::Core
             ClientWindowModule,
             Input::ClientInputModule,
             Common::Time::TimeModule,
-            Gameplay::ClientPlayerModule>();
+            Gameplay::ClientPlayerModule,
+            ClientSceneModule>();
     }
 }

@@ -1,6 +1,7 @@
 #include "RenderStar/Client/ClientApplication.hpp"
 
 #include "RenderStar/Client/Core/ClientLifecycleModule.hpp"
+#include "RenderStar/Client/Core/ClientSceneModule.hpp"
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
 #include "RenderStar/Client/Event/Buses/ClientCoreEventBus.hpp"
 #include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
@@ -61,6 +62,7 @@ namespace RenderStar::Client
             .Module(std::make_unique<Render::RendererModule>())
             .Module(std::make_unique<Network::ClientNetworkModule>())
             .Module(std::make_unique<Gameplay::ClientPlayerModule>())
+            .Module(std::make_unique<Core::ClientSceneModule>())
             .Module(std::make_unique<Core::ClientLifecycleModule>())
             .Build();
 

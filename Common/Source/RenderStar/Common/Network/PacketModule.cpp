@@ -1,4 +1,9 @@
 #include "RenderStar/Common/Network/PacketModule.hpp"
+#include "RenderStar/Common/Network/Packets/PlayerAssignPacket.hpp"
+#include "RenderStar/Common/Network/Packets/PlayerDespawnPacket.hpp"
+#include "RenderStar/Common/Network/Packets/PlayerPositionPacket.hpp"
+#include "RenderStar/Common/Network/Packets/PlayerSpawnPacket.hpp"
+#include "RenderStar/Common/Network/Packets/SceneDataPacket.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
 
 namespace RenderStar::Common::Network
@@ -53,8 +58,18 @@ namespace RenderStar::Common::Network
             iterator->second(packet);
     }
 
+    void PacketModule::RegisterAllPackets()
+    {
+        RegisterPacket<Packets::PlayerAssignPacket>();
+        RegisterPacket<Packets::PlayerSpawnPacket>();
+        RegisterPacket<Packets::PlayerDespawnPacket>();
+        RegisterPacket<Packets::PlayerPositionPacket>();
+        RegisterPacket<Packets::SceneDataPacket>();
+    }
+
     void PacketModule::OnInitialize(Module::ModuleContext& context)
     {
-        logger->info("PacketModule initialized");
+        RegisterAllPackets();
+        logger->info("PacketModule initialized with {} packet types", factories.size());
     }
 }

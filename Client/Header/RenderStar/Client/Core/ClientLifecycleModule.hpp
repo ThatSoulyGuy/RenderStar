@@ -5,6 +5,7 @@
 #include "RenderStar/Client/Render/Resource/Mesh.hpp"
 #include "RenderStar/Common/Component/GameObject.hpp"
 #include "RenderStar/Common/Module/AbstractModule.hpp"
+#include <memory>
 #include <vector>
 
 namespace RenderStar::Client::Render
@@ -46,6 +47,7 @@ namespace RenderStar::Client::Core
         Common::Event::EventResult OnRenderFrameEvent(Render::IRenderBackend*);
 
         UniformSlot& AcquireUniformSlot();
+        void BuildSceneMeshes();
 
         void SetupGameplayLogic(Common::Module::ModuleContext& context);
         void SetupMainLoop() const;
@@ -59,6 +61,8 @@ namespace RenderStar::Client::Core
         Render::IUniformManager* cachedUniformManager = nullptr;
 
         float testRotationAngle = 0.0f;
+
+        std::vector<std::unique_ptr<Render::Resource::Mesh>> sceneMeshes;
 
         Common::Component::GameObject playerEntity = Common::Component::GameObject::Invalid();
     };
