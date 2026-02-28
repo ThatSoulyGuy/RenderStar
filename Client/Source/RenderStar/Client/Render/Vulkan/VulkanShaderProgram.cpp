@@ -1,5 +1,6 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanShaderProgram.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanDescriptorModule.hpp"
+#include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
 
 namespace RenderStar::Client::Render::Vulkan
 {
@@ -21,19 +22,45 @@ namespace RenderStar::Client::Render::Vulkan
 
     VulkanShaderProgram::~VulkanShaderProgram()
     {
+        if (!released)
+            Release();
+    }
+
+    void VulkanShaderProgram::Release()
+    {
+        if (released)
+            return;
+
         DestroyPipeline();
 
         if (shaderModule)
         {
             if (vertexShader.module != VK_NULL_HANDLE)
+            {
                 shaderModule->DestroyShader(vertexShader);
+                vertexShader.module = VK_NULL_HANDLE;
+            }
 
             if (fragmentShader.module != VK_NULL_HANDLE)
+            {
                 shaderModule->DestroyShader(fragmentShader);
+                fragmentShader.module = VK_NULL_HANDLE;
+            }
 
             if (computeShader.module != VK_NULL_HANDLE)
+            {
                 shaderModule->DestroyShader(computeShader);
+                computeShader.module = VK_NULL_HANDLE;
+            }
         }
+
+        valid = false;
+        released = true;
+    }
+
+    GraphicsResourceType VulkanShaderProgram::GetResourceType() const
+    {
+        return GraphicsResourceType::SHADER_PROGRAM;
     }
 
     void VulkanShaderProgram::Initialize(
@@ -43,7 +70,8 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanDescriptorModule* descModule,
         VulkanShader vertex,
         VulkanShader fragment,
-        const VertexLayout& vertexLayout)
+        const VertexLayout& vertexLayout,
+        IGraphicsResourceManager& manager)
     {
         device = vulkanDevice;
         shaderModule = module;
@@ -54,16 +82,21 @@ namespace RenderStar::Client::Render::Vulkan
 
         BuildPipeline(renderPass, vertexLayout);
         valid = (pipeline != VK_NULL_HANDLE);
+
+        manager.Track(this);
     }
 
     void VulkanShaderProgram::InitializeCompute(
         VulkanShaderModule* module,
-        VulkanShader compute)
+        VulkanShader compute,
+        IGraphicsResourceManager& manager)
     {
         shaderModule = module;
         computeShader = compute;
         isCompute = true;
         valid = true;
+
+        manager.Track(this);
     }
 
     void VulkanShaderProgram::BuildPipeline(VkRenderPass renderPass, const VertexLayout& vertexLayout)
@@ -243,7 +276,7 @@ namespace RenderStar::Client::Render::Vulkan
 
     bool VulkanShaderProgram::IsValid() const
     {
-        return valid;
+        return valid && !released;
     }
 
     const VulkanShader& VulkanShaderProgram::GetVertexShader() const

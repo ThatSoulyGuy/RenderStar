@@ -1,6 +1,7 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanUniformManager.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanShaderProgram.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanUniformBinding.hpp"
+#include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
 
 namespace RenderStar::Client::Render::Vulkan
 {
@@ -9,6 +10,7 @@ namespace RenderStar::Client::Render::Vulkan
         , bufferModule(nullptr)
         , descriptorModule(nullptr)
         , maxFramesInFlight(2)
+        , resourceManager(nullptr)
     {
     }
 
@@ -20,11 +22,13 @@ namespace RenderStar::Client::Render::Vulkan
     void VulkanUniformManager::Initialize(
         VulkanBufferModule* buffer,
         VulkanDescriptorModule* descriptor,
-        uint32_t framesInFlight)
+        uint32_t framesInFlight,
+        IGraphicsResourceManager* manager)
     {
         bufferModule = buffer;
         descriptorModule = descriptor;
         maxFramesInFlight = framesInFlight;
+        resourceManager = manager;
         logger->info("Vulkan uniform manager initialized");
     }
 
@@ -162,6 +166,6 @@ namespace RenderStar::Client::Render::Vulkan
 
         logger->info("Created uniform binding with {} descriptor sets", maxFramesInFlight);
 
-        return std::make_unique<VulkanUniformBinding>(sets, descriptorModule);
+        return std::make_unique<VulkanUniformBinding>(sets, descriptorModule, *resourceManager);
     }
 }

@@ -1,5 +1,6 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanTextureManager.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanTextureHandle.hpp"
+#include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
 #include <cstring>
 #include <stdexcept>
 
@@ -11,6 +12,7 @@ namespace RenderStar::Client::Render::Vulkan
         , allocator(VK_NULL_HANDLE)
         , graphicsQueue(VK_NULL_HANDLE)
         , commandPool(VK_NULL_HANDLE)
+        , resourceManager(nullptr)
     {
     }
 
@@ -19,11 +21,12 @@ namespace RenderStar::Client::Render::Vulkan
         Destroy();
     }
 
-    void VulkanTextureManager::Initialize(VkDevice vulkanDevice, VmaAllocator vmaAllocator, VkQueue queue, uint32_t queueFamily)
+    void VulkanTextureManager::Initialize(VkDevice vulkanDevice, VmaAllocator vmaAllocator, VkQueue queue, uint32_t queueFamily, IGraphicsResourceManager* manager)
     {
         device = vulkanDevice;
         allocator = vmaAllocator;
         graphicsQueue = queue;
+        resourceManager = manager;
 
         VkCommandPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -162,7 +165,7 @@ namespace RenderStar::Client::Render::Vulkan
 
         logger->info("Created texture {}x{}", w, h);
 
-        return std::make_unique<VulkanTextureHandle>(device, allocator, image, imageAllocation, imageView, sampler, w, h);
+        return std::make_unique<VulkanTextureHandle>(device, allocator, image, imageAllocation, imageView, sampler, w, h, *resourceManager);
     }
 
     ITextureHandle* VulkanTextureManager::GetDefaultTexture()

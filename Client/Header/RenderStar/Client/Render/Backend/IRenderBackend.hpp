@@ -12,6 +12,7 @@ namespace RenderStar::Client::Render
     class IShaderManager;
     class IUniformManager;
     class ITextureManager;
+    class IGraphicsResourceManager;
     class IShaderProgram;
     class IUniformBindingHandle;
     class IMesh;
@@ -57,6 +58,7 @@ namespace RenderStar::Client::Render
         virtual IShaderManager* GetShaderManager() = 0;
         virtual IUniformManager* GetUniformManager() = 0;
         virtual ITextureManager* GetTextureManager() = 0;
+        virtual IGraphicsResourceManager* GetResourceManager() = 0;
         virtual IRenderCommandQueue* GetCommandQueue() = 0;
 
         virtual void SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh) = 0;

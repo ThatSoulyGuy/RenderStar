@@ -24,11 +24,16 @@ namespace RenderStar::Client::Render::Vulkan
             VulkanDescriptorModule* descriptorModule,
             VulkanShader vertexShader,
             VulkanShader fragmentShader,
-            const VertexLayout& vertexLayout);
+            const VertexLayout& vertexLayout,
+            IGraphicsResourceManager& resourceManager);
 
         void InitializeCompute(
             VulkanShaderModule* shaderModule,
-            VulkanShader computeShader);
+            VulkanShader computeShader,
+            IGraphicsResourceManager& resourceManager);
+
+        void Release() override;
+        GraphicsResourceType GetResourceType() const override;
 
         void BindPipeline(VkCommandBuffer commandBuffer);
         void BindDescriptorSet(VkCommandBuffer commandBuffer, VkDescriptorSet descriptorSet);

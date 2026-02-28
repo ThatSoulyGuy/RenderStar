@@ -23,14 +23,40 @@ namespace RenderStar::Client::Render::OpenGL
 
     OpenGLMeshAdapter::~OpenGLMeshAdapter()
     {
+        if (!released)
+            Release();
+    }
+
+    void OpenGLMeshAdapter::Release()
+    {
+        if (released)
+            return;
+
         if (indexBuffer != 0)
+        {
             glDeleteBuffers(1, &indexBuffer);
+            indexBuffer = 0;
+        }
 
         if (vertexBuffer != 0)
+        {
             glDeleteBuffers(1, &vertexBuffer);
+            vertexBuffer = 0;
+        }
 
         if (vaoHandle != 0)
+        {
             glDeleteVertexArrays(1, &vaoHandle);
+            vaoHandle = 0;
+        }
+
+        valid = false;
+        released = true;
+    }
+
+    GraphicsResourceType OpenGLMeshAdapter::GetResourceType() const
+    {
+        return GraphicsResourceType::MESH;
     }
 
     void OpenGLMeshAdapter::Bind()

@@ -1,4 +1,5 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanTextureHandle.hpp"
+#include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
 
 namespace RenderStar::Client::Render::Vulkan
 {
@@ -10,7 +11,8 @@ namespace RenderStar::Client::Render::Vulkan
         VkImageView imageView,
         VkSampler sampler,
         uint32_t width,
-        uint32_t height)
+        uint32_t height,
+        IGraphicsResourceManager& manager)
         : device(device)
         , allocator(allocator)
         , image(image)
@@ -20,18 +22,44 @@ namespace RenderStar::Client::Render::Vulkan
         , width(width)
         , height(height)
     {
+        manager.Track(this);
     }
 
     VulkanTextureHandle::~VulkanTextureHandle()
     {
+        if (!released)
+            Release();
+    }
+
+    void VulkanTextureHandle::Release()
+    {
+        if (released)
+            return;
+
         if (sampler != VK_NULL_HANDLE)
+        {
             vkDestroySampler(device, sampler, nullptr);
+            sampler = VK_NULL_HANDLE;
+        }
 
         if (imageView != VK_NULL_HANDLE)
+        {
             vkDestroyImageView(device, imageView, nullptr);
+            imageView = VK_NULL_HANDLE;
+        }
 
         if (image != VK_NULL_HANDLE)
+        {
             vmaDestroyImage(allocator, image, allocation);
+            image = VK_NULL_HANDLE;
+        }
+
+        released = true;
+    }
+
+    GraphicsResourceType VulkanTextureHandle::GetResourceType() const
+    {
+        return GraphicsResourceType::TEXTURE;
     }
 
     uint32_t VulkanTextureHandle::GetWidth() const
@@ -46,7 +74,7 @@ namespace RenderStar::Client::Render::Vulkan
 
     bool VulkanTextureHandle::IsValid() const
     {
-        return image != VK_NULL_HANDLE && imageView != VK_NULL_HANDLE && sampler != VK_NULL_HANDLE;
+        return !released && image != VK_NULL_HANDLE && imageView != VK_NULL_HANDLE && sampler != VK_NULL_HANDLE;
     }
 
     VkImageView VulkanTextureHandle::GetImageView() const

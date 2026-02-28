@@ -28,6 +28,17 @@ namespace RenderStar::Client::Render::Affectors
         shader = std::move(s);
     }
 
+    void PlayerRenderAffector::Cleanup()
+    {
+        uniformPool.clear();
+        cubeMesh.reset();
+        uniformPoolIndex = 0;
+        shader.reset();
+        bufferManager = nullptr;
+        uniformManager = nullptr;
+        textureManager = nullptr;
+    }
+
     void PlayerRenderAffector::Render(Common::Component::ComponentModule& componentModule, IRenderBackend* backend,
         const glm::mat4& viewProjection, int32_t localPlayerId)
     {

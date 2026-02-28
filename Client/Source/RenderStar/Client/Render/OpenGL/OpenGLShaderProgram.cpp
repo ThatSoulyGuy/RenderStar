@@ -13,11 +13,27 @@ namespace RenderStar::Client::Render::OpenGL
 
     OpenGLShaderProgram::~OpenGLShaderProgram()
     {
+        if (!released)
+            Release();
+    }
+
+    void OpenGLShaderProgram::Release()
+    {
+        if (released)
+            return;
+
         if (programHandle != INVALID_PROGRAM)
         {
             glDeleteProgram(programHandle);
             programHandle = INVALID_PROGRAM;
         }
+
+        released = true;
+    }
+
+    GraphicsResourceType OpenGLShaderProgram::GetResourceType() const
+    {
+        return GraphicsResourceType::SHADER_PROGRAM;
     }
 
     bool OpenGLShaderProgram::CompileFromSource(const std::string& vertexSource, const std::string& fragmentSource)

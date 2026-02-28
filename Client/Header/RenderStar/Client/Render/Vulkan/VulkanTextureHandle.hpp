@@ -18,9 +18,13 @@ namespace RenderStar::Client::Render::Vulkan
             VkImageView imageView,
             VkSampler sampler,
             uint32_t width,
-            uint32_t height);
+            uint32_t height,
+            IGraphicsResourceManager& resourceManager);
 
         ~VulkanTextureHandle() override;
+
+        void Release() override;
+        GraphicsResourceType GetResourceType() const override;
 
         uint32_t GetWidth() const override;
         uint32_t GetHeight() const override;

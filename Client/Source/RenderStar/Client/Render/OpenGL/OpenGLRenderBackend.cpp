@@ -178,6 +178,11 @@ namespace RenderStar::Client::Render::OpenGL
         return textureManager.get();
     }
 
+    IGraphicsResourceManager* OpenGLRenderBackend::GetResourceManager()
+    {
+        return nullptr;
+    }
+
     IRenderCommandQueue* OpenGLRenderBackend::GetCommandQueue()
     {
         return commandQueue.get();

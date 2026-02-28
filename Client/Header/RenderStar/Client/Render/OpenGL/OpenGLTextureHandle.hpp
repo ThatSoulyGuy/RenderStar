@@ -12,6 +12,9 @@ namespace RenderStar::Client::Render::OpenGL
         OpenGLTextureHandle(uint32_t textureId, uint32_t width, uint32_t height);
         ~OpenGLTextureHandle() override;
 
+        void Release() override;
+        GraphicsResourceType GetResourceType() const override;
+
         uint32_t GetWidth() const override;
         uint32_t GetHeight() const override;
         bool IsValid() const override;

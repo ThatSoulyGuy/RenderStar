@@ -25,7 +25,8 @@ namespace RenderStar::Client::Render::Vulkan
         void Initialize(
             VulkanBufferModule* bufferModule,
             VulkanDescriptorModule* descriptorModule,
-            uint32_t maxFramesInFlight);
+            uint32_t maxFramesInFlight,
+            IGraphicsResourceManager* resourceManager);
 
         void Destroy();
 
@@ -58,6 +59,7 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanBufferModule* bufferModule;
         VulkanDescriptorModule* descriptorModule;
         uint32_t maxFramesInFlight;
+        IGraphicsResourceManager* resourceManager;
         std::unordered_map<std::string, VulkanUniformBuffer> uniformBuffers;
         std::vector<VkDescriptorSet> descriptorSets;
         std::vector<VkDescriptorPool> createdPools;

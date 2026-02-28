@@ -2,21 +2,40 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanDescriptorModule.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanBufferHandle.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanTextureHandle.hpp"
+#include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
 
 namespace RenderStar::Client::Render::Vulkan
 {
     VulkanUniformBinding::VulkanUniformBinding(
         const std::vector<VkDescriptorSet>& descriptorSets,
-        VulkanDescriptorModule* descriptorModule)
+        VulkanDescriptorModule* descriptorModule,
+        IGraphicsResourceManager& manager)
         : descriptorSets(descriptorSets)
         , descriptorModule(descriptorModule)
         , destroyed(false)
     {
+        manager.Track(this);
     }
 
     VulkanUniformBinding::~VulkanUniformBinding()
     {
-        Destroy();
+        if (!released)
+            Release();
+    }
+
+    void VulkanUniformBinding::Release()
+    {
+        if (released)
+            return;
+
+        destroyed = true;
+        descriptorSets.clear();
+        released = true;
+    }
+
+    GraphicsResourceType VulkanUniformBinding::GetResourceType() const
+    {
+        return GraphicsResourceType::UNIFORM_BINDING;
     }
 
     void VulkanUniformBinding::Bind(int32_t frameIndex)
@@ -25,6 +44,9 @@ namespace RenderStar::Client::Render::Vulkan
 
     void VulkanUniformBinding::UpdateBuffer(int32_t binding, IBufferHandle* buffer, size_t size, int32_t frameIndex)
     {
+        if (released)
+            return;
+
         auto* vulkanBuffer = static_cast<VulkanBufferHandle*>(buffer);
         if (vulkanBuffer == nullptr)
             return;
@@ -54,6 +76,9 @@ namespace RenderStar::Client::Render::Vulkan
 
     void VulkanUniformBinding::UpdateTexture(int32_t binding, ITextureHandle* texture, int32_t frameIndex)
     {
+        if (released)
+            return;
+
         auto* vulkanTexture = static_cast<VulkanTextureHandle*>(texture);
         if (vulkanTexture == nullptr)
             return;

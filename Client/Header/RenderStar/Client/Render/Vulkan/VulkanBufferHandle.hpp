@@ -13,9 +13,13 @@ namespace RenderStar::Client::Render::Vulkan
             VulkanBufferModule* bufferModule,
             VulkanBuffer buffer,
             BufferType type,
-            BufferUsage usage);
+            BufferUsage usage,
+            IGraphicsResourceManager& resourceManager);
 
         ~VulkanBufferHandle() override;
+
+        void Release() override;
+        GraphicsResourceType GetResourceType() const override;
 
         void SetData(const void* data, size_t size) override;
         void SetSubData(const void* data, size_t size, size_t offset) override;

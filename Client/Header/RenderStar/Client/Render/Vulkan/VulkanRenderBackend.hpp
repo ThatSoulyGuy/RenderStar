@@ -18,6 +18,7 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanUniformManager.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanTextureManager.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanCommandQueue.hpp"
+#include "RenderStar/Client/Render/Vulkan/VulkanGraphicsResourceManager.hpp"
 #include <spdlog/spdlog.h>
 #include <vector>
 #include <memory>
@@ -79,6 +80,7 @@ namespace RenderStar::Client::Render::Vulkan
         IShaderManager* GetShaderManager() override;
         IUniformManager* GetUniformManager() override;
         ITextureManager* GetTextureManager() override;
+        IGraphicsResourceManager* GetResourceManager() override;
         IRenderCommandQueue* GetCommandQueue() override;
 
         void SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh) override;
@@ -121,6 +123,8 @@ namespace RenderStar::Client::Render::Vulkan
         std::unique_ptr<VulkanUniformManager> uniformManager;
         std::unique_ptr<VulkanTextureManager> textureManager;
         std::unique_ptr<VulkanCommandQueue> commandQueue;
+
+        VulkanGraphicsResourceManager resourceManager;
 
         VkImage depthImage;
         VkDeviceMemory depthImageMemory;

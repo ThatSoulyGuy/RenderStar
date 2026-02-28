@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderStar/Client/Render/Resource/IGraphicsResource.hpp"
 #include <cstdint>
 #include <cstddef>
 
@@ -8,11 +9,9 @@ namespace RenderStar::Client::Render
     class IBufferHandle;
     class ITextureHandle;
 
-    class IUniformBindingHandle
+    class IUniformBindingHandle : public IGraphicsResource
     {
     public:
-
-        virtual ~IUniformBindingHandle() = default;
 
         virtual void Bind(int32_t frameIndex) = 0;
         virtual void UpdateBuffer(int32_t binding, IBufferHandle* buffer, size_t size, int32_t frameIndex = -1) = 0;

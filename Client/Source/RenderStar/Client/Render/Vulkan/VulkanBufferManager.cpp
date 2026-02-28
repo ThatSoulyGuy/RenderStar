@@ -1,20 +1,23 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanBufferManager.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanBufferHandle.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanMesh.hpp"
+#include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
 
 namespace RenderStar::Client::Render::Vulkan
 {
     VulkanBufferManager::VulkanBufferManager()
         : logger(spdlog::default_logger()->clone("VulkanBufferManager"))
         , bufferModule(nullptr)
+        , resourceManager(nullptr)
     {
     }
 
     VulkanBufferManager::~VulkanBufferManager() = default;
 
-    void VulkanBufferManager::Initialize(VulkanBufferModule* module)
+    void VulkanBufferManager::Initialize(VulkanBufferModule* module, IGraphicsResourceManager* manager)
     {
         bufferModule = module;
+        resourceManager = manager;
         logger->info("Vulkan buffer manager initialized");
     }
 
@@ -29,7 +32,7 @@ namespace RenderStar::Client::Render::Vulkan
 
         VulkanBuffer buffer = bufferModule->CreateBuffer(vulkanType, size, hostVisible);
 
-        auto handle = std::make_unique<VulkanBufferHandle>(bufferModule, buffer, type, usage);
+        auto handle = std::make_unique<VulkanBufferHandle>(bufferModule, buffer, type, usage, *resourceManager);
 
         if (initialData)
             handle->SetData(initialData, size);
@@ -65,7 +68,7 @@ namespace RenderStar::Client::Render::Vulkan
         PrimitiveType primitive)
     {
         auto mesh = std::make_unique<VulkanMesh>();
-        mesh->Initialize(bufferModule, layout, primitive);
+        mesh->Initialize(bufferModule, *resourceManager, layout, primitive);
         return mesh;
     }
 

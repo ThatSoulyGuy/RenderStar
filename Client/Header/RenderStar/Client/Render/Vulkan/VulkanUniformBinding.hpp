@@ -13,8 +13,11 @@ namespace RenderStar::Client::Render::Vulkan
     {
     public:
 
-        VulkanUniformBinding(const std::vector<VkDescriptorSet>& descriptorSets, VulkanDescriptorModule* descriptorModule);
+        VulkanUniformBinding(const std::vector<VkDescriptorSet>& descriptorSets, VulkanDescriptorModule* descriptorModule, IGraphicsResourceManager& resourceManager);
         ~VulkanUniformBinding() override;
+
+        void Release() override;
+        GraphicsResourceType GetResourceType() const override;
 
         void Bind(int32_t frameIndex) override;
         void UpdateBuffer(int32_t binding, IBufferHandle* buffer, size_t size, int32_t frameIndex = -1) override;

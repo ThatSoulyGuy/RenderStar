@@ -15,8 +15,12 @@ namespace RenderStar::Client::Render::Vulkan
 
         void Initialize(
             VulkanBufferModule* bufferModule,
+            IGraphicsResourceManager& resourceManager,
             const VertexLayout& layout,
             PrimitiveType primitive = PrimitiveType::TRIANGLES);
+
+        void Release() override;
+        GraphicsResourceType GetResourceType() const override;
 
         void SetVertexData(const void* data, size_t size) override;
         void SetIndexData(const void* data, size_t size, IndexType indexType) override;

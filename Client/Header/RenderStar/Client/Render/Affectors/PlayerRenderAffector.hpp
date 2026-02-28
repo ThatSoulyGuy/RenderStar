@@ -27,6 +27,7 @@ namespace RenderStar::Client::Render::Affectors
 
         void SetupRenderState(IBufferManager* bufferManager, IUniformManager* uniformManager, ITextureManager* textureManager);
         void SetShader(std::unique_ptr<IShaderProgram> shader);
+        void Cleanup();
 
         void Render(Common::Component::ComponentModule& componentModule, IRenderBackend* backend,
             const glm::mat4& viewProjection, int32_t localPlayerId);

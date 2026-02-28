@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderStar/Client/Render/Resource/IGraphicsResource.hpp"
 #include <cstdint>
 
 namespace RenderStar::Client::Render
@@ -32,11 +33,9 @@ namespace RenderStar::Client::Render
         TextureFilterMode magFilter = TextureFilterMode::LINEAR;
     };
 
-    class ITextureHandle
+    class ITextureHandle : public IGraphicsResource
     {
     public:
-
-        virtual ~ITextureHandle() = default;
 
         virtual uint32_t GetWidth() const = 0;
         virtual uint32_t GetHeight() const = 0;

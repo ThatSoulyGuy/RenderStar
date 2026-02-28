@@ -16,6 +16,9 @@ namespace RenderStar::Client::Render::OpenGL
 
         ~OpenGLMeshAdapter() override;
 
+        void Release() override;
+        GraphicsResourceType GetResourceType() const override;
+
         void Bind();
         void Unbind();
 

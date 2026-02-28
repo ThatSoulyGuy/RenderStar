@@ -67,6 +67,7 @@ namespace RenderStar::Client::Render::OpenGL
         IShaderManager* GetShaderManager() override;
         IUniformManager* GetUniformManager() override;
         ITextureManager* GetTextureManager() override;
+        IGraphicsResourceManager* GetResourceManager() override;
         IRenderCommandQueue* GetCommandQueue() override;
 
         void SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh) override;

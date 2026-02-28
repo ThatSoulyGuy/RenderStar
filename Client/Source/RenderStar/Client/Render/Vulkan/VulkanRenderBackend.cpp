@@ -84,7 +84,7 @@ namespace RenderStar::Client::Render::Vulkan
         descriptorModule.Create(deviceModule.GetDevice(), MAX_FRAMES_IN_FLIGHT);
 
         bufferManager = std::make_unique<VulkanBufferManager>();
-        bufferManager->Initialize(&bufferModule);
+        bufferManager->Initialize(&bufferModule, &resourceManager);
 
         shaderManager = std::make_unique<VulkanShaderManager>();
         shaderManager->Initialize(
@@ -92,17 +92,19 @@ namespace RenderStar::Client::Render::Vulkan
             renderPassModule.GetRenderPass(),
             &shaderModule,
             &descriptorModule,
-            Vertex::LAYOUT);
+            Vertex::LAYOUT,
+            &resourceManager);
 
         uniformManager = std::make_unique<VulkanUniformManager>();
-        uniformManager->Initialize(&bufferModule, &descriptorModule, MAX_FRAMES_IN_FLIGHT);
+        uniformManager->Initialize(&bufferModule, &descriptorModule, MAX_FRAMES_IN_FLIGHT, &resourceManager);
 
         textureManager = std::make_unique<VulkanTextureManager>();
         textureManager->Initialize(
             deviceModule.GetDevice(),
             memoryModule.GetAllocator(),
             deviceModule.GetGraphicsQueue(),
-            deviceModule.GetGraphicsQueueFamily());
+            deviceModule.GetGraphicsQueueFamily(),
+            &resourceManager);
 
         commandQueue = std::make_unique<VulkanCommandQueue>();
         commandQueue->Initialize(&commandModule, MAX_FRAMES_IN_FLIGHT);
@@ -114,6 +116,8 @@ namespace RenderStar::Client::Render::Vulkan
     void VulkanRenderBackend::Destroy()
     {
         vkDeviceWaitIdle(deviceModule.GetDevice());
+
+        resourceManager.ReleaseAll();
 
         commandQueue.reset();
         textureManager->Destroy();
@@ -340,6 +344,11 @@ namespace RenderStar::Client::Render::Vulkan
     ITextureManager* VulkanRenderBackend::GetTextureManager()
     {
         return textureManager.get();
+    }
+
+    IGraphicsResourceManager* VulkanRenderBackend::GetResourceManager()
+    {
+        return &resourceManager;
     }
 
     IRenderCommandQueue* VulkanRenderBackend::GetCommandQueue()

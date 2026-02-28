@@ -22,7 +22,8 @@ namespace RenderStar::Client::Render::Vulkan
             VkRenderPass renderPass,
             VulkanShaderModule* shaderModule,
             VulkanDescriptorModule* descriptorModule,
-            const VertexLayout& defaultVertexLayout);
+            const VertexLayout& defaultVertexLayout,
+            IGraphicsResourceManager* resourceManager);
 
         std::unique_ptr<IShaderProgram> CreateFromSource(const ShaderSource& source) override;
         std::unique_ptr<IShaderProgram> CreateFromBinary(const ShaderBinary& binary) override;
@@ -43,5 +44,6 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanShaderModule* shaderModule;
         VulkanDescriptorModule* descriptorModule;
         VertexLayout vertexLayout;
+        IGraphicsResourceManager* resourceManager;
     };
 }

@@ -15,7 +15,7 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanTextureManager();
         ~VulkanTextureManager() override;
 
-        void Initialize(VkDevice device, VmaAllocator allocator, VkQueue graphicsQueue, uint32_t graphicsQueueFamily);
+        void Initialize(VkDevice device, VmaAllocator allocator, VkQueue graphicsQueue, uint32_t graphicsQueueFamily, IGraphicsResourceManager* resourceManager);
         void Destroy();
 
         std::unique_ptr<ITextureHandle> CreateFromMemory(
@@ -39,6 +39,7 @@ namespace RenderStar::Client::Render::Vulkan
         VmaAllocator allocator;
         VkQueue graphicsQueue;
         VkCommandPool commandPool;
+        IGraphicsResourceManager* resourceManager;
         std::unique_ptr<ITextureHandle> defaultTexture;
     };
 }

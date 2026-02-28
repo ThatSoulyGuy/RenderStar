@@ -43,10 +43,7 @@ namespace RenderStar::Client::Core
 
     void ClientLifecycleModule::OnCleanup()
     {
-        logger->info("ClientLifecycleModule cleaning up render resources...");
-
-        if (auto mapGeometryAffector = context->GetModule<Render::Affectors::MapGeometryRenderAffector>(); mapGeometryAffector.has_value())
-            mapGeometryAffector->get().Cleanup();
+        logger->info("ClientLifecycleModule cleaning up...");
 
         if (auto sceneModule = context->GetModule<Common::Scene::SceneModule>(); sceneModule.has_value())
             sceneModule->get().ClearScene();

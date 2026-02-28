@@ -12,11 +12,27 @@ namespace RenderStar::Client::Render::OpenGL
 
     OpenGLTextureHandle::~OpenGLTextureHandle()
     {
+        if (!released)
+            Release();
+    }
+
+    void OpenGLTextureHandle::Release()
+    {
+        if (released)
+            return;
+
         if (textureId != 0)
         {
             glDeleteTextures(1, &textureId);
             textureId = 0;
         }
+
+        released = true;
+    }
+
+    GraphicsResourceType OpenGLTextureHandle::GetResourceType() const
+    {
+        return GraphicsResourceType::TEXTURE;
     }
 
     uint32_t OpenGLTextureHandle::GetWidth() const

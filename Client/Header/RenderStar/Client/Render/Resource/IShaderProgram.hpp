@@ -1,12 +1,12 @@
 #pragma once
 
+#include "RenderStar/Client/Render/Resource/IGraphicsResource.hpp"
+
 namespace RenderStar::Client::Render
 {
-    class IShaderProgram
+    class IShaderProgram : public IGraphicsResource
     {
     public:
-
-        virtual ~IShaderProgram() = default;
 
         virtual bool IsValid() const = 0;
     };

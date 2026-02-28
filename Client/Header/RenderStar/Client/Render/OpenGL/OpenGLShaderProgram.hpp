@@ -21,6 +21,9 @@ namespace RenderStar::Client::Render::OpenGL
 
         ~OpenGLShaderProgram() override;
 
+        void Release() override;
+        GraphicsResourceType GetResourceType() const override;
+
         bool CompileFromSource(const std::string& vertexSource, const std::string& fragmentSource);
 
         void Bind();

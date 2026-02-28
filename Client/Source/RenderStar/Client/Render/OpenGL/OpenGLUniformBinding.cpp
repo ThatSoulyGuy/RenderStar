@@ -15,7 +15,22 @@ namespace RenderStar::Client::Render::OpenGL
 
     OpenGLUniformBinding::~OpenGLUniformBinding()
     {
+        if (!released)
+            Release();
+    }
+
+    void OpenGLUniformBinding::Release()
+    {
+        if (released)
+            return;
+
         Destroy();
+        released = true;
+    }
+
+    GraphicsResourceType OpenGLUniformBinding::GetResourceType() const
+    {
+        return GraphicsResourceType::UNIFORM_BINDING;
     }
 
     void OpenGLUniformBinding::Bind(int32_t frameIndex)

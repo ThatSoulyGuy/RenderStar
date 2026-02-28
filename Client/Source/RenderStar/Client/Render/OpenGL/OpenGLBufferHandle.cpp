@@ -40,11 +40,28 @@ namespace RenderStar::Client::Render::OpenGL
 
     OpenGLBufferHandle::~OpenGLBufferHandle()
     {
+        if (!released)
+            Release();
+    }
+
+    void OpenGLBufferHandle::Release()
+    {
+        if (released)
+            return;
+
         if (!destroyed && bufferId != 0)
         {
             glDeleteBuffers(1, &bufferId);
+            bufferId = 0;
             destroyed = true;
         }
+
+        released = true;
+    }
+
+    GraphicsResourceType OpenGLBufferHandle::GetResourceType() const
+    {
+        return GraphicsResourceType::BUFFER;
     }
 
     void OpenGLBufferHandle::Bind()

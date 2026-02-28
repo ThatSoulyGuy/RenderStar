@@ -13,7 +13,7 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanBufferManager();
         ~VulkanBufferManager() override;
 
-        void Initialize(VulkanBufferModule* bufferModule);
+        void Initialize(VulkanBufferModule* bufferModule, IGraphicsResourceManager* resourceManager);
 
         std::unique_ptr<IBufferHandle> CreateBuffer(
             BufferType type,
@@ -48,5 +48,6 @@ namespace RenderStar::Client::Render::Vulkan
 
         std::shared_ptr<spdlog::logger> logger;
         VulkanBufferModule* bufferModule;
+        IGraphicsResourceManager* resourceManager;
     };
 }

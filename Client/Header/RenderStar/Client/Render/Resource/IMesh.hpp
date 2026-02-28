@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderStar/Client/Render/Resource/IGraphicsResource.hpp"
 #include "RenderStar/Client/Render/Resource/VertexLayout.hpp"
 #include "RenderStar/Client/Render/Resource/IBufferHandle.hpp"
 #include <cstdint>
@@ -23,11 +24,9 @@ namespace RenderStar::Client::Render
         UINT32
     };
 
-    class IMesh
+    class IMesh : public IGraphicsResource
     {
     public:
-
-        virtual ~IMesh() = default;
 
         virtual void SetVertexData(const void* data, size_t size) = 0;
         virtual void SetIndexData(const void* data, size_t size, IndexType indexType) = 0;

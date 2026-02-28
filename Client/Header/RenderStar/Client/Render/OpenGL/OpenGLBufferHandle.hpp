@@ -12,6 +12,9 @@ namespace RenderStar::Client::Render::OpenGL
         OpenGLBufferHandle(uint32_t bufferId, BufferType type, BufferUsage usage, size_t size);
         ~OpenGLBufferHandle() override;
 
+        void Release() override;
+        GraphicsResourceType GetResourceType() const override;
+
         void Bind();
         void Unbind();
 

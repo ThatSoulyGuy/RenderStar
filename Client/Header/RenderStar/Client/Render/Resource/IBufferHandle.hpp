@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderStar/Client/Render/Resource/IGraphicsResource.hpp"
 #include <cstdint>
 #include <cstddef>
 
@@ -20,11 +21,9 @@ namespace RenderStar::Client::Render
         STREAM
     };
 
-    class IBufferHandle
+    class IBufferHandle : public IGraphicsResource
     {
     public:
-
-        virtual ~IBufferHandle() = default;
 
         virtual void SetData(const void* data, size_t size) = 0;
         virtual void SetSubData(const void* data, size_t size, size_t offset) = 0;

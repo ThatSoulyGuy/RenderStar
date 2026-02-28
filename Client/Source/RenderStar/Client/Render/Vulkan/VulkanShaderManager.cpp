@@ -1,7 +1,7 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanShaderManager.hpp"
-
 #include "RenderStar/Client/Render/Vulkan/VulkanDescriptorModule.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanShaderProgram.hpp"
+#include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
 #include "RenderStar/Common/Asset/ITextAsset.hpp"
 #include "RenderStar/Common/Asset/IBinaryAsset.hpp"
 
@@ -26,6 +26,7 @@ namespace RenderStar::Client::Render::Vulkan
         , shaderModule(nullptr)
         , descriptorModule(nullptr)
         , vertexLayout{}
+        , resourceManager(nullptr)
     {
     }
 
@@ -36,13 +37,15 @@ namespace RenderStar::Client::Render::Vulkan
         VkRenderPass vulkanRenderPass,
         VulkanShaderModule* module,
         VulkanDescriptorModule* descModule,
-        const VertexLayout& defaultVertexLayout)
+        const VertexLayout& defaultVertexLayout,
+        IGraphicsResourceManager* manager)
     {
         device = vulkanDevice;
         renderPass = vulkanRenderPass;
         shaderModule = module;
         descriptorModule = descModule;
         vertexLayout = defaultVertexLayout;
+        resourceManager = manager;
         logger->info("Vulkan shader manager initialized");
     }
 
@@ -53,7 +56,7 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanShader vertexShader = shaderModule->LoadShaderFromGlsl(source.vertexSource, VulkanShaderStage::VERTEX, "vertex");
         VulkanShader fragmentShader = shaderModule->LoadShaderFromGlsl(source.fragmentSource, VulkanShaderStage::FRAGMENT, "fragment");
 
-        program->Initialize(device, renderPass, shaderModule, descriptorModule, vertexShader, fragmentShader, vertexLayout);
+        program->Initialize(device, renderPass, shaderModule, descriptorModule, vertexShader, fragmentShader, vertexLayout, *resourceManager);
 
         logger->info("Created shader from GLSL source");
 
@@ -69,7 +72,7 @@ namespace RenderStar::Client::Render::Vulkan
             VulkanShader computeShader = shaderModule->LoadShaderFromSpirv(
                 binary.computeSpirv, VulkanShaderStage::COMPUTE);
 
-            program->InitializeCompute(shaderModule, computeShader);
+            program->InitializeCompute(shaderModule, computeShader, *resourceManager);
         }
         else
         {
@@ -80,7 +83,7 @@ namespace RenderStar::Client::Render::Vulkan
                 binary.fragmentSpirv, VulkanShaderStage::FRAGMENT);
 
             program->Initialize(device, renderPass, shaderModule, descriptorModule,
-                vertexShader, fragmentShader, vertexLayout);
+                vertexShader, fragmentShader, vertexLayout, *resourceManager);
         }
 
         return program;
@@ -95,7 +98,7 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanShader fragmentShader = shaderModule->LoadShaderFromGlsl(
             fragmentAsset.GetContent(), VulkanShaderStage::FRAGMENT, fragmentAsset.GetLocation().ToString());
 
-        program->Initialize(device, renderPass, shaderModule, descriptorModule, vertexShader, fragmentShader, vertexLayout);
+        program->Initialize(device, renderPass, shaderModule, descriptorModule, vertexShader, fragmentShader, vertexLayout, *resourceManager);
 
         logger->info("Created shader from text assets: {}, {}", vertexAsset.GetLocation().ToString(), fragmentAsset.GetLocation().ToString());
 
@@ -112,7 +115,7 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanShader vertexShader = shaderModule->LoadShaderFromSpirv(vertexSpirv, VulkanShaderStage::VERTEX);
         VulkanShader fragmentShader = shaderModule->LoadShaderFromSpirv(fragmentSpirv, VulkanShaderStage::FRAGMENT);
 
-        program->Initialize(device, renderPass, shaderModule, descriptorModule, vertexShader, fragmentShader, vertexLayout);
+        program->Initialize(device, renderPass, shaderModule, descriptorModule, vertexShader, fragmentShader, vertexLayout, *resourceManager);
 
         logger->info("Loaded shader from binary assets: {}, {}", vertexAsset.GetLocation().ToString(), fragmentAsset.GetLocation().ToString());
 
@@ -126,7 +129,7 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanShader computeShader = shaderModule->LoadShaderFromGlsl(
             computeAsset.GetContent(), VulkanShaderStage::COMPUTE, computeAsset.GetLocation().ToString());
 
-        program->InitializeCompute(shaderModule, computeShader);
+        program->InitializeCompute(shaderModule, computeShader, *resourceManager);
 
         logger->info("Created compute shader from text asset: {}", computeAsset.GetLocation().ToString());
 
@@ -140,7 +143,7 @@ namespace RenderStar::Client::Render::Vulkan
         std::vector<uint32_t> computeSpirv = ConvertToSpirv(computeAsset);
         VulkanShader computeShader = shaderModule->LoadShaderFromSpirv(computeSpirv, VulkanShaderStage::COMPUTE);
 
-        program->InitializeCompute(shaderModule, computeShader);
+        program->InitializeCompute(shaderModule, computeShader, *resourceManager);
 
         logger->info("Loaded compute shader from binary asset: {}", computeAsset.GetLocation().ToString());
 

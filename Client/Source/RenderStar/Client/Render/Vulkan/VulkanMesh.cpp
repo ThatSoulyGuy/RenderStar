@@ -1,4 +1,5 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanMesh.hpp"
+#include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
 
 namespace RenderStar::Client::Render::Vulkan
 {
@@ -17,28 +18,55 @@ namespace RenderStar::Client::Render::Vulkan
 
     VulkanMesh::~VulkanMesh()
     {
-        if (bufferModule)
-        {
-            if (vertexBuffer.buffer != VK_NULL_HANDLE)
-                bufferModule->DestroyBuffer(vertexBuffer);
-
-            if (indexBuffer.buffer != VK_NULL_HANDLE)
-                bufferModule->DestroyBuffer(indexBuffer);
-        }
+        if (!released)
+            Release();
     }
 
     void VulkanMesh::Initialize(
         VulkanBufferModule* module,
+        IGraphicsResourceManager& manager,
         const VertexLayout& layout,
         PrimitiveType primitive)
     {
         bufferModule = module;
         vertexLayout = layout;
         primitiveType = primitive;
+        manager.Track(this);
+    }
+
+    void VulkanMesh::Release()
+    {
+        if (released)
+            return;
+
+        if (bufferModule)
+        {
+            if (vertexBuffer.buffer != VK_NULL_HANDLE)
+            {
+                bufferModule->DestroyBuffer(vertexBuffer);
+                vertexBuffer.buffer = VK_NULL_HANDLE;
+            }
+
+            if (indexBuffer.buffer != VK_NULL_HANDLE)
+            {
+                bufferModule->DestroyBuffer(indexBuffer);
+                indexBuffer.buffer = VK_NULL_HANDLE;
+            }
+        }
+
+        released = true;
+    }
+
+    GraphicsResourceType VulkanMesh::GetResourceType() const
+    {
+        return GraphicsResourceType::MESH;
     }
 
     void VulkanMesh::SetVertexData(const void* data, size_t size)
     {
+        if (released)
+            return;
+
         if (vertexBuffer.buffer != VK_NULL_HANDLE)
             bufferModule->DestroyBuffer(vertexBuffer);
 
@@ -50,6 +78,9 @@ namespace RenderStar::Client::Render::Vulkan
 
     void VulkanMesh::SetIndexData(const void* data, size_t size, IndexType type)
     {
+        if (released)
+            return;
+
         if (indexBuffer.buffer != VK_NULL_HANDLE)
             bufferModule->DestroyBuffer(indexBuffer);
 
@@ -89,7 +120,7 @@ namespace RenderStar::Client::Render::Vulkan
 
     bool VulkanMesh::IsValid() const
     {
-        return vertexBuffer.buffer != VK_NULL_HANDLE && vertexCount > 0;
+        return !released && vertexBuffer.buffer != VK_NULL_HANDLE && vertexCount > 0;
     }
 
     VkBuffer VulkanMesh::GetVertexBuffer() const
@@ -109,6 +140,9 @@ namespace RenderStar::Client::Render::Vulkan
 
     void VulkanMesh::RecordDrawCommands(VkCommandBuffer commandBuffer)
     {
+        if (released)
+            return;
+
         VkBuffer vertexBuffers[] = { vertexBuffer.buffer };
         VkDeviceSize offsets[] = { 0 };
 
