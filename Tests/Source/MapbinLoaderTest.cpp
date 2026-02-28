@@ -1,0 +1,372 @@
+#include <gtest/gtest.h>
+#include "RenderStar/Common/Scene/MapbinLoader.hpp"
+#include <cstring>
+#include <vector>
+
+using namespace RenderStar::Common::Scene;
+
+namespace
+{
+    void WriteUint32(std::vector<uint8_t>& buf, uint32_t value)
+    {
+        size_t offset = buf.size();
+        buf.resize(buf.size() + 4);
+        std::memcpy(buf.data() + offset, &value, sizeof(uint32_t));
+    }
+
+    void WriteFloat(std::vector<uint8_t>& buf, float value)
+    {
+        size_t offset = buf.size();
+        buf.resize(buf.size() + 4);
+        std::memcpy(buf.data() + offset, &value, sizeof(float));
+    }
+
+    void WriteHeader(std::vector<uint8_t>& buf, uint32_t textureCount, uint32_t groupCount)
+    {
+        WriteUint32(buf, 0x4D415042);
+        WriteUint32(buf, 2);
+        WriteUint32(buf, textureCount);
+        WriteUint32(buf, groupCount);
+    }
+
+    void WriteTexture(std::vector<uint8_t>& buf, int32_t materialId, uint32_t width, uint32_t height,
+                      uint32_t wrapS, uint32_t wrapT, uint32_t minFilter, uint32_t magFilter,
+                      const std::vector<uint8_t>& pixels)
+    {
+        WriteUint32(buf, static_cast<uint32_t>(materialId));
+        WriteUint32(buf, width);
+        WriteUint32(buf, height);
+        WriteUint32(buf, wrapS);
+        WriteUint32(buf, wrapT);
+        WriteUint32(buf, minFilter);
+        WriteUint32(buf, magFilter);
+        WriteUint32(buf, static_cast<uint32_t>(pixels.size()));
+        buf.insert(buf.end(), pixels.begin(), pixels.end());
+    }
+
+    void WriteVertex(std::vector<uint8_t>& buf, float px, float py, float pz,
+                     float nx, float ny, float nz, float u, float v)
+    {
+        WriteFloat(buf, px);
+        WriteFloat(buf, py);
+        WriteFloat(buf, pz);
+        WriteFloat(buf, nx);
+        WriteFloat(buf, ny);
+        WriteFloat(buf, nz);
+        WriteFloat(buf, u);
+        WriteFloat(buf, v);
+    }
+
+    void WriteGroup(std::vector<uint8_t>& buf, int32_t materialId, uint32_t vertexCount,
+                    const std::vector<uint32_t>& indices)
+    {
+        WriteUint32(buf, static_cast<uint32_t>(materialId));
+        WriteUint32(buf, vertexCount);
+        WriteUint32(buf, static_cast<uint32_t>(indices.size()));
+
+        for (uint32_t v = 0; v < vertexCount; ++v)
+            WriteVertex(buf, static_cast<float>(v), 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
+
+        for (uint32_t idx : indices)
+            WriteUint32(buf, idx);
+    }
+}
+
+TEST(MapbinLoaderTest, EmptyDataReturnsNullopt)
+{
+    auto result = MapbinLoader::Load({});
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST(MapbinLoaderTest, TooSmallDataReturnsNullopt)
+{
+    std::vector<uint8_t> data(8, 0);
+    auto result = MapbinLoader::Load(data);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST(MapbinLoaderTest, WrongMagicReturnsNullopt)
+{
+    std::vector<uint8_t> buf;
+    WriteUint32(buf, 0xDEADBEEF);
+    WriteUint32(buf, 2);
+    WriteUint32(buf, 0);
+    WriteUint32(buf, 0);
+
+    auto result = MapbinLoader::Load(buf);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST(MapbinLoaderTest, WrongVersionReturnsNullopt)
+{
+    std::vector<uint8_t> buf;
+    WriteUint32(buf, 0x4D415042);
+    WriteUint32(buf, 99);
+    WriteUint32(buf, 0);
+    WriteUint32(buf, 0);
+
+    auto result = MapbinLoader::Load(buf);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST(MapbinLoaderTest, EmptyScene)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 0, 0);
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result->textures.empty());
+    EXPECT_TRUE(result->groups.empty());
+}
+
+TEST(MapbinLoaderTest, SingleTextureNoGroups)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 1, 0);
+
+    std::vector<uint8_t> pixels = {0xFF, 0x00, 0xFF, 0xFF};
+    WriteTexture(buf, 5, 1, 1, 0x2901, 0x2901, 0x2601, 0x2601, pixels);
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->textures.size(), 1u);
+
+    const auto& tex = result->textures[0];
+    EXPECT_EQ(tex.materialId, 5);
+    EXPECT_EQ(tex.width, 1u);
+    EXPECT_EQ(tex.height, 1u);
+    EXPECT_EQ(tex.wrapS, 0x2901u);
+    EXPECT_EQ(tex.wrapT, 0x2901u);
+    EXPECT_EQ(tex.minFilter, 0x2601u);
+    EXPECT_EQ(tex.magFilter, 0x2601u);
+    ASSERT_EQ(tex.pixelData.size(), 4u);
+    EXPECT_EQ(tex.pixelData[0], 0xFF);
+    EXPECT_EQ(tex.pixelData[1], 0x00);
+    EXPECT_EQ(tex.pixelData[2], 0xFF);
+    EXPECT_EQ(tex.pixelData[3], 0xFF);
+}
+
+TEST(MapbinLoaderTest, MultipleTextures)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 2, 0);
+
+    std::vector<uint8_t> pixels1(16, 0xAA);
+    WriteTexture(buf, 1, 2, 2, 0x2901, 0x812F, 0x2600, 0x2601, pixels1);
+
+    std::vector<uint8_t> pixels2(4, 0xBB);
+    WriteTexture(buf, 2, 1, 1, 0x812F, 0x812F, 0x2601, 0x2600, pixels2);
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->textures.size(), 2u);
+
+    EXPECT_EQ(result->textures[0].materialId, 1);
+    EXPECT_EQ(result->textures[0].width, 2u);
+    EXPECT_EQ(result->textures[0].height, 2u);
+    EXPECT_EQ(result->textures[0].wrapS, 0x2901u);
+    EXPECT_EQ(result->textures[0].wrapT, 0x812Fu);
+    EXPECT_EQ(result->textures[0].pixelData.size(), 16u);
+
+    EXPECT_EQ(result->textures[1].materialId, 2);
+    EXPECT_EQ(result->textures[1].width, 1u);
+    EXPECT_EQ(result->textures[1].height, 1u);
+    EXPECT_EQ(result->textures[1].wrapS, 0x812Fu);
+    EXPECT_EQ(result->textures[1].pixelData.size(), 4u);
+}
+
+TEST(MapbinLoaderTest, SingleGroupNoTextures)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 0, 1);
+    WriteGroup(buf, 3, 3, {0, 1, 2});
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result->textures.empty());
+    ASSERT_EQ(result->groups.size(), 1u);
+
+    const auto& group = result->groups[0];
+    EXPECT_EQ(group.materialId, 3);
+    EXPECT_EQ(group.vertexCount, 3);
+    ASSERT_EQ(group.indices.size(), 3u);
+}
+
+TEST(MapbinLoaderTest, GroupMaterialIdPreserved)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 0, 2);
+    WriteGroup(buf, 7, 3, {0, 1, 2});
+    WriteGroup(buf, 42, 3, {0, 1, 2});
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->groups.size(), 2u);
+    EXPECT_EQ(result->groups[0].materialId, 7);
+    EXPECT_EQ(result->groups[1].materialId, 42);
+}
+
+TEST(MapbinLoaderTest, WindingOrderSwapped)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 0, 1);
+    WriteGroup(buf, 0, 3, {0, 1, 2});
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->groups[0].indices.size(), 3u);
+    EXPECT_EQ(result->groups[0].indices[0], 0u);
+    EXPECT_EQ(result->groups[0].indices[1], 2u);
+    EXPECT_EQ(result->groups[0].indices[2], 1u);
+}
+
+TEST(MapbinLoaderTest, WindingOrderSwappedMultipleTriangles)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 0, 1);
+    WriteGroup(buf, 0, 6, {0, 1, 2, 3, 4, 5});
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->groups[0].indices.size(), 6u);
+    EXPECT_EQ(result->groups[0].indices[0], 0u);
+    EXPECT_EQ(result->groups[0].indices[1], 2u);
+    EXPECT_EQ(result->groups[0].indices[2], 1u);
+    EXPECT_EQ(result->groups[0].indices[3], 3u);
+    EXPECT_EQ(result->groups[0].indices[4], 5u);
+    EXPECT_EQ(result->groups[0].indices[5], 4u);
+}
+
+TEST(MapbinLoaderTest, VertexDataLayout)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 0, 1);
+
+    WriteUint32(buf, 0);
+    WriteUint32(buf, 1);
+    WriteUint32(buf, 0);
+
+    WriteFloat(buf, 1.0f);
+    WriteFloat(buf, 2.0f);
+    WriteFloat(buf, 3.0f);
+    WriteFloat(buf, 0.6f);
+    WriteFloat(buf, 0.8f);
+    WriteFloat(buf, -0.2f);
+    WriteFloat(buf, 0.5f);
+    WriteFloat(buf, 0.75f);
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->groups.size(), 1u);
+
+    const auto& vd = result->groups[0].vertexData;
+    ASSERT_EQ(vd.size(), 8u);
+    EXPECT_FLOAT_EQ(vd[0], 1.0f);
+    EXPECT_FLOAT_EQ(vd[1], 2.0f);
+    EXPECT_FLOAT_EQ(vd[2], 3.0f);
+    EXPECT_FLOAT_EQ(vd[3], 1.0f);
+    EXPECT_FLOAT_EQ(vd[4], 1.0f);
+    EXPECT_FLOAT_EQ(vd[5], 1.0f);
+    EXPECT_FLOAT_EQ(vd[6], 0.5f);
+    EXPECT_FLOAT_EQ(vd[7], 0.75f);
+}
+
+TEST(MapbinLoaderTest, TextureAndGroupCombined)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 1, 1);
+
+    std::vector<uint8_t> pixels(4, 0xFF);
+    WriteTexture(buf, 10, 1, 1, 0x2901, 0x2901, 0x2601, 0x2601, pixels);
+    WriteGroup(buf, 10, 3, {0, 1, 2});
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->textures.size(), 1u);
+    ASSERT_EQ(result->groups.size(), 1u);
+    EXPECT_EQ(result->textures[0].materialId, 10);
+    EXPECT_EQ(result->groups[0].materialId, 10);
+}
+
+TEST(MapbinLoaderTest, TruncatedTextureHeaderReturnsNullopt)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 1, 0);
+    buf.resize(buf.size() + 16, 0);
+
+    auto result = MapbinLoader::Load(buf);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST(MapbinLoaderTest, TruncatedTexturePixelsReturnsNullopt)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 1, 0);
+
+    WriteUint32(buf, 0);
+    WriteUint32(buf, 2);
+    WriteUint32(buf, 2);
+    WriteUint32(buf, 0);
+    WriteUint32(buf, 0);
+    WriteUint32(buf, 0);
+    WriteUint32(buf, 0);
+    WriteUint32(buf, 1000);
+
+    auto result = MapbinLoader::Load(buf);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST(MapbinLoaderTest, TruncatedGroupHeaderReturnsNullopt)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 0, 1);
+    buf.resize(buf.size() + 4, 0);
+
+    auto result = MapbinLoader::Load(buf);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST(MapbinLoaderTest, TruncatedGroupVerticesReturnsNullopt)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 0, 1);
+    WriteUint32(buf, 0);
+    WriteUint32(buf, 100);
+    WriteUint32(buf, 3);
+
+    auto result = MapbinLoader::Load(buf);
+    EXPECT_FALSE(result.has_value());
+}
+
+TEST(MapbinLoaderTest, LargeTexturePixelData)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 1, 0);
+
+    uint32_t width = 64;
+    uint32_t height = 64;
+    std::vector<uint8_t> pixels(width * height * 4, 0x80);
+    WriteTexture(buf, 0, width, height, 0x2901, 0x2901, 0x2601, 0x2601, pixels);
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->textures.size(), 1u);
+    EXPECT_EQ(result->textures[0].width, 64u);
+    EXPECT_EQ(result->textures[0].height, 64u);
+    EXPECT_EQ(result->textures[0].pixelData.size(), 64u * 64u * 4u);
+}
+
+TEST(MapbinLoaderTest, ZeroSizeTexturePixelData)
+{
+    std::vector<uint8_t> buf;
+    WriteHeader(buf, 1, 0);
+
+    std::vector<uint8_t> pixels;
+    WriteTexture(buf, 0, 0, 0, 0, 0, 0, 0, pixels);
+
+    auto result = MapbinLoader::Load(buf);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->textures.size(), 1u);
+    EXPECT_TRUE(result->textures[0].pixelData.empty());
+}

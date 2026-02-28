@@ -25,6 +25,7 @@ namespace RenderStar::Common::Scene
 
         std::function<void(Component::GameObject entity, Component::ComponentModule& ecs, pugi::xml_node& entityNode)> serialize;
         std::function<void(Component::GameObject entity, Component::ComponentModule& ecs, const pugi::xml_node& componentNode)> deserialize;
+        std::function<void(Component::GameObject entity, Component::ComponentModule& ecs)> removeComponent;
         std::function<void(Component::ComponentModule& ecs, const std::unordered_set<int32_t>& ownedEntities, const EntityIdRemapper& remapper)> remapReferences;
     };
 

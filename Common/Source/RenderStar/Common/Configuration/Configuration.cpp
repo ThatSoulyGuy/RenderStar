@@ -34,7 +34,7 @@ namespace RenderStar::Common::Configuration
 
         if (scopedElement.empty())
         {
-            logger->debug("No configuration found for class scope '{}', creating section", classScope);
+            logger->warn("No configuration section '{}' found in '{}', values will use defaults", classScope, configNamespace);
             scopedElement = root.append_child(classScope.c_str());
         }
     }
@@ -44,7 +44,10 @@ namespace RenderStar::Common::Configuration
         const auto node = NavigateToNode(path);
 
         if (node.empty())
+        {
+            logger->debug("Configuration key '{}' not found in section '{}'", path, classScope);
             return std::nullopt;
+        }
 
         std::string content = node.text().as_string();
 
@@ -59,7 +62,10 @@ namespace RenderStar::Common::Configuration
         const auto node = NavigateToNode(path);
 
         if (node.empty())
+        {
+            logger->debug("Configuration key '{}' not found in section '{}'", path, classScope);
             return std::nullopt;
+        }
 
         return node.text().as_int();
     }
@@ -69,7 +75,10 @@ namespace RenderStar::Common::Configuration
         const auto node = NavigateToNode(path);
 
         if (node.empty())
+        {
+            logger->debug("Configuration key '{}' not found in section '{}'", path, classScope);
             return std::nullopt;
+        }
 
         return node.text().as_float();
     }
@@ -79,7 +88,10 @@ namespace RenderStar::Common::Configuration
         const auto node = NavigateToNode(path);
 
         if (node.empty())
+        {
+            logger->debug("Configuration key '{}' not found in section '{}'", path, classScope);
             return std::nullopt;
+        }
 
         std::string value = node.text().as_string();
         std::transform(value.begin(), value.end(), value.begin(), ::tolower);

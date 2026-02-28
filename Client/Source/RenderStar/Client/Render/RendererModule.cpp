@@ -44,15 +44,9 @@ namespace RenderStar::Client::Render
 
     void RendererModule::OnInitialize(Common::Module::ModuleContext& context)
     {
-        const auto windowModule = context.GetModule<Core::ClientWindowModule>();
+        auto& windowModule = context.GetDependency<Core::ClientWindowModule>();
 
-        if (!windowModule.has_value())
-        {
-            logger->error("ClientWindowModule not found");
-            return;
-        }
-
-        backendType = windowModule->get().GetPreferredBackend();
+        backendType = windowModule.GetPreferredBackend();
         backend = BackendFactory::Create(backendType);
 
         if (backend == nullptr)
@@ -61,7 +55,7 @@ namespace RenderStar::Client::Render
             return;
         }
 
-        backend->Initialize(windowModule->get().GetWindowHandle(), windowModule->get().GetFramebufferWidth(), windowModule->get().GetFramebufferHeight());
+        backend->Initialize(windowModule.GetWindowHandle(), windowModule.GetFramebufferWidth(), windowModule.GetFramebufferHeight());
 
         const auto eventBus = context.GetEventBus<Event::ClientRenderEventBus>();
 

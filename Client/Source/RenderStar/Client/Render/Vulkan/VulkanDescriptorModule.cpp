@@ -189,10 +189,17 @@ namespace RenderStar::Client::Render::Vulkan
         uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         uboLayoutBinding.pImmutableSamplers = nullptr;
 
-        mvpLayout = CreateDescriptorSetLayout({ uboLayoutBinding });
+        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+        samplerLayoutBinding.binding = 1;
+        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        samplerLayoutBinding.descriptorCount = 1;
+        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        samplerLayoutBinding.pImmutableSamplers = nullptr;
+
+        mvpLayout = CreateDescriptorSetLayout({ uboLayoutBinding, samplerLayoutBinding });
         mvpLayoutCreated = true;
 
-        logger->info("Created MVP descriptor set layout");
+        logger->info("Created MVP descriptor set layout with texture sampler");
 
         return mvpLayout.layout;
     }

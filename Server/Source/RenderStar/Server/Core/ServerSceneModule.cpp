@@ -1,12 +1,10 @@
 #include "RenderStar/Server/Core/ServerSceneModule.hpp"
-#include "RenderStar/Common/Asset/AssetModule.hpp"
-#include "RenderStar/Common/Asset/AssetLocation.hpp"
-#include "RenderStar/Common/Asset/IBinaryAsset.hpp"
-#include "RenderStar/Common/Configuration/ConfigurationModule.hpp"
+#include "RenderStar/Common/Component/Components/MapGeometry.hpp"
 #include "RenderStar/Common/Event/EventResult.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
-#include "RenderStar/Common/Network/Packets/SceneDataPacket.hpp"
-#include "RenderStar/Common/Scene/MapbinLoader.hpp"
+#include "RenderStar/Common/Network/Packets/EntityBatchPacket.hpp"
+#include "RenderStar/Common/Network/Packets/EntityCreatePacket.hpp"
+#include "RenderStar/Common/Network/Packets/EntityDestroyPacket.hpp"
 #include "RenderStar/Common/Scene/SceneModule.hpp"
 #include "RenderStar/Server/Event/Buses/ServerCoreEventBus.hpp"
 #include "RenderStar/Server/Event/Events/ClientJoinedEvent.hpp"
@@ -16,79 +14,10 @@ namespace RenderStar::Server::Core
 {
     void ServerSceneModule::OnInitialize(Common::Module::ModuleContext& context)
     {
-        auto networkModuleOpt = context.GetModule<Network::ServerNetworkModule>();
+        networkModule = &context.GetDependency<Network::ServerNetworkModule>();
+        sceneModule = &context.GetDependency<Common::Scene::SceneModule>();
 
-        if (!networkModuleOpt.has_value())
-        {
-            logger->error("ServerNetworkModule not found");
-            return;
-        }
-
-        networkModule = &networkModuleOpt->get();
-
-        auto configModuleOpt = context.GetModule<Common::Configuration::ConfigurationModule>();
-
-        if (!configModuleOpt.has_value())
-        {
-            logger->error("ConfigurationModule not found");
-            return;
-        }
-
-        std::string sceneFile;
-
-        if (auto configOpt = configModuleOpt->get().For<ServerSceneModule>("render_star", "server_settings.xml"))
-        {
-            if (auto sceneOpt = (*configOpt)->GetString("scene_file"))
-                sceneFile = *sceneOpt;
-        }
-
-        if (sceneFile.empty())
-        {
-            logger->info("No scene_file configured, skipping scene load");
-        }
-        else
-        {
-            auto assetModuleOpt = context.GetModule<Common::Asset::AssetModule>();
-
-            if (!assetModuleOpt.has_value())
-            {
-                logger->error("AssetModule not found");
-                return;
-            }
-
-            auto binaryAsset = assetModuleOpt->get().LoadBinary(Common::Asset::AssetLocation::Parse(sceneFile));
-
-            if (!binaryAsset.IsValid())
-            {
-                logger->error("Failed to load scene file: {}", sceneFile);
-                return;
-            }
-
-            auto scene = Common::Scene::MapbinLoader::Load(binaryAsset.Get()->GetDataView());
-
-            if (!scene.has_value())
-            {
-                logger->error("Failed to parse mapbin file: {}", sceneFile);
-                return;
-            }
-
-            auto sceneModuleOpt = context.GetModule<Common::Scene::SceneModule>();
-
-            if (sceneModuleOpt.has_value())
-                sceneModuleOpt->get().SetMapGeometry(std::move(scene.value()));
-
-            size_t totalVertices = 0;
-
-            if (sceneModuleOpt.has_value() && sceneModuleOpt->get().HasMapGeometry())
-            {
-                for (const auto& group : sceneModuleOpt->get().GetMapGeometry()->groups)
-                    totalVertices += group.vertexCount;
-            }
-
-            logger->info("Loaded scene '{}': {} groups, {} vertices", sceneFile,
-                sceneModuleOpt.has_value() ? sceneModuleOpt->get().GetMapGeometry()->groups.size() : 0,
-                totalVertices);
-        }
+        sceneModule->RegisterSerializableComponent<Common::Component::MapGeometry>();
 
         auto eventBus = context.GetEventBus<Event::Buses::ServerCoreEventBus>();
 
@@ -99,7 +28,7 @@ namespace RenderStar::Server::Core
                 {
                     OnClientJoined(event.connection);
                     return Common::Event::EventResult::Success();
-                });
+                }, Common::Event::HandlerPriority::HIGH);
         }
 
         logger->info("ServerSceneModule initialized");
@@ -107,23 +36,68 @@ namespace RenderStar::Server::Core
 
     void ServerSceneModule::OnClientJoined(std::shared_ptr<Network::ClientConnection> connection)
     {
-        auto sceneModuleOpt = context->GetModule<Common::Scene::SceneModule>();
+        SendEntityBatches(*connection);
+    }
 
-        if (!sceneModuleOpt.has_value() || !sceneModuleOpt->get().HasMapGeometry())
+    void ServerSceneModule::SendEntityBatches(Network::ClientConnection& connection)
+    {
+        auto allIds = sceneModule->GetOwnedEntityIds();
+
+        if (allIds.empty())
+        {
+            logger->info("No scene entities to send to {}", connection.remoteAddress);
             return;
+        }
 
-        const auto& mapGeometry = sceneModuleOpt->get().GetMapGeometry();
+        const auto totalEntities = static_cast<int32_t>(allIds.size());
+        const int32_t totalBatches = (totalEntities + DEFAULT_BATCH_SIZE - 1) / DEFAULT_BATCH_SIZE;
 
-        Common::Network::Packets::SceneDataPacket packet;
-        packet.groups = mapGeometry->groups;
+        for (int32_t batchIdx = 0; batchIdx < totalBatches; ++batchIdx)
+        {
+            const int32_t startOffset = batchIdx * DEFAULT_BATCH_SIZE;
+            const int32_t endOffset = std::min(startOffset + DEFAULT_BATCH_SIZE, totalEntities);
 
-        networkModule->Send(*connection, packet);
+            std::vector<int32_t> batchIds(allIds.begin() + startOffset, allIds.begin() + endOffset);
 
-        logger->info("Sent scene data ({} groups) to {}", packet.groups.size(), connection->remoteAddress);
+            Common::Network::Packets::EntityBatchPacket packet;
+            packet.batchIndex = batchIdx;
+            packet.totalBatches = totalBatches;
+            packet.xmlData = sceneModule->SerializeEntities(batchIds);
+
+            logger->info("Batch {}/{}: {} entities, xmlData size={}", batchIdx + 1, totalBatches, batchIds.size(), packet.xmlData.size());
+            logger->debug("Batch XML: {}", packet.xmlData);
+
+            networkModule->Send(connection, packet);
+        }
+
+        logger->info("Sent {} entities in {} batches to {}", totalEntities, totalBatches, connection.remoteAddress);
+    }
+
+    Common::Component::GameObject ServerSceneModule::CreateAndBroadcastEntity(const std::string& name)
+    {
+        auto entity = sceneModule->CreateEntity(name);
+        auto xmlData = sceneModule->SerializeEntities({ entity.id });
+
+        Common::Network::Packets::EntityCreatePacket packet;
+        packet.xmlData = std::move(xmlData);
+        networkModule->Broadcast(packet);
+
+        return entity;
+    }
+
+    void ServerSceneModule::DestroyAndBroadcastEntity(Common::Component::GameObject entity)
+    {
+        Common::Network::Packets::EntityDestroyPacket packet;
+        packet.serverEntityId = entity.id;
+        networkModule->Broadcast(packet);
+
+        sceneModule->DestroyEntity(entity);
     }
 
     std::vector<std::type_index> ServerSceneModule::GetDependencies() const
     {
-        return DependsOn<Network::ServerNetworkModule>();
+        return DependsOn<
+            Network::ServerNetworkModule,
+            Common::Scene::SceneModule>();
     }
 }

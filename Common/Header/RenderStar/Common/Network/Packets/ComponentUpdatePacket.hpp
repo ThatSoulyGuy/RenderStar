@@ -2,24 +2,27 @@
 
 #include "RenderStar/Common/Network/IPacket.hpp"
 #include "RenderStar/Common/Network/PacketBuffer.hpp"
-#include <cstdint>
+#include <string>
 
 namespace RenderStar::Common::Network::Packets
 {
-    class PlayerDespawnPacket final : public IPacket
+    class ComponentUpdatePacket final : public IPacket
     {
     public:
 
-        int32_t playerId = -1;
+        int32_t entityId = -1;
+        std::string xmlData;
 
         void Write(PacketBuffer& buffer) const override
         {
-            buffer.WriteInt32(playerId);
+            buffer.WriteInt32(entityId);
+            buffer.WriteString(xmlData);
         }
 
         void Read(PacketBuffer& buffer) override
         {
-            playerId = buffer.ReadInt32();
+            entityId = buffer.ReadInt32();
+            xmlData = buffer.ReadString();
         }
     };
 }

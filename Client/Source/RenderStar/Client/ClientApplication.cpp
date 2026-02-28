@@ -1,19 +1,25 @@
 #include "RenderStar/Client/ClientApplication.hpp"
 
 #include "RenderStar/Client/Core/ClientLifecycleModule.hpp"
-#include "RenderStar/Client/Core/ClientSceneModule.hpp"
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
 #include "RenderStar/Client/Event/Buses/ClientCoreEventBus.hpp"
 #include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
 #include "RenderStar/Client/Event/Events/ClientEvents.hpp"
 #include "RenderStar/Client/Gameplay/ClientPlayerModule.hpp"
+#include "RenderStar/Client/Gameplay/PlayerControllerAffector.hpp"
 #include "RenderStar/Client/Input/ClientInputModule.hpp"
 #include "RenderStar/Client/Network/ClientNetworkModule.hpp"
+#include "RenderStar/Client/Render/Affectors/CameraAffector.hpp"
+#include "RenderStar/Client/Render/Affectors/MapGeometryRenderAffector.hpp"
+#include "RenderStar/Client/Render/Affectors/PlayerRenderAffector.hpp"
 #include "RenderStar/Client/Render/RendererModule.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
+#include "RenderStar/Common/Component/Affectors/TransformAffector.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Configuration/ConfigurationModule.hpp"
 #include "RenderStar/Common/Module/ModuleManager.hpp"
+#include "RenderStar/Common/Network/PacketModule.hpp"
+#include "RenderStar/Client/Core/ClientSceneModule.hpp"
 #include "RenderStar/Common/Scene/SceneModule.hpp"
 #include "RenderStar/Common/Time/TimeModule.hpp"
 
@@ -55,14 +61,21 @@ namespace RenderStar::Client
             .Module(std::make_unique<Common::Configuration::ConfigurationModule>(resourceBasePath))
             .Module(std::make_unique<Common::Asset::AssetModule>(resourceBasePath))
             .Module(std::make_unique<Common::Time::TimeModule>())
-            .Module(std::make_unique<Common::Component::ComponentModule>())
+            .Module(Common::Component::ComponentModule::Builder()
+                .Affector(std::make_unique<Gameplay::PlayerControllerAffector>())
+                .Affector(std::make_unique<Common::Component::Affectors::TransformAffector>())
+                .Affector(std::make_unique<Render::Affectors::CameraAffector>())
+                .Affector(std::make_unique<Render::Affectors::MapGeometryRenderAffector>())
+                .Affector(std::make_unique<Render::Affectors::PlayerRenderAffector>())
+                .Build())
             .Module(std::make_unique<Common::Scene::SceneModule>())
             .Module(std::make_unique<Core::ClientWindowModule>())
             .Module(std::make_unique<Input::ClientInputModule>())
             .Module(std::make_unique<Render::RendererModule>())
+            .Module(std::make_unique<Common::Network::PacketModule>())
             .Module(std::make_unique<Network::ClientNetworkModule>())
-            .Module(std::make_unique<Gameplay::ClientPlayerModule>())
             .Module(std::make_unique<Core::ClientSceneModule>())
+            .Module(std::make_unique<Gameplay::ClientPlayerModule>())
             .Module(std::make_unique<Core::ClientLifecycleModule>())
             .Build();
 

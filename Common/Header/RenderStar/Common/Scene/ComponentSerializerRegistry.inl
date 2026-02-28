@@ -35,6 +35,12 @@ namespace RenderStar::Common::Scene
             ecs.AddComponent<ComponentType>(entity, std::move(component));
         };
 
+        entry.removeComponent = [](const Component::GameObject entity, Component::ComponentModule& ecs)
+        {
+            if (ecs.HasComponent<ComponentType>(entity))
+                ecs.RemoveComponent<ComponentType>(entity);
+        };
+
         if (capturedRemap)
         {
             entry.remapReferences = [capturedRemap](Component::ComponentModule& ecs, const std::unordered_set<int32_t>& ownedEntities, const EntityIdRemapper& remapper)

@@ -47,13 +47,13 @@ namespace RenderStar::Client::Render::Shader
     std::string GlslTransformer::TransformVersion(const std::string& source)
     {
         std::regex versionPattern(R"(^\s*#version\s+(\d+)(\s+\w+)?\s*$)", std::regex::multiline);
-        return std::regex_replace(source, versionPattern, "#version 410 core");
+        return std::regex_replace(source, versionPattern, "#version 450 core");
     }
 
     std::string GlslTransformer::TransformUboBindings(const std::string& source)
     {
-        std::regex uboPattern(R"(layout\s*\(\s*binding\s*=\s*\d+\s*\)\s*uniform\s+(\w+))");
-        return std::regex_replace(source, uboPattern, "layout(std140) uniform $1");
+        std::regex uboPattern(R"(layout\s*\(\s*binding\s*=\s*(\d+)\s*\)\s*(uniform\s+\w+\s*\{))");
+        return std::regex_replace(source, uboPattern, "layout(binding = $1, std140) $2");
     }
 
     std::string GlslTransformer::RemovePushConstants(const std::string& source)

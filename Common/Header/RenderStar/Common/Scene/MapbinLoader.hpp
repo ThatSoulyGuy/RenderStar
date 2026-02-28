@@ -7,15 +7,29 @@
 
 namespace RenderStar::Common::Scene
 {
+    struct MapbinTexture
+    {
+        int32_t materialId = 0;
+        uint32_t width = 0;
+        uint32_t height = 0;
+        uint32_t wrapS = 0;
+        uint32_t wrapT = 0;
+        uint32_t minFilter = 0;
+        uint32_t magFilter = 0;
+        std::vector<uint8_t> pixelData;
+    };
+
     struct MapbinGroup
     {
         std::vector<float> vertexData;
         std::vector<uint32_t> indices;
         int32_t vertexCount = 0;
+        int32_t materialId = 0;
     };
 
     struct MapbinScene
     {
+        std::vector<MapbinTexture> textures;
         std::vector<MapbinGroup> groups;
     };
 

@@ -25,6 +25,12 @@ namespace RenderStar::Common::Module
         return std::nullopt;
     }
 
+    template <typename ModuleType>
+    ModuleType& ModuleContext::GetDependency()
+    {
+        return GetModule<ModuleType>().value().get();
+    }
+
     template <typename EventBusType>
     std::optional<std::reference_wrapper<EventBusType>> ModuleContext::GetEventBus()
     {

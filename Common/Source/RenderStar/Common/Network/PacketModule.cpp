@@ -1,9 +1,11 @@
 #include "RenderStar/Common/Network/PacketModule.hpp"
+#include "RenderStar/Common/Network/Packets/EntityBatchPacket.hpp"
+#include "RenderStar/Common/Network/Packets/EntityCreatePacket.hpp"
+#include "RenderStar/Common/Network/Packets/EntityDestroyPacket.hpp"
 #include "RenderStar/Common/Network/Packets/PlayerAssignPacket.hpp"
-#include "RenderStar/Common/Network/Packets/PlayerDespawnPacket.hpp"
-#include "RenderStar/Common/Network/Packets/PlayerPositionPacket.hpp"
-#include "RenderStar/Common/Network/Packets/PlayerSpawnPacket.hpp"
 #include "RenderStar/Common/Network/Packets/SceneDataPacket.hpp"
+#include "RenderStar/Common/Network/Packets/ComponentUpdatePacket.hpp"
+#include "RenderStar/Common/Network/Packets/AuthorityChangePacket.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
 
 namespace RenderStar::Common::Network
@@ -56,15 +58,19 @@ namespace RenderStar::Common::Network
 
         if (iterator != handlers.end())
             iterator->second(packet);
+        else
+            logger->warn("No handler registered for packet type '{}'", typeIndex.name());
     }
 
     void PacketModule::RegisterAllPackets()
     {
         RegisterPacket<Packets::PlayerAssignPacket>();
-        RegisterPacket<Packets::PlayerSpawnPacket>();
-        RegisterPacket<Packets::PlayerDespawnPacket>();
-        RegisterPacket<Packets::PlayerPositionPacket>();
         RegisterPacket<Packets::SceneDataPacket>();
+        RegisterPacket<Packets::EntityBatchPacket>();
+        RegisterPacket<Packets::EntityCreatePacket>();
+        RegisterPacket<Packets::EntityDestroyPacket>();
+        RegisterPacket<Packets::ComponentUpdatePacket>();
+        RegisterPacket<Packets::AuthorityChangePacket>();
     }
 
     void PacketModule::OnInitialize(Module::ModuleContext& context)

@@ -21,14 +21,12 @@ namespace RenderStar::Client::Network
     {
         LoadConfiguration(context);
 
-        RegisterSubModule<Common::Network::PacketModule>(std::make_unique<Common::Network::PacketModule>());
+        packetModule = &context.GetDependency<Common::Network::PacketModule>();
 
         const auto eventBus = context.GetEventBus<Event::ClientCoreEventBus>();
 
         if (eventBus.has_value())
             coreEventBus = &eventBus->get();
-
-        Connect("127.0.0.1", 25565);
     }
 
     void ClientNetworkModule::Connect(const std::string& hostname, int32_t port)
@@ -131,7 +129,6 @@ namespace RenderStar::Client::Network
 
     void ClientNetworkModule::ProcessReceivedData(size_t bytesReceived)
     {
-        auto packetModule = GetPacketModule();
         if (!packetModule)
             return;
 
@@ -193,8 +190,6 @@ namespace RenderStar::Client::Network
             return false;
         }
 
-        auto packetModule = GetPacketModule();
-
         if (!packetModule)
             return false;
 
@@ -213,6 +208,8 @@ namespace RenderStar::Client::Network
 
         std::ranges::transform(data, buffer.begin() + 4, [](std::byte b) { return static_cast<uint8_t>(b); });
 
+        std::lock_guard lock(sendMutex);
+
         asio::error_code errorCode;
         asio::write(*socket, asio::buffer(buffer), errorCode);
 
@@ -223,16 +220,6 @@ namespace RenderStar::Client::Network
         }
 
         return true;
-    }
-
-    Common::Network::PacketModule* ClientNetworkModule::GetPacketModule() const
-    {
-        const auto subModule = const_cast<ClientNetworkModule*>(this)->GetSubModule<Common::Network::PacketModule>();
-
-        if (subModule.has_value())
-            return &subModule->get();
-
-        return nullptr;
     }
 
     ConnectionState ClientNetworkModule::GetState() const
@@ -272,15 +259,9 @@ namespace RenderStar::Client::Network
 
     void ClientNetworkModule::LoadConfiguration(Common::Module::ModuleContext& moduleContext)
     {
-        auto configModule = moduleContext.GetModule<Common::Configuration::ConfigurationModule>();
+        auto& configModule = moduleContext.GetDependency<Common::Configuration::ConfigurationModule>();
 
-        if (!configModule.has_value())
-        {
-            logger->error("ConfigurationModule not found");
-            return;
-        }
-
-        auto configOpt = configModule->get().For<ClientNetworkModule>("render_star");
+        auto configOpt = configModule.For<ClientNetworkModule>("render_star");
 
         if (!configOpt)
         {
@@ -301,6 +282,8 @@ namespace RenderStar::Client::Network
 
     std::vector<std::type_index> ClientNetworkModule::GetDependencies() const
     {
-        return DependsOn<Common::Configuration::ConfigurationModule>();
+        return DependsOn<
+            Common::Configuration::ConfigurationModule,
+            Common::Network::PacketModule>();
     }
 }

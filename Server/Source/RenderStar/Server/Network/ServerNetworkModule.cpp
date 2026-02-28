@@ -9,6 +9,7 @@
 #include "RenderStar/Server/Event/Events/ServerPreinitializationEvent.hpp"
 #include "RenderStar/Server/Event/Events/ClientJoinedEvent.hpp"
 #include "RenderStar/Server/Event/Events/ClientLeftEvent.hpp"
+#include "RenderStar/Server/Event/Events/PacketReceivedEvent.hpp"
 #include <algorithm>
 #include <spdlog/spdlog.h>
 
@@ -99,7 +100,7 @@ namespace RenderStar::Server::Network
 
     void ServerNetworkModule::OnInitialize(Common::Module::ModuleContext& context)
     {
-        RegisterSubModule<Common::Network::PacketModule>(std::make_unique<Common::Network::PacketModule>());
+        packetModule = &context.GetDependency<Common::Network::PacketModule>();
 
         const auto eventBus = context.GetEventBus<Event::Buses::ServerCoreEventBus>();
 
@@ -227,7 +228,6 @@ namespace RenderStar::Server::Network
 
     void ServerNetworkModule::ProcessPackets(ConnectionPointer connection, size_t bytesReceived)
     {
-        auto packetModule = GetPacketModule();
         if (!packetModule)
             return;
 
@@ -260,8 +260,8 @@ namespace RenderStar::Server::Network
                 continue;
             }
 
-            if (packetReceivedCallback)
-                packetReceivedCallback(connection, *packet);
+            if (coreEventBus)
+                coreEventBus->Publish(Event::Events::PacketReceivedEvent(connection, packet.get()));
             else
                 packetModule->HandlePacket(*packet);
 
@@ -295,7 +295,6 @@ namespace RenderStar::Server::Network
 
     bool ServerNetworkModule::Send(ClientConnection& connection, const Common::Network::IPacket& packet)
     {
-        auto packetModule = GetPacketModule();
         if (!packetModule)
             return false;
 
@@ -366,19 +365,6 @@ namespace RenderStar::Server::Network
             coreEventBus->Publish(Event::Events::ClientLeftEvent(address, reason, connectionPtr));
     }
 
-    void ServerNetworkModule::SetPacketReceivedCallback(PacketReceivedCallback callback)
-    {
-        packetReceivedCallback = std::move(callback);
-    }
-
-    Common::Network::PacketModule* ServerNetworkModule::GetPacketModule() const
-    {
-        auto subModule = const_cast<ServerNetworkModule*>(this)->GetSubModule<Common::Network::PacketModule>();
-        if (subModule.has_value())
-            return &subModule->get();
-        return nullptr;
-    }
-
     ServerMode ServerNetworkModule::GetMode() const
     {
         return mode;
@@ -411,4 +397,8 @@ namespace RenderStar::Server::Network
         return static_cast<int32_t>(connections.size()) >= maxPlayers;
     }
 
+    std::vector<std::type_index> ServerNetworkModule::GetDependencies() const
+    {
+        return DependsOn<Common::Network::PacketModule>();
+    }
 }

@@ -14,6 +14,7 @@ namespace RenderStar::Common::Scene
         void RecordMapping(const int32_t savedId, const Component::GameObject newEntity)
         {
             savedToNew[savedId] = newEntity;
+            newToSaved[newEntity.id] = savedId;
         }
 
         [[nodiscard]]
@@ -37,8 +38,18 @@ namespace RenderStar::Common::Scene
             return savedToNew;
         }
 
+        [[nodiscard]]
+        int32_t GetServerIdForLocalId(int32_t localId) const
+        {
+            if (const auto iterator = newToSaved.find(localId); iterator != newToSaved.end())
+                return iterator->second;
+
+            return -1;
+        }
+
     private:
 
         std::unordered_map<int32_t, Component::GameObject> savedToNew;
+        std::unordered_map<int32_t, int32_t> newToSaved;
     };
 }

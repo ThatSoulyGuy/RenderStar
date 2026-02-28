@@ -267,3 +267,55 @@ TEST_F(ModuleManagerTest, NoDependenciesPreservesRegistrationOrder)
     EXPECT_TRUE(p1->initOrder < p2->initOrder);
     mgr->Shutdown();
 }
+
+TEST_F(ModuleManagerTest, GetDependencyReturnsReference)
+{
+    auto tm = std::make_unique<TrackingModule>();
+    auto* ptr = tm.get();
+    auto mgr = ModuleManager::Builder().Module(std::move(tm)).Build();
+    mgr->Start();
+
+    auto& ref = mgr->GetContext().GetDependency<TrackingModule>();
+    EXPECT_EQ(&ref, ptr);
+    mgr->Shutdown();
+}
+
+TEST_F(ModuleManagerTest, GetDependencyThrowsForMissing)
+{
+    auto mgr = ModuleManager::Builder().Build();
+    mgr->Start();
+
+    EXPECT_THROW(mgr->GetContext().GetDependency<TrackingModule>(), std::bad_optional_access);
+    mgr->Shutdown();
+}
+
+TEST_F(ModuleManagerTest, GetDependencyWorksInOnInitialize)
+{
+    class DependencyConsumer final : public AbstractModule
+    {
+    public:
+        TrackingModule* resolved = nullptr;
+        void OnInitialize(ModuleContext& ctx) override
+        {
+            resolved = &ctx.GetDependency<TrackingModule>();
+        }
+        std::vector<std::type_index> GetDependencies() const override
+        {
+            return DependsOn<TrackingModule>();
+        }
+    };
+
+    auto base = std::make_unique<TrackingModule>();
+    auto* basePtr = base.get();
+    auto consumer = std::make_unique<DependencyConsumer>();
+    auto* consumerPtr = consumer.get();
+
+    auto mgr = ModuleManager::Builder()
+        .Module(std::move(consumer))
+        .Module(std::move(base))
+        .Build();
+    mgr->Start();
+
+    EXPECT_EQ(consumerPtr->resolved, basePtr);
+    mgr->Shutdown();
+}

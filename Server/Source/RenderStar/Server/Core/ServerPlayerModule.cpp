@@ -1,43 +1,34 @@
 #include "RenderStar/Server/Core/ServerPlayerModule.hpp"
+#include "RenderStar/Common/Component/ComponentModule.hpp"
+#include "RenderStar/Common/Component/Components/PlayerIdentity.hpp"
+#include "RenderStar/Common/Component/Components/SerializableTransform.hpp"
+#include "RenderStar/Common/Component/Components/Transform.hpp"
+#include "RenderStar/Common/Component/EntityAuthority.hpp"
 #include "RenderStar/Common/Event/AbstractEventBus.hpp"
 #include "RenderStar/Common/Event/EventResult.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
-#include "RenderStar/Common/Network/PacketModule.hpp"
+#include "RenderStar/Common/Network/Packets/ComponentUpdatePacket.hpp"
+#include "RenderStar/Common/Network/Packets/EntityCreatePacket.hpp"
 #include "RenderStar/Common/Network/Packets/PlayerAssignPacket.hpp"
-#include "RenderStar/Common/Network/Packets/PlayerSpawnPacket.hpp"
-#include "RenderStar/Common/Network/Packets/PlayerDespawnPacket.hpp"
-#include "RenderStar/Common/Network/Packets/PlayerPositionPacket.hpp"
+#include "RenderStar/Common/Scene/SceneModule.hpp"
+#include "RenderStar/Server/Core/ServerSceneModule.hpp"
 #include "RenderStar/Server/Event/Buses/ServerCoreEventBus.hpp"
 #include "RenderStar/Server/Event/Events/ClientJoinedEvent.hpp"
 #include "RenderStar/Server/Event/Events/ClientLeftEvent.hpp"
+#include "RenderStar/Server/Event/Events/PacketReceivedEvent.hpp"
 #include "RenderStar/Server/Network/ServerNetworkModule.hpp"
 
 namespace RenderStar::Server::Core
 {
     void ServerPlayerModule::OnInitialize(Common::Module::ModuleContext& context)
     {
-        auto networkModuleOpt = context.GetModule<Network::ServerNetworkModule>();
+        networkModule = &context.GetDependency<Network::ServerNetworkModule>();
+        sceneModule = &context.GetDependency<Common::Scene::SceneModule>();
+        componentModule = &context.GetDependency<Common::Component::ComponentModule>();
+        serverSceneModule = &context.GetDependency<ServerSceneModule>();
 
-        if (!networkModuleOpt.has_value())
-        {
-            logger->error("ServerNetworkModule not found");
-            return;
-        }
-
-        networkModule = &networkModuleOpt->get();
-        packetModule = networkModule->GetPacketModule();
-
-        if (!packetModule)
-        {
-            logger->error("PacketModule not found on ServerNetworkModule");
-            return;
-        }
-
-        networkModule->SetPacketReceivedCallback(
-            [this](std::shared_ptr<Network::ClientConnection> connection, Common::Network::IPacket& packet)
-            {
-                OnPacketReceived(std::move(connection), packet);
-            });
+        sceneModule->RegisterSerializableComponent<Common::Component::PlayerIdentity>();
+        sceneModule->RegisterSerializableComponent<Common::Component::Transform>();
 
         auto eventBus = context.GetEventBus<Event::Buses::ServerCoreEventBus>();
 
@@ -56,6 +47,13 @@ namespace RenderStar::Server::Core
                     OnClientLeft(event.connection);
                     return Common::Event::EventResult::Success();
                 });
+
+            eventBus->get().Subscribe<Event::Events::PacketReceivedEvent>(
+                [this](const Event::Events::PacketReceivedEvent& event)
+                {
+                    OnPacketReceived(event.connection, *event.packet);
+                    return Common::Event::EventResult::Success();
+                });
         }
 
         logger->info("ServerPlayerModule initialized");
@@ -65,37 +63,31 @@ namespace RenderStar::Server::Core
     {
         int32_t playerId = nextPlayerId++;
 
-        PlayerState state;
-        state.connection = connection;
+        auto entity = sceneModule->CreateEntity("Player_" + std::to_string(playerId));
+
+        auto& transform = componentModule->AddComponent<Common::Component::Transform>(entity);
+        transform.position = glm::vec3(0.0f, 2.0f, 5.0f);
+
+        componentModule->AddComponent<Common::Component::PlayerIdentity>(entity,
+            Common::Component::PlayerIdentity{ playerId });
+
+        componentModule->SetEntityAuthority(entity, Common::Component::EntityAuthority::Client(playerId));
 
         Common::Network::Packets::PlayerAssignPacket assignPacket;
         assignPacket.playerId = playerId;
         networkModule->Send(*connection, assignPacket);
 
-        for (const auto& [existingId, existingState] : players)
-        {
-            Common::Network::Packets::PlayerSpawnPacket existingSpawn;
-            existingSpawn.playerId = existingId;
-            existingSpawn.x = existingState.posX;
-            existingSpawn.y = existingState.posY;
-            existingSpawn.z = existingState.posZ;
-            existingSpawn.yaw = existingState.yaw;
-            existingSpawn.pitch = existingState.pitch;
-            networkModule->Send(*connection, existingSpawn);
+        auto xmlData = sceneModule->SerializeEntities({ entity.id });
+        Common::Network::Packets::EntityCreatePacket createPacket;
+        createPacket.xmlData = std::move(xmlData);
+        networkModule->Broadcast(createPacket);
 
-            Common::Network::Packets::PlayerSpawnPacket newSpawn;
-            newSpawn.playerId = playerId;
-            newSpawn.x = state.posX;
-            newSpawn.y = state.posY;
-            newSpawn.z = state.posZ;
-            newSpawn.yaw = state.yaw;
-            newSpawn.pitch = state.pitch;
-            networkModule->Send(*existingState.connection, newSpawn);
-        }
-
+        PlayerState state;
+        state.connection = connection;
+        state.entity = entity;
         players[playerId] = std::move(state);
 
-        logger->info("Player {} joined from {}", playerId, connection->remoteAddress);
+        logger->info("Player {} joined from {}, entity id={}", playerId, connection->remoteAddress, entity.id);
     }
 
     void ServerPlayerModule::OnClientLeft(std::shared_ptr<Network::ClientConnection> connection)
@@ -107,7 +99,6 @@ namespace RenderStar::Server::Core
             if (it->second.connection.get() == connection.get())
             {
                 leftPlayerId = it->first;
-                players.erase(it);
                 break;
             }
         }
@@ -115,55 +106,60 @@ namespace RenderStar::Server::Core
         if (leftPlayerId < 0)
             return;
 
-        Common::Network::Packets::PlayerDespawnPacket despawnPacket;
-        despawnPacket.playerId = leftPlayerId;
+        auto entity = players[leftPlayerId].entity;
+        players.erase(leftPlayerId);
 
-        for (const auto& [id, state] : players)
-            networkModule->Send(*state.connection, despawnPacket);
+        if (entity.IsValid())
+            serverSceneModule->DestroyAndBroadcastEntity(entity);
 
         logger->info("Player {} left", leftPlayerId);
     }
 
     void ServerPlayerModule::OnPacketReceived(std::shared_ptr<Network::ClientConnection> connection, Common::Network::IPacket& packet)
     {
-        auto* posPacket = dynamic_cast<Common::Network::Packets::PlayerPositionPacket*>(&packet);
+        auto* updatePacket = dynamic_cast<Common::Network::Packets::ComponentUpdatePacket*>(&packet);
 
-        if (!posPacket)
+        if (!updatePacket)
+            return;
+
+        int32_t playerId = FindPlayerIdByConnection(*connection);
+
+        if (playerId < 0)
         {
-            packetModule->HandlePacket(packet);
+            logger->warn("ComponentUpdatePacket from unknown connection");
             return;
         }
 
-        int32_t sourcePlayerId = -1;
+        Common::Component::GameObject entity{ updatePacket->entityId };
 
-        for (auto& [id, state] : players)
+        if (!componentModule->CheckAuthority(entity, Common::Component::AuthorityContext::AsClient(playerId)))
         {
-            if (state.connection.get() == connection.get())
-            {
-                sourcePlayerId = id;
-                state.posX = posPacket->x;
-                state.posY = posPacket->y;
-                state.posZ = posPacket->z;
-                state.yaw = posPacket->yaw;
-                state.pitch = posPacket->pitch;
-                break;
-            }
+            logger->warn("Player {} tried to modify entity {} without authority", playerId, updatePacket->entityId);
+            return;
         }
 
-        if (sourcePlayerId < 0)
-            return;
+        sceneModule->UpdateEntityComponents(entity, updatePacket->xmlData);
 
-        posPacket->playerId = sourcePlayerId;
+        networkModule->Broadcast(*updatePacket, *connection);
+    }
 
+    int32_t ServerPlayerModule::FindPlayerIdByConnection(const Network::ClientConnection& connection) const
+    {
         for (const auto& [id, state] : players)
         {
-            if (id != sourcePlayerId)
-                networkModule->Send(*state.connection, *posPacket);
+            if (state.connection.get() == &connection)
+                return id;
         }
+
+        return -1;
     }
 
     std::vector<std::type_index> ServerPlayerModule::GetDependencies() const
     {
-        return DependsOn<Network::ServerNetworkModule>();
+        return DependsOn<
+            Network::ServerNetworkModule,
+            Common::Scene::SceneModule,
+            Common::Component::ComponentModule,
+            ServerSceneModule>();
     }
 }

@@ -61,6 +61,56 @@ namespace RenderStar::Common::Component
     }
 
     template<typename ComponentType>
+    std::optional<std::reference_wrapper<ComponentType>> ComponentModule::GetComponentAuthorized(GameObject entity, const AuthorityContext& caller)
+    {
+        if (!CheckAuthority(entity, caller))
+            return std::nullopt;
+
+        auto result = GetComponent<ComponentType>(entity);
+
+        if (result.has_value())
+            MarkEntityDirty(entity);
+
+        return result;
+    }
+
+    template<typename ComponentType>
+    ComponentType& ComponentModule::AddComponentAuthorized(GameObject entity, const AuthorityContext& caller)
+    {
+        if (!CheckAuthority(entity, caller))
+        {
+            static ComponentType fallback{};
+            return fallback;
+        }
+
+        MarkEntityDirty(entity);
+        return AddComponent<ComponentType>(entity);
+    }
+
+    template<typename ComponentType>
+    ComponentType& ComponentModule::AddComponentAuthorized(GameObject entity, ComponentType component, const AuthorityContext& caller)
+    {
+        if (!CheckAuthority(entity, caller))
+        {
+            static ComponentType fallback{};
+            return fallback;
+        }
+
+        MarkEntityDirty(entity);
+        return AddComponent<ComponentType>(entity, std::move(component));
+    }
+
+    template<typename ComponentType>
+    void ComponentModule::RemoveComponentAuthorized(GameObject entity, const AuthorityContext& caller)
+    {
+        if (!CheckAuthority(entity, caller))
+            return;
+
+        MarkEntityDirty(entity);
+        RemoveComponent<ComponentType>(entity);
+    }
+
+    template<typename ComponentType>
     void ComponentModule::EnsurePoolExists()
     {
         if (const auto typeIndex = std::type_index(typeid(ComponentType)); !pools.contains(typeIndex))

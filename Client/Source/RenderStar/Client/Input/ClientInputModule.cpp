@@ -38,15 +38,9 @@ namespace RenderStar::Client::Input
 
     void ClientInputModule::OnInitialize(Common::Module::ModuleContext& context)
     {
-        const auto windowModule = context.GetModule<Core::ClientWindowModule>();
+        auto& windowModule = context.GetDependency<Core::ClientWindowModule>();
 
-        if (!windowModule.has_value())
-        {
-            logger->error("ClientWindowModule not found — input will not function");
-            return;
-        }
-
-        windowHandle = windowModule->get().GetWindowHandle();
+        windowHandle = windowModule.GetWindowHandle();
 
         if (windowHandle == nullptr)
         {

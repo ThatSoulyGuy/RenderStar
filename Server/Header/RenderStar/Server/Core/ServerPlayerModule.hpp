@@ -1,15 +1,25 @@
 #pragma once
 
+#include "RenderStar/Common/Component/GameObject.hpp"
 #include "RenderStar/Common/Module/AbstractModule.hpp"
 #include "RenderStar/Server/Network/ClientConnection.hpp"
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
 
+namespace RenderStar::Common::Component
+{
+    class ComponentModule;
+}
+
 namespace RenderStar::Common::Network
 {
-    class PacketModule;
     class IPacket;
+}
+
+namespace RenderStar::Common::Scene
+{
+    class SceneModule;
 }
 
 namespace RenderStar::Server::Network
@@ -19,14 +29,12 @@ namespace RenderStar::Server::Network
 
 namespace RenderStar::Server::Core
 {
+    class ServerSceneModule;
+
     struct PlayerState
     {
         std::shared_ptr<Network::ClientConnection> connection;
-        float posX = 0.0f;
-        float posY = 2.0f;
-        float posZ = 5.0f;
-        float yaw = -90.0f;
-        float pitch = 0.0f;
+        Common::Component::GameObject entity = Common::Component::GameObject::Invalid();
     };
 
     class ServerPlayerModule final : public Common::Module::AbstractModule
@@ -46,8 +54,12 @@ namespace RenderStar::Server::Core
         void OnClientLeft(std::shared_ptr<Network::ClientConnection> connection);
         void OnPacketReceived(std::shared_ptr<Network::ClientConnection> connection, Common::Network::IPacket& packet);
 
+        int32_t FindPlayerIdByConnection(const Network::ClientConnection& connection) const;
+
         Network::ServerNetworkModule* networkModule = nullptr;
-        Common::Network::PacketModule* packetModule = nullptr;
+        Common::Scene::SceneModule* sceneModule = nullptr;
+        Common::Component::ComponentModule* componentModule = nullptr;
+        ServerSceneModule* serverSceneModule = nullptr;
 
         int32_t nextPlayerId = 0;
         std::unordered_map<int32_t, PlayerState> players;

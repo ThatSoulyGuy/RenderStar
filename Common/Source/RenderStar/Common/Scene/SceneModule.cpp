@@ -1,18 +1,59 @@
 #include "RenderStar/Common/Scene/SceneModule.hpp"
 #include "RenderStar/Common/Scene/EntityIdRemapper.hpp"
-#include "RenderStar/Common/Scene/MapbinLoader.hpp"
 #include "RenderStar/Common/Scene/SceneEvents.hpp"
-#include "RenderStar/Common/Asset/AssetModule.hpp"
-#include "RenderStar/Common/Asset/IBinaryAsset.hpp"
-#include "RenderStar/Common/Asset/AssetLocation.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
+#include "RenderStar/Common/Component/EntityAuthority.hpp"
 #include "RenderStar/Common/Event/IEventBus.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
+#include <cstring>
 #include <pugixml.hpp>
 #include <sstream>
 
 namespace RenderStar::Common::Scene
 {
+    namespace
+    {
+        const char* AuthorityLevelToString(Component::AuthorityLevel level)
+        {
+            switch (level)
+            {
+                case Component::AuthorityLevel::SERVER: return "server";
+                case Component::AuthorityLevel::CLIENT: return "client";
+                default: return "nobody";
+            }
+        }
+
+        Component::AuthorityLevel StringToAuthorityLevel(const char* str)
+        {
+            if (std::strcmp(str, "server") == 0)
+                return Component::AuthorityLevel::SERVER;
+            if (std::strcmp(str, "client") == 0)
+                return Component::AuthorityLevel::CLIENT;
+            return Component::AuthorityLevel::NOBODY;
+        }
+
+        void WriteAuthorityAttributes(pugi::xml_node& entityNode, const Component::EntityAuthority& authority)
+        {
+            entityNode.append_attribute("authority").set_value(AuthorityLevelToString(authority.level));
+
+            if (authority.level == Component::AuthorityLevel::CLIENT)
+                entityNode.append_attribute("ownerId").set_value(authority.ownerId);
+        }
+
+        Component::EntityAuthority ReadAuthorityAttributes(const pugi::xml_node& entityNode)
+        {
+            auto authorityAttr = entityNode.attribute("authority");
+
+            if (authorityAttr.empty())
+                return Component::EntityAuthority::Nobody();
+
+            auto level = StringToAuthorityLevel(authorityAttr.as_string("nobody"));
+            int32_t ownerId = entityNode.attribute("ownerId").as_int(-1);
+
+            return { level, ownerId };
+        }
+    }
+
     SceneModule::SceneModule() : componentModule(nullptr), eventBus(nullptr) { }
 
     void SceneModule::OnInitialize(Module::ModuleContext& context)
@@ -132,9 +173,6 @@ namespace RenderStar::Common::Scene
 
         ReadEntities(root);
 
-        if (!descriptor.mapGeometryFile.empty())
-            LoadMapGeometry(descriptor.mapGeometryFile);
-
         currentScene = descriptor;
 
         logger->info("Scene '{}' loaded from {} ({} entities)", descriptor.name, filePath, ownedEntities.size());
@@ -155,7 +193,6 @@ namespace RenderStar::Common::Scene
         ownedEntities.clear();
         preservedComponents.clear();
         currentScene.reset();
-        mapGeometry.reset();
 
         logger->info("Scene cleared");
 
@@ -171,21 +208,6 @@ namespace RenderStar::Common::Scene
     bool SceneModule::HasActiveScene() const
     {
         return currentScene.has_value();
-    }
-
-    void SceneModule::SetMapGeometry(MapbinScene geometry)
-    {
-        mapGeometry = std::move(geometry);
-    }
-
-    const std::optional<MapbinScene>& SceneModule::GetMapGeometry() const
-    {
-        return mapGeometry;
-    }
-
-    bool SceneModule::HasMapGeometry() const
-    {
-        return mapGeometry.has_value();
     }
 
     void SceneModule::SetEventBus(Event::IEventBus* bus)
@@ -317,48 +339,6 @@ namespace RenderStar::Common::Scene
         RemapEntityReferences(remapper);
     }
 
-    void SceneModule::LoadMapGeometry(const std::string& assetPath)
-    {
-        if (!context)
-        {
-            logger->error("No module context available for loading map geometry");
-            return;
-        }
-
-        auto assetModuleOpt = context->GetModule<Asset::AssetModule>();
-
-        if (!assetModuleOpt.has_value())
-        {
-            logger->error("AssetModule not found, cannot load map geometry");
-            return;
-        }
-
-        auto binaryAsset = assetModuleOpt->get().LoadBinary(Asset::AssetLocation::Parse(assetPath));
-
-        if (!binaryAsset.IsValid())
-        {
-            logger->error("Failed to load map geometry file: {}", assetPath);
-            return;
-        }
-
-        auto scene = MapbinLoader::Load(binaryAsset.Get()->GetDataView());
-
-        if (!scene.has_value())
-        {
-            logger->error("Failed to parse mapbin file: {}", assetPath);
-            return;
-        }
-
-        mapGeometry = std::move(scene.value());
-
-        size_t totalVertices = 0;
-
-        for (const auto& group : mapGeometry->groups)
-            totalVertices += group.vertexCount;
-
-        logger->info("Loaded map geometry: {} groups, {} total vertices", mapGeometry->groups.size(), totalVertices);
-    }
-
     void SceneModule::RemapEntityReferences(const EntityIdRemapper& remapper)
     {
         for (const auto& serializer : registry.GetSerializers())
@@ -366,5 +346,158 @@ namespace RenderStar::Common::Scene
             if (serializer.remapReferences)
                 serializer.remapReferences(*componentModule, ownedEntities, remapper);
         }
+    }
+
+    std::string SceneModule::SerializeEntities(const std::vector<int32_t>& entityIds)
+    {
+        pugi::xml_document document;
+        auto entitiesNode = document.append_child("Entities");
+        entitiesNode.append_attribute("count").set_value(static_cast<int>(entityIds.size()));
+
+        const auto& serializers = registry.GetSerializers();
+
+        for (const auto entityId : entityIds)
+        {
+            const Component::GameObject entity{ entityId };
+
+            auto entityNode = entitiesNode.append_child("Entity");
+            entityNode.append_attribute("id").set_value(entityId);
+
+            const auto nameOpt = componentModule->GetEntityName(entity);
+
+            if (nameOpt.has_value())
+                entityNode.append_attribute("name").set_value(nameOpt.value().get().c_str());
+
+            WriteAuthorityAttributes(entityNode, componentModule->GetEntityAuthority(entity));
+
+            for (const auto& serializer : serializers)
+                serializer.serialize(entity, *componentModule, entityNode);
+
+            if (const auto it = preservedComponents.find(entityId); it != preservedComponents.end())
+            {
+                for (const auto& xmlFragment : it->second)
+                {
+                    pugi::xml_document fragmentDoc;
+
+                    if (fragmentDoc.load_string(xmlFragment.c_str()))
+                        entityNode.append_copy(fragmentDoc.document_element());
+                }
+            }
+        }
+
+        std::ostringstream oss;
+        document.save(oss, "", pugi::format_raw);
+        return oss.str();
+    }
+
+    void SceneModule::DeserializeEntities(const std::string& xmlData, EntityIdRemapper& remapper)
+    {
+        pugi::xml_document document;
+        const auto result = document.load_string(xmlData.c_str());
+
+        if (!result)
+        {
+            logger->error("Failed to parse entity XML data: {}", result.description());
+            return;
+        }
+
+        const auto entitiesNode = document.child("Entities");
+
+        if (entitiesNode.empty())
+            return;
+
+        for (auto entityNode = entitiesNode.child("Entity"); entityNode; entityNode = entityNode.next_sibling("Entity"))
+        {
+            const int32_t serverId = entityNode.attribute("id").as_int(-1);
+
+            if (remapper.HasMapping(serverId))
+            {
+                logger->debug("Skipping already-mapped server entity {}", serverId);
+                continue;
+            }
+
+            const std::string name = entityNode.attribute("name").as_string("");
+
+            const Component::GameObject newEntity = name.empty() ? CreateEntity() : CreateEntity(name);
+            remapper.RecordMapping(serverId, newEntity);
+
+            auto authority = ReadAuthorityAttributes(entityNode);
+            componentModule->SetEntityAuthority(newEntity, authority);
+        }
+
+        for (auto entityNode = entitiesNode.child("Entity"); entityNode; entityNode = entityNode.next_sibling("Entity"))
+        {
+            const int32_t serverId = entityNode.attribute("id").as_int(-1);
+            const Component::GameObject entity = remapper.Remap(serverId);
+
+            if (!entity.IsValid())
+                continue;
+
+            for (auto componentNode = entityNode.first_child(); componentNode; componentNode = componentNode.next_sibling())
+            {
+                const std::string tagName = componentNode.name();
+
+                if (tagName == "Description")
+                    continue;
+
+                const auto* serializer = registry.FindByXmlTag(tagName);
+
+                if (serializer != nullptr)
+                {
+                    serializer->deserialize(entity, *componentModule, componentNode);
+                }
+                else
+                {
+                    std::ostringstream oss;
+                    componentNode.print(oss, "", pugi::format_raw);
+                    preservedComponents[entity.id].push_back(oss.str());
+
+                    logger->debug("Preserved unrecognized component '{}' on entity {}", tagName, entity.id);
+                }
+            }
+        }
+    }
+
+    void SceneModule::UpdateEntityComponents(Component::GameObject entity, const std::string& xmlData)
+    {
+        pugi::xml_document document;
+        const auto result = document.load_string(xmlData.c_str());
+
+        if (!result)
+        {
+            logger->error("Failed to parse component update XML: {}", result.description());
+            return;
+        }
+
+        const auto entitiesNode = document.child("Entities");
+
+        if (entitiesNode.empty())
+            return;
+
+        auto entityNode = entitiesNode.child("Entity");
+
+        if (entityNode.empty())
+            return;
+
+        for (auto componentNode = entityNode.first_child(); componentNode; componentNode = componentNode.next_sibling())
+        {
+            const std::string tagName = componentNode.name();
+
+            if (tagName == "Description")
+                continue;
+
+            const auto* serializer = registry.FindByXmlTag(tagName);
+
+            if (serializer != nullptr)
+            {
+                serializer->removeComponent(entity, *componentModule);
+                serializer->deserialize(entity, *componentModule, componentNode);
+            }
+        }
+    }
+
+    std::vector<int32_t> SceneModule::GetOwnedEntityIds() const
+    {
+        return { ownedEntities.begin(), ownedEntities.end() };
     }
 }

@@ -121,3 +121,47 @@ TEST_F(ConfigurationTest, EmptyStringList)
     auto result = config->GetStringList("nonexistent");
     EXPECT_TRUE(result.empty());
 }
+
+TEST(ConfigurationMissingSectionTest, MissingSectionReturnsNulloptForAllGetters)
+{
+    auto doc = std::make_shared<pugi::xml_document>();
+    doc->append_child("test_ns").append_child("ExistingSection");
+
+    Configuration config("test_ns", "NonExistentSection", doc);
+
+    EXPECT_FALSE(config.GetString("key").has_value());
+    EXPECT_FALSE(config.GetInteger("key").has_value());
+    EXPECT_FALSE(config.GetFloat("key").has_value());
+    EXPECT_FALSE(config.GetBoolean("key").has_value());
+    EXPECT_TRUE(config.GetStringList("key").empty());
+}
+
+TEST(ConfigurationMissingSectionTest, MissingSectionStillAllowsSetAndGet)
+{
+    auto doc = std::make_shared<pugi::xml_document>();
+    doc->append_child("test_ns");
+
+    Configuration config("test_ns", "NewSection", doc);
+
+    config.SetString("key", "value");
+    EXPECT_EQ(*config.GetString("key"), "value");
+}
+
+TEST(ConfigurationMissingSectionTest, WrongNamespaceReturnsNullopt)
+{
+    auto doc = std::make_shared<pugi::xml_document>();
+    doc->append_child("correct_ns").append_child("TestClass");
+
+    Configuration config("wrong_ns", "TestClass", doc);
+
+    EXPECT_FALSE(config.GetString("key").has_value());
+}
+
+TEST(ConfigurationMissingSectionTest, EmptyDocumentReturnsNullopt)
+{
+    auto doc = std::make_shared<pugi::xml_document>();
+
+    Configuration config("test_ns", "TestClass", doc);
+
+    EXPECT_FALSE(config.GetString("key").has_value());
+}

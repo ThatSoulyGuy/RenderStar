@@ -39,6 +39,13 @@ target_sources(RenderStarTests PRIVATE
     Source/KeyModifierTest.cpp
     Source/ClientEventsTest.cpp
     Source/ConnectionStateTest.cpp
+    Source/TextureDescriptionTest.cpp
+    Source/MapbinLoaderTest.cpp
+    Source/SceneDataPacketTest.cpp
+    Source/EntityAuthorityTest.cpp
+    Source/ComponentModuleAuthorityTest.cpp
+    Source/ComponentUpdatePacketTest.cpp
+    Source/AuthorityChangePacketTest.cpp
     ${CMAKE_SOURCE_DIR}/Client/Source/RenderStar/Client/Render/Resource/Vertex.cpp
     ${CMAKE_SOURCE_DIR}/Client/Source/RenderStar/Client/Render/Shader/GlslTransformer.cpp
     ${CMAKE_SOURCE_DIR}/Client/Source/RenderStar/Client/Render/Components/Camera.cpp

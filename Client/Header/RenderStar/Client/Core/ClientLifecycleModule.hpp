@@ -1,8 +1,7 @@
 #pragma once
 
-#include "RenderStar/Client/Render/Resource/IShaderProgram.hpp"
+#include "RenderStar/Client/Render/Resource/IBufferHandle.hpp"
 #include "RenderStar/Client/Render/Resource/IUniformBindingHandle.hpp"
-#include "RenderStar/Client/Render/Resource/Mesh.hpp"
 #include "RenderStar/Common/Component/GameObject.hpp"
 #include "RenderStar/Common/Module/AbstractModule.hpp"
 #include <memory>
@@ -13,6 +12,7 @@ namespace RenderStar::Client::Render
     class IRenderBackend;
     class IBufferManager;
     class IUniformManager;
+    class ITextureManager;
 }
 
 namespace RenderStar::Common::Event
@@ -47,22 +47,17 @@ namespace RenderStar::Client::Core
         Common::Event::EventResult OnRenderFrameEvent(Render::IRenderBackend*);
 
         UniformSlot& AcquireUniformSlot();
-        void BuildSceneMeshes();
 
         void SetupGameplayLogic(Common::Module::ModuleContext& context);
         void SetupMainLoop() const;
-
-        std::unique_ptr<Render::IShaderProgram> testShader;
-        std::unique_ptr<Render::Resource::Mesh> testMesh;
 
         std::vector<UniformSlot> uniformPool;
         size_t uniformPoolIndex = 0;
         Render::IBufferManager* cachedBufferManager = nullptr;
         Render::IUniformManager* cachedUniformManager = nullptr;
+        Render::ITextureManager* cachedTextureManager = nullptr;
 
         float testRotationAngle = 0.0f;
-
-        std::vector<std::unique_ptr<Render::Resource::Mesh>> sceneMeshes;
 
         Common::Component::GameObject playerEntity = Common::Component::GameObject::Invalid();
     };

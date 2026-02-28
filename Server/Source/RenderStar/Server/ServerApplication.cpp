@@ -11,6 +11,7 @@
 #include "RenderStar/Server/Event/Events/ServerPreinitializationEvent.hpp"
 #include "RenderStar/Server/Event/Events/ServerInitializationEvent.hpp"
 #include "RenderStar/Server/Network/ServerNetworkModule.hpp"
+#include "RenderStar/Common/Network/PacketModule.hpp"
 #include <filesystem>
 
 namespace RenderStar::Server
@@ -27,6 +28,7 @@ namespace RenderStar::Server
             .EventBus<Event::Buses::ServerCoreEventBus>(std::make_unique<Event::Buses::ServerCoreEventBus>())
             .Module<Common::Configuration::ConfigurationModule>(std::move(configModule))
             .Module<Common::Asset::AssetModule>(std::make_unique<Common::Asset::AssetModule>(basePath))
+            .Module<Common::Network::PacketModule>(std::make_unique<Common::Network::PacketModule>())
             .Module<Network::ServerNetworkModule>(Network::ServerNetworkModule::FromArguments(argc, argv, configModuleRef))
             .Module<Common::Component::ComponentModule>(std::make_unique<Common::Component::ComponentModule>())
             .Module<Common::Scene::SceneModule>(std::make_unique<Common::Scene::SceneModule>())

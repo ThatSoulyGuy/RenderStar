@@ -5,6 +5,22 @@
 
 namespace RenderStar::Common::Component
 {
+    ComponentModule::Builder& ComponentModule::Builder::Affector(std::unique_ptr<AbstractAffector> affector)
+    {
+        affectors.push_back(std::move(affector));
+        return *this;
+    }
+
+    std::unique_ptr<ComponentModule> ComponentModule::Builder::Build()
+    {
+        auto module = std::make_unique<ComponentModule>();
+
+        for (auto& affector : affectors)
+            module->RegisterSubModule(std::move(affector));
+
+        return module;
+    }
+
     ComponentModule::ComponentModule()
         : nextEntityId(0)
     {
@@ -35,6 +51,8 @@ namespace RenderStar::Common::Component
             pool->Remove(entity);
 
         namePool.Remove(entity);
+        authorityPool.Remove(entity);
+        dirtyEntities.erase(entity.id);
         entities.erase(iterator);
     }
 
@@ -66,6 +84,47 @@ namespace RenderStar::Common::Component
             if (auto* affector = dynamic_cast<AbstractAffector*>(subModule.get()))
                 affector->Affect(*this);
         }
+    }
+
+    void ComponentModule::SetEntityAuthority(GameObject entity, EntityAuthority authority)
+    {
+        if (authorityPool.Has(entity))
+        {
+            auto& existing = authorityPool.Require(entity);
+            existing = authority;
+        }
+        else
+        {
+            authorityPool.Add(entity, authority);
+        }
+    }
+
+    EntityAuthority ComponentModule::GetEntityAuthority(GameObject entity) const
+    {
+        auto opt = authorityPool.Get(entity);
+
+        if (opt.has_value())
+            return opt->get();
+
+        return EntityAuthority::Nobody();
+    }
+
+    bool ComponentModule::CheckAuthority(GameObject entity, const AuthorityContext& caller) const
+    {
+        auto authority = GetEntityAuthority(entity);
+        return authority.CanModify(caller.level, caller.ownerId);
+    }
+
+    void ComponentModule::MarkEntityDirty(GameObject entity)
+    {
+        dirtyEntities.insert(entity.id);
+    }
+
+    std::unordered_set<int32_t> ComponentModule::ConsumeDirtyEntities()
+    {
+        auto result = std::move(dirtyEntities);
+        dirtyEntities.clear();
+        return result;
     }
 
     void ComponentModule::OnInitialize(Module::ModuleContext& moduleContext)

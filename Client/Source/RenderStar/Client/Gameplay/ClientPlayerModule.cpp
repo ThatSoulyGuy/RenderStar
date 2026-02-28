@@ -1,69 +1,23 @@
 #include "RenderStar/Client/Gameplay/ClientPlayerModule.hpp"
-#include "RenderStar/Client/Network/ClientNetworkModule.hpp"
+#include "RenderStar/Client/Gameplay/PlayerController.hpp"
+#include "RenderStar/Client/Render/Components/Camera.hpp"
+#include "RenderStar/Common/Component/ComponentModule.hpp"
+#include "RenderStar/Common/Component/Components/PlayerIdentity.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
 #include "RenderStar/Common/Network/PacketModule.hpp"
 #include "RenderStar/Common/Network/Packets/PlayerAssignPacket.hpp"
-#include "RenderStar/Common/Network/Packets/PlayerSpawnPacket.hpp"
-#include "RenderStar/Common/Network/Packets/PlayerDespawnPacket.hpp"
-#include "RenderStar/Common/Network/Packets/PlayerPositionPacket.hpp"
 
 namespace RenderStar::Client::Gameplay
 {
     void ClientPlayerModule::OnInitialize(Common::Module::ModuleContext& context)
     {
-        auto networkModuleOpt = context.GetModule<Network::ClientNetworkModule>();
+        auto& packetModule = context.GetDependency<Common::Network::PacketModule>();
 
-        if (!networkModuleOpt.has_value())
-        {
-            logger->error("ClientNetworkModule not found");
-            return;
-        }
-
-        auto* packetModule = networkModuleOpt->get().GetPacketModule();
-
-        if (!packetModule)
-        {
-            logger->error("PacketModule not found on ClientNetworkModule");
-            return;
-        }
-
-        packetModule->RegisterHandler<Common::Network::Packets::PlayerAssignPacket>(
+        packetModule.RegisterHandler<Common::Network::Packets::PlayerAssignPacket>(
             [this](Common::Network::Packets::PlayerAssignPacket& packet)
             {
                 localPlayerId.store(packet.playerId);
                 logger->info("Assigned player ID: {}", packet.playerId);
-            });
-
-        packetModule->RegisterHandler<Common::Network::Packets::PlayerSpawnPacket>(
-            [this](Common::Network::Packets::PlayerSpawnPacket& packet)
-            {
-                std::lock_guard lock(remotePlayersMutex);
-                remotePlayers[packet.playerId] = RemotePlayer{
-                    glm::vec3(packet.x, packet.y, packet.z),
-                    packet.yaw,
-                    packet.pitch
-                };
-                logger->info("Remote player {} spawned at ({}, {}, {})", packet.playerId, packet.x, packet.y, packet.z);
-            });
-
-        packetModule->RegisterHandler<Common::Network::Packets::PlayerDespawnPacket>(
-            [this](Common::Network::Packets::PlayerDespawnPacket& packet)
-            {
-                std::lock_guard lock(remotePlayersMutex);
-                remotePlayers.erase(packet.playerId);
-                logger->info("Remote player {} despawned", packet.playerId);
-            });
-
-        packetModule->RegisterHandler<Common::Network::Packets::PlayerPositionPacket>(
-            [this](Common::Network::Packets::PlayerPositionPacket& packet)
-            {
-                std::lock_guard lock(remotePlayersMutex);
-                if (auto it = remotePlayers.find(packet.playerId); it != remotePlayers.end())
-                {
-                    it->second.position = glm::vec3(packet.x, packet.y, packet.z);
-                    it->second.yaw = packet.yaw;
-                    it->second.pitch = packet.pitch;
-                }
             });
 
         logger->info("ClientPlayerModule initialized");
@@ -74,37 +28,59 @@ namespace RenderStar::Client::Gameplay
         return localPlayerId.load();
     }
 
-    std::unordered_map<int32_t, RemotePlayer> ClientPlayerModule::GetRemotePlayers() const
+    Common::Component::GameObject ClientPlayerModule::GetLocalPlayerEntity() const
     {
-        std::lock_guard lock(remotePlayersMutex);
-        return remotePlayers;
+        return localPlayerEntity;
     }
 
-    void ClientPlayerModule::SendLocalPosition(float x, float y, float z, float yaw, float pitch)
+    void ClientPlayerModule::CheckForLocalPlayerEntity(Common::Component::ComponentModule& componentModule)
     {
-        const int32_t pid = localPlayerId.load();
+        if (localPlayerSetUp)
+            return;
+
+        int32_t pid = localPlayerId.load();
 
         if (pid < 0)
             return;
 
-        auto networkModuleOpt = context->GetModule<Network::ClientNetworkModule>();
+        auto& pool = componentModule.GetPool<Common::Component::PlayerIdentity>();
 
-        if (!networkModuleOpt.has_value() || !networkModuleOpt->get().IsConnected())
+        if (pool.GetSize() == 0)
+        {
+            logger->debug("Waiting for player entity: PlayerIdentity pool is empty (localPlayerId={})", pid);
             return;
+        }
 
-        Common::Network::Packets::PlayerPositionPacket posPacket;
-        posPacket.playerId = pid;
-        posPacket.x = x;
-        posPacket.y = y;
-        posPacket.z = z;
-        posPacket.yaw = yaw;
-        posPacket.pitch = pitch;
+        for (auto [entity, identity] : pool)
+        {
+            if (identity.playerId != pid)
+                continue;
 
-        networkModuleOpt->get().Send(posPacket);
+            localPlayerEntity = entity;
+
+            auto& controller = componentModule.AddComponent<PlayerController>(entity);
+            controller.moveSpeed = 5.0f;
+            controller.lookSensitivity = 0.1f;
+
+            auto& camera = componentModule.AddComponent<Render::Components::Camera>(entity);
+            camera.projectionType = Render::Components::ProjectionType::PERSPECTIVE;
+            camera.fieldOfView = 60.0f;
+            camera.nearPlane = 0.1f;
+            camera.farPlane = 100.0f;
+
+            auto authority = componentModule.GetEntityAuthority(entity);
+            logger->info("Local player entity set up: id={}, playerId={}, authority={}, ownerId={}", entity.id, pid, static_cast<int>(authority.level), authority.ownerId);
+
+            localPlayerSetUp = true;
+            break;
+        }
+
+        if (!localPlayerSetUp)
+            logger->debug("PlayerIdentity pool has {} entries but none match localPlayerId={}", pool.GetSize(), pid);
     }
 
     std::vector<std::type_index> ClientPlayerModule::GetDependencies() const
     {
-        return DependsOn<Network::ClientNetworkModule>();
+        return DependsOn<Common::Network::PacketModule>();
     }
 }

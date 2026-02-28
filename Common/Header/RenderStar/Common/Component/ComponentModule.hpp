@@ -1,21 +1,35 @@
 #pragma once
 
 #include "RenderStar/Common/Module/AbstractModule.hpp"
+#include "RenderStar/Common/Component/AbstractAffector.hpp"
+#include "RenderStar/Common/Component/AuthorityContext.hpp"
+#include "RenderStar/Common/Component/EntityAuthority.hpp"
 #include "RenderStar/Common/Component/GameObject.hpp"
 #include "RenderStar/Common/Component/ComponentPool.hpp"
 #include <memory>
 #include <typeindex>
 #include <unordered_map>
+#include <unordered_set>
 #include <optional>
 #include <string>
 
 namespace RenderStar::Common::Component
 {
-    class AbstractAffector;
-
     class ComponentModule final : public Module::AbstractModule
     {
     public:
+
+        class Builder
+        {
+        public:
+
+            Builder& Affector(std::unique_ptr<AbstractAffector> affector);
+            std::unique_ptr<ComponentModule> Build();
+
+        private:
+
+            std::vector<std::unique_ptr<AbstractAffector>> affectors;
+        };
 
         ComponentModule();
 
@@ -51,6 +65,30 @@ namespace RenderStar::Common::Component
 
         void RunAffectors();
 
+        void SetEntityAuthority(GameObject entity, EntityAuthority authority);
+
+        [[nodiscard]]
+        EntityAuthority GetEntityAuthority(GameObject entity) const;
+
+        [[nodiscard]]
+        bool CheckAuthority(GameObject entity, const AuthorityContext& caller) const;
+
+        template<typename ComponentType>
+        std::optional<std::reference_wrapper<ComponentType>> GetComponentAuthorized(GameObject entity, const AuthorityContext& caller);
+
+        template<typename ComponentType>
+        ComponentType& AddComponentAuthorized(GameObject entity, const AuthorityContext& caller);
+
+        template<typename ComponentType>
+        ComponentType& AddComponentAuthorized(GameObject entity, ComponentType component, const AuthorityContext& caller);
+
+        template<typename ComponentType>
+        void RemoveComponentAuthorized(GameObject entity, const AuthorityContext& caller);
+
+        void MarkEntityDirty(GameObject entity);
+
+        std::unordered_set<int32_t> ConsumeDirtyEntities();
+
     protected:
 
         void OnInitialize(Module::ModuleContext& context) override;
@@ -64,6 +102,8 @@ namespace RenderStar::Common::Component
         std::vector<GameObject> entities;
         std::unordered_map<std::type_index, std::unique_ptr<IComponentPool>> pools;
         ComponentPool<std::string> namePool;
+        ComponentPool<EntityAuthority> authorityPool;
+        std::unordered_set<int32_t> dirtyEntities;
     };
 }
 

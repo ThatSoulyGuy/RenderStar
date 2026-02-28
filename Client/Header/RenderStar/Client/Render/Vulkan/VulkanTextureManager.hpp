@@ -1,0 +1,44 @@
+#pragma once
+
+#include "RenderStar/Client/Render/Resource/ITextureManager.hpp"
+#include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
+#include <spdlog/spdlog.h>
+#include <memory>
+
+namespace RenderStar::Client::Render::Vulkan
+{
+    class VulkanTextureManager : public ITextureManager
+    {
+    public:
+
+        VulkanTextureManager();
+        ~VulkanTextureManager() override;
+
+        void Initialize(VkDevice device, VmaAllocator allocator, VkQueue graphicsQueue, uint32_t graphicsQueueFamily);
+        void Destroy();
+
+        std::unique_ptr<ITextureHandle> CreateFromMemory(
+            const TextureDescription& description, const void* pixels) override;
+
+        ITextureHandle* GetDefaultTexture() override;
+
+    private:
+
+        void CreateDefaultTexture();
+        void TransitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+        void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+        VkCommandBuffer BeginSingleTimeCommands();
+        void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
+
+        VkSamplerAddressMode ToVulkanWrapMode(TextureWrapMode mode) const;
+        VkFilter ToVulkanFilter(TextureFilterMode mode) const;
+
+        std::shared_ptr<spdlog::logger> logger;
+        VkDevice device;
+        VmaAllocator allocator;
+        VkQueue graphicsQueue;
+        VkCommandPool commandPool;
+        std::unique_ptr<ITextureHandle> defaultTexture;
+    };
+}

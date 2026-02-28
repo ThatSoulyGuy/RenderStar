@@ -27,6 +27,9 @@ namespace RenderStar::Common::Module
         template<typename ModuleType>
         std::optional<std::reference_wrapper<ModuleType>> GetModule();
 
+        template<typename ModuleType>
+        ModuleType& GetDependency();
+
         template<typename EventBusType>
         std::optional<std::reference_wrapper<EventBusType>> GetEventBus();
 

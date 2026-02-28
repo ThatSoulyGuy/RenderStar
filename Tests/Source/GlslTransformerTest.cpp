@@ -32,16 +32,35 @@ TEST(GlslTransformerTest, TransformVersionDirective)
 {
     std::string source = "#version 450\nvoid main() {}";
     auto result = GlslTransformer::Transform450To410(source, ShaderType::VERTEX);
-    EXPECT_TRUE(result.find("#version 410 core") != std::string::npos);
-    EXPECT_TRUE(result.find("#version 450") == std::string::npos);
+    EXPECT_TRUE(result.find("#version 450 core") != std::string::npos);
 }
 
 TEST(GlslTransformerTest, TransformUboBindings)
 {
     std::string source = "#version 450\nlayout(binding = 0) uniform UniformBufferObject {\n    mat4 model;\n} ubo;\nvoid main() {}";
     auto result = GlslTransformer::Transform450To410(source, ShaderType::VERTEX);
-    EXPECT_TRUE(result.find("layout(std140) uniform UniformBufferObject") != std::string::npos);
-    EXPECT_TRUE(result.find("layout(binding = 0)") == std::string::npos);
+    EXPECT_TRUE(result.find("layout(binding = 0, std140) uniform UniformBufferObject {") != std::string::npos);
+}
+
+TEST(GlslTransformerTest, SamplerBindingPreserved)
+{
+    std::string source = "#version 450\nlayout(binding = 1) uniform sampler2D texSampler;\nvoid main() {}";
+    auto result = GlslTransformer::Transform450To410(source, ShaderType::FRAGMENT);
+    EXPECT_TRUE(result.find("layout(binding = 1) uniform sampler2D texSampler;") != std::string::npos);
+}
+
+TEST(GlslTransformerTest, UboAndSamplerCombined)
+{
+    std::string source =
+        "#version 450\n"
+        "layout(binding = 0) uniform UniformBufferObject {\n"
+        "    mat4 model;\n"
+        "} ubo;\n"
+        "layout(binding = 1) uniform sampler2D texSampler;\n"
+        "void main() {}\n";
+    auto result = GlslTransformer::Transform450To410(source, ShaderType::FRAGMENT);
+    EXPECT_TRUE(result.find("layout(binding = 0, std140) uniform UniformBufferObject {") != std::string::npos);
+    EXPECT_TRUE(result.find("layout(binding = 1) uniform sampler2D texSampler;") != std::string::npos);
 }
 
 TEST(GlslTransformerTest, EmptySourceReturnsEmpty)
@@ -80,7 +99,7 @@ TEST(GlslTransformerTest, FullShaderRoundtrip)
         "}\n";
 
     auto result = GlslTransformer::Transform450To410(source, ShaderType::VERTEX);
-    EXPECT_TRUE(result.find("#version 410 core") != std::string::npos);
-    EXPECT_TRUE(result.find("layout(std140) uniform") != std::string::npos);
+    EXPECT_TRUE(result.find("#version 450 core") != std::string::npos);
+    EXPECT_TRUE(result.find("std140") != std::string::npos);
     EXPECT_TRUE(result.find("layout(location = 0) in vec3 inPosition") != std::string::npos);
 }

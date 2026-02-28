@@ -10,6 +10,7 @@
 namespace RenderStar::Client::Render::OpenGL
 {
     class OpenGLBufferHandle;
+    class OpenGLTextureHandle;
 
     class OpenGLUniformBinding : public IUniformBindingHandle
     {
@@ -19,7 +20,8 @@ namespace RenderStar::Client::Render::OpenGL
         ~OpenGLUniformBinding() override;
 
         void Bind(int32_t frameIndex) override;
-        void UpdateBuffer(int32_t binding, IBufferHandle* buffer, size_t size) override;
+        void UpdateBuffer(int32_t binding, IBufferHandle* buffer, size_t size, int32_t frameIndex = -1) override;
+        void UpdateTexture(int32_t binding, ITextureHandle* texture, int32_t frameIndex = -1) override;
         uint64_t GetNativeHandle(int32_t frameIndex) const override;
         void Destroy() override;
         bool IsDestroyed() const override;
@@ -34,6 +36,7 @@ namespace RenderStar::Client::Render::OpenGL
         UniformLayout layout;
         int32_t frameCount;
         std::unordered_map<int32_t, std::vector<OpenGLBufferHandle*>> bindingBuffers;
+        std::unordered_map<int32_t, OpenGLTextureHandle*> textureBindings;
         bool destroyed;
     };
 }

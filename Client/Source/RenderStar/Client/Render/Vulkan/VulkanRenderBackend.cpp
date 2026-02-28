@@ -97,6 +97,13 @@ namespace RenderStar::Client::Render::Vulkan
         uniformManager = std::make_unique<VulkanUniformManager>();
         uniformManager->Initialize(&bufferModule, &descriptorModule, MAX_FRAMES_IN_FLIGHT);
 
+        textureManager = std::make_unique<VulkanTextureManager>();
+        textureManager->Initialize(
+            deviceModule.GetDevice(),
+            memoryModule.GetAllocator(),
+            deviceModule.GetGraphicsQueue(),
+            deviceModule.GetGraphicsQueueFamily());
+
         commandQueue = std::make_unique<VulkanCommandQueue>();
         commandQueue->Initialize(&commandModule, MAX_FRAMES_IN_FLIGHT);
 
@@ -109,6 +116,8 @@ namespace RenderStar::Client::Render::Vulkan
         vkDeviceWaitIdle(deviceModule.GetDevice());
 
         commandQueue.reset();
+        textureManager->Destroy();
+        textureManager.reset();
         uniformManager->Destroy();
         uniformManager.reset();
         shaderManager.reset();
@@ -326,6 +335,11 @@ namespace RenderStar::Client::Render::Vulkan
     IUniformManager* VulkanRenderBackend::GetUniformManager()
     {
         return uniformManager.get();
+    }
+
+    ITextureManager* VulkanRenderBackend::GetTextureManager()
+    {
+        return textureManager.get();
     }
 
     IRenderCommandQueue* VulkanRenderBackend::GetCommandQueue()

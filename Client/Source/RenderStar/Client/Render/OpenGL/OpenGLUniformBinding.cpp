@@ -1,5 +1,6 @@
 #include "RenderStar/Client/Render/OpenGL/OpenGLUniformBinding.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLBufferHandle.hpp"
+#include "RenderStar/Client/Render/OpenGL/OpenGLTextureHandle.hpp"
 #include <glad/gl.h>
 
 namespace RenderStar::Client::Render::OpenGL
@@ -29,9 +30,15 @@ namespace RenderStar::Client::Render::OpenGL
                 glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, buffers[frameIndex]->GetBufferId());
             }
         }
+
+        for (const auto& [unit, texture] : textureBindings)
+        {
+            glActiveTexture(GL_TEXTURE0 + unit);
+            glBindTexture(GL_TEXTURE_2D, texture->GetTextureId());
+        }
     }
 
-    void OpenGLUniformBinding::UpdateBuffer(int32_t binding, IBufferHandle* buffer, size_t size)
+    void OpenGLUniformBinding::UpdateBuffer(int32_t binding, IBufferHandle* buffer, size_t size, int32_t frameIndex)
     {
         if (destroyed)
             return;
@@ -47,6 +54,20 @@ namespace RenderStar::Client::Render::OpenGL
             buffers[i] = glBuffer;
     }
 
+    void OpenGLUniformBinding::UpdateTexture(int32_t binding, ITextureHandle* texture, int32_t frameIndex)
+    {
+        if (destroyed)
+            return;
+
+        if (texture == nullptr)
+        {
+            textureBindings.erase(binding);
+            return;
+        }
+
+        textureBindings[binding] = static_cast<OpenGLTextureHandle*>(texture);
+    }
+
     uint64_t OpenGLUniformBinding::GetNativeHandle(int32_t frameIndex) const
     {
         return 0;
@@ -58,6 +79,7 @@ namespace RenderStar::Client::Render::OpenGL
             return;
 
         bindingBuffers.clear();
+        textureBindings.clear();
         destroyed = true;
 
         logger->debug("OpenGL uniform binding destroyed");

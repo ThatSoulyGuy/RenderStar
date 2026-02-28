@@ -40,12 +40,26 @@ namespace RenderStar::Client::Gameplay
 
         for (auto [entity, controller] : pool)
         {
+            if (!componentModule.CheckAuthority(entity, GetAuthorityContext()))
+            {
+                if (!authorityWarningLogged)
+                {
+                    auto entityAuth = componentModule.GetEntityAuthority(entity);
+                    logger->warn("PlayerControllerAffector: authority check failed for entity {} (entity authority={}, ownerId={}, caller authority={}, callerId={})",
+                        entity.id, static_cast<int>(entityAuth.level), entityAuth.ownerId,
+                        static_cast<int>(GetAuthorityContext().level), GetAuthorityContext().ownerId);
+                    authorityWarningLogged = true;
+                }
+                continue;
+            }
+
             auto transformOpt = componentModule.GetComponent<Transform>(entity);
 
             if (!transformOpt.has_value())
                 continue;
 
             Transform& transform = transformOpt.value().get();
+            bool changed = false;
 
             if (inputModule->IsMouseButtonPressed(Input::MouseCode::RIGHT))
                 inputModule->LockCursor();
@@ -57,9 +71,13 @@ namespace RenderStar::Client::Gameplay
             {
                 const glm::dvec2 delta = inputModule->GetCursorDelta();
 
-                controller.yaw -= static_cast<float>(delta.x) * controller.lookSensitivity;
-                controller.pitch -= static_cast<float>(delta.y) * controller.lookSensitivity;
-                controller.pitch = std::clamp(controller.pitch, -89.0f, 89.0f);
+                if (delta.x != 0.0 || delta.y != 0.0)
+                {
+                    controller.yaw -= static_cast<float>(delta.x) * controller.lookSensitivity;
+                    controller.pitch -= static_cast<float>(delta.y) * controller.lookSensitivity;
+                    controller.pitch = std::clamp(controller.pitch, -89.0f, 89.0f);
+                    changed = true;
+                }
             }
 
             const float yawRad = glm::radians(controller.yaw);
@@ -92,9 +110,15 @@ namespace RenderStar::Client::Gameplay
                 movement -= up;
 
             if (glm::length(movement) > 0.0f)
+            {
                 movement = glm::normalize(movement);
+                changed = true;
+            }
 
             transform.position += movement * controller.moveSpeed * deltaTime;
+
+            if (changed)
+                componentModule.MarkEntityDirty(entity);
         }
     }
 }

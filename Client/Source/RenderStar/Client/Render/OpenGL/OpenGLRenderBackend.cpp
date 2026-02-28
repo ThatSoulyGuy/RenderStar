@@ -2,6 +2,7 @@
 #include "RenderStar/Client/Render/OpenGL/OpenGLBufferManagerAdapter.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLUniformManagerAdapter.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderManagerAdapter.hpp"
+#include "RenderStar/Client/Render/OpenGL/OpenGLTextureManager.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLCommandQueue.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderProgram.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLMeshAdapter.hpp"
@@ -80,11 +81,13 @@ namespace RenderStar::Client::Render::OpenGL
         glDepthFunc(GL_LESS);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
-        glFrontFace(GL_CCW);
+        glFrontFace(GL_CW);
 
         bufferManager = std::make_unique<OpenGLBufferManagerAdapter>();
         uniformManager = std::make_unique<OpenGLUniformManagerAdapter>();
         shaderManager = std::make_unique<OpenGLShaderManagerAdapter>();
+        textureManager = std::make_unique<OpenGLTextureManager>();
+        textureManager->Initialize();
         commandQueue = std::make_unique<OpenGLCommandQueue>();
 
         initialized = true;
@@ -95,6 +98,7 @@ namespace RenderStar::Client::Render::OpenGL
     {
         commandQueue.reset();
         shaderManager.reset();
+        textureManager.reset();
         uniformManager.reset();
         bufferManager.reset();
 
@@ -167,6 +171,11 @@ namespace RenderStar::Client::Render::OpenGL
     IUniformManager* OpenGLRenderBackend::GetUniformManager()
     {
         return uniformManager.get();
+    }
+
+    ITextureManager* OpenGLRenderBackend::GetTextureManager()
+    {
+        return textureManager.get();
     }
 
     IRenderCommandQueue* OpenGLRenderBackend::GetCommandQueue()

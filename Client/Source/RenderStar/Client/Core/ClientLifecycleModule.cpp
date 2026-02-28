@@ -2,27 +2,28 @@
 #include "RenderStar/Client/Core/ClientSceneModule.hpp"
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
 #include "RenderStar/Client/Gameplay/ClientPlayerModule.hpp"
-#include "RenderStar/Client/Gameplay/PlayerController.hpp"
 #include "RenderStar/Client/Gameplay/PlayerControllerAffector.hpp"
 #include "RenderStar/Client/Input/ClientInputModule.hpp"
 #include "RenderStar/Client/Event/Buses/ClientCoreEventBus.hpp"
 #include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
 #include "RenderStar/Client/Event/Events/ClientEvents.hpp"
 #include "RenderStar/Client/Render/Affectors/CameraAffector.hpp"
+#include "RenderStar/Client/Render/Affectors/MapGeometryRenderAffector.hpp"
+#include "RenderStar/Client/Render/Affectors/PlayerRenderAffector.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
 #include "RenderStar/Client/Render/Components/Camera.hpp"
 #include "RenderStar/Client/Render/RendererModule.hpp"
 #include "RenderStar/Client/Render/Resource/IBufferManager.hpp"
 #include "RenderStar/Client/Render/Resource/IShaderManager.hpp"
+#include "RenderStar/Client/Render/Resource/ITextureManager.hpp"
 #include "RenderStar/Client/Render/Resource/IUniformManager.hpp"
-#include "RenderStar/Client/Render/Resource/Mesh.hpp"
 #include "RenderStar/Client/Render/Resource/StandardUniforms.hpp"
-#include "RenderStar/Client/Render/Resource/Vertex.hpp"
+#include "RenderStar/Client/Network/ClientNetworkModule.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
-#include "RenderStar/Common/Component/Affectors/TransformAffector.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Component/Components/Transform.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
+#include "RenderStar/Common/Scene/SceneModule.hpp"
 #include "RenderStar/Common/Time/TimeModule.hpp"
 
 using namespace RenderStar::Client::Render;
@@ -34,6 +35,9 @@ namespace RenderStar::Client::Core
         SetupGameplayLogic(context);
         SetupMainLoop();
 
+        auto& networkModule = context.GetDependency<Network::ClientNetworkModule>();
+        networkModule.Connect("127.0.0.1", 25565);
+
         logger->info("ClientLifecycleModule initialized");
     }
 
@@ -41,12 +45,16 @@ namespace RenderStar::Client::Core
     {
         logger->info("ClientLifecycleModule cleaning up render resources...");
 
-        sceneMeshes.clear();
+        if (auto mapGeometryAffector = context->GetModule<Render::Affectors::MapGeometryRenderAffector>(); mapGeometryAffector.has_value())
+            mapGeometryAffector->get().Cleanup();
+
+        if (auto sceneModule = context->GetModule<Common::Scene::SceneModule>(); sceneModule.has_value())
+            sceneModule->get().ClearScene();
+
         uniformPool.clear();
         cachedBufferManager = nullptr;
         cachedUniformManager = nullptr;
-        testMesh.reset();
-        testShader.reset();
+        cachedTextureManager = nullptr;
 
         logger->info("ClientLifecycleModule cleanup complete");
     }
@@ -73,69 +81,37 @@ namespace RenderStar::Client::Core
         if (!vertexAsset.IsValid() || !fragmentAsset.IsValid())
             return Common::Event::EventResult::Failure("Failed to load shader assets");
 
-        testShader = shaderManager->CreateFromTextAssets(*vertexAsset.Get(), *fragmentAsset.Get());
-
-        if (!testShader || !testShader->IsValid())
-            return Common::Event::EventResult::Failure("Failed to create test shader");
-
-        const std::vector vertices =
-        {
-            Vertex(-0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f),
-            Vertex( 0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f),
-            Vertex( 0.5f,  0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f),
-            Vertex(-0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f),
-            Vertex(-0.5f, -0.5f,  0.5f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f),
-            Vertex( 0.5f, -0.5f,  0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f),
-            Vertex( 0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f),
-            Vertex(-0.5f,  0.5f,  0.5f, 0.5f, 0.5f, 0.5f, 0.0f, 1.0f)
-        };
-
-        const std::vector<uint32_t> indices =
-        {
-            0, 2, 1, 0, 3, 2,
-            4, 5, 6, 4, 6, 7,
-            0, 7, 4, 0, 3, 7,
-            1, 2, 6, 1, 6, 5,
-            3, 6, 2, 3, 7, 6,
-            0, 1, 5, 0, 5, 4
-        };
-
-        testMesh = std::make_unique<Resource::Mesh>(*bufferManager, Vertex::LAYOUT, PrimitiveType::TRIANGLES);
-        testMesh->SetVertices(vertices);
-        testMesh->SetIndices(indices);
-
         cachedBufferManager = bufferManager;
         cachedUniformManager = uniformManager;
+        cachedTextureManager = backend->GetTextureManager();
 
         if (auto cameraAffector = context.GetModule<Render::Affectors::CameraAffector>(); cameraAffector.has_value())
             cameraAffector->get().SetViewportSize(backend->GetWidth(), backend->GetHeight());
 
-        logger->info("Test geometry initialized successfully");
+        auto shader = shaderManager->CreateFromTextAssets(*vertexAsset, *fragmentAsset);
 
-        return Common::Event::EventResult::Success();
-    }
+        if (!shader || !shader->IsValid())
+            return Common::Event::EventResult::Failure("Failed to create shader program");
 
-    void ClientLifecycleModule::BuildSceneMeshes()
-    {
-        const auto sceneModuleOpt = context->GetModule<ClientSceneModule>();
-
-        if (!sceneModuleOpt.has_value() || !sceneModuleOpt->get().HasPendingSceneData())
-            return;
-
-        const auto groups = sceneModuleOpt->get().TakePendingSceneData();
-        sceneMeshes.clear();
-
-        for (const auto& group : groups)
+        if (auto mapGeometryAffector = context.GetModule<Render::Affectors::MapGeometryRenderAffector>(); mapGeometryAffector.has_value())
         {
-            auto mesh = std::make_unique<Resource::Mesh>(*cachedBufferManager, Vertex::LAYOUT, PrimitiveType::TRIANGLES);
-
-            mesh->SetVertexData(group.vertexData.data(), group.vertexData.size() * sizeof(float));
-            mesh->SetIndexData(group.indices.data(), group.indices.size() * sizeof(uint32_t), IndexType::UINT32);
-
-            sceneMeshes.push_back(std::move(mesh));
+            mapGeometryAffector->get().SetupRenderState(bufferManager, uniformManager, cachedTextureManager);
+            mapGeometryAffector->get().SetShader(std::move(shader));
         }
 
-        logger->info("Built {} scene meshes", sceneMeshes.size());
+        if (auto playerRenderAffector = context.GetModule<Render::Affectors::PlayerRenderAffector>(); playerRenderAffector.has_value())
+        {
+            playerRenderAffector->get().SetupRenderState(bufferManager, uniformManager, cachedTextureManager);
+
+            auto playerShader = shaderManager->CreateFromTextAssets(*vertexAsset, *fragmentAsset);
+
+            if (playerShader && playerShader->IsValid())
+                playerRenderAffector->get().SetShader(std::move(playerShader));
+        }
+
+        logger->info("Render state initialized successfully");
+
+        return Common::Event::EventResult::Success();
     }
 
     Common::Event::EventResult ClientLifecycleModule::OnRenderFrameEvent(IRenderBackend* backend)
@@ -149,7 +125,12 @@ namespace RenderStar::Client::Core
         backend->BeginFrame();
         uniformPoolIndex = 0;
 
-        BuildSceneMeshes();
+        auto& componentModule = context->GetDependency<Common::Component::ComponentModule>();
+        auto& playerModule = context->GetDependency<Gameplay::ClientPlayerModule>();
+        auto mapGeometryAffectorOpt = context->GetModule<Render::Affectors::MapGeometryRenderAffector>();
+
+        if (mapGeometryAffectorOpt.has_value())
+            mapGeometryAffectorOpt->get().CheckForNewMapGeometry(componentModule);
 
         testRotationAngle += 0.5f;
 
@@ -158,9 +139,11 @@ namespace RenderStar::Client::Core
 
         glm::mat4 viewProjection(1.0f);
 
-        if (const auto componentModule = context->GetModule<Common::Component::ComponentModule>(); componentModule.has_value() && playerEntity.IsValid())
+        playerEntity = playerModule.GetLocalPlayerEntity();
+
+        if (playerEntity.IsValid())
         {
-            if (auto cameraOpt = componentModule->get().GetComponent<Components::Camera>(playerEntity); cameraOpt.has_value())
+            if (auto cameraOpt = componentModule.GetComponent<Components::Camera>(playerEntity); cameraOpt.has_value())
                 viewProjection = cameraOpt->get().GetViewProjectionMatrix();
         }
 
@@ -170,61 +153,17 @@ namespace RenderStar::Client::Core
         model = glm::rotate(model, glm::radians(testRotationAngle * 0.5f), glm::vec3(1.0f, 0.0f, 0.0f));
 
         const StandardUniforms uniformData(model, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
-        const int32_t frameIndex = backend->GetCurrentFrame();
 
         auto& [cubeBuffer, cubeBinding] = AcquireUniformSlot();
 
         cubeBuffer->SetSubData(&uniformData, StandardUniforms::Size(), 0);
-        backend->SubmitDrawCommand(testShader.get(), cubeBinding.get(), frameIndex, testMesh->GetUnderlyingMesh());
         backend->ExecuteDrawCommands();
 
-        if (auto playerModuleOpt = context->GetModule<Gameplay::ClientPlayerModule>(); playerModuleOpt.has_value())
-        {
-            auto& playerModule = playerModuleOpt->get();
+        if (mapGeometryAffectorOpt.has_value())
+            mapGeometryAffectorOpt->get().Render(componentModule, backend, viewProjection);
 
-            if (const auto componentModule = context->GetModule<Common::Component::ComponentModule>(); componentModule.has_value() && playerEntity.IsValid())
-            {
-                if (auto transformOpt = componentModule->get().GetComponent<Common::Component::Transform>(playerEntity); transformOpt.has_value())
-                {
-                    float yaw = -90.0f;
-                    float pitch = 0.0f;
-
-                    if (auto controllerOpt = componentModule->get().GetComponent<Gameplay::PlayerController>(playerEntity); controllerOpt.has_value())
-                    {
-                        yaw = controllerOpt->get().yaw;
-                        pitch = controllerOpt->get().pitch;
-                    }
-
-                    const auto& pos = transformOpt->get().position;
-                    playerModule.SendLocalPosition(pos.x, pos.y, pos.z, yaw, pitch);
-                }
-            }
-
-            for (const auto& [id, remote] : playerModule.GetRemotePlayers())
-            {
-                auto remoteModel = glm::translate(glm::mat4(1.0f), remote.position);
-                remoteModel = glm::rotate(remoteModel, glm::radians(remote.yaw + 90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-
-                const StandardUniforms remoteUniforms(remoteModel, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-
-                auto& [remoteBuffer, remoteBinding] = AcquireUniformSlot();
-
-                remoteBuffer->SetSubData(&remoteUniforms, StandardUniforms::Size(), 0);
-                backend->SubmitDrawCommand(testShader.get(), remoteBinding.get(), frameIndex, testMesh->GetUnderlyingMesh());
-                backend->ExecuteDrawCommands();
-            }
-        }
-
-        for (const auto& sceneMesh : sceneMeshes)
-        {
-            const StandardUniforms sceneUniforms(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f)), viewProjection, glm::vec4(0.0f));
-
-            auto& [sceneBuffer, sceneBinding] = AcquireUniformSlot();
-
-            sceneBuffer->SetSubData(&sceneUniforms, StandardUniforms::Size(), 0);
-            backend->SubmitDrawCommand(testShader.get(), sceneBinding.get(), frameIndex, sceneMesh->GetUnderlyingMesh());
-            backend->ExecuteDrawCommands();
-        }
+        if (auto playerRenderAffectorOpt = context->GetModule<Render::Affectors::PlayerRenderAffector>(); playerRenderAffectorOpt.has_value())
+            playerRenderAffectorOpt->get().Render(componentModule, backend, viewProjection, playerModule.GetLocalPlayerId());
 
         backend->EndFrame();
 
@@ -238,10 +177,14 @@ namespace RenderStar::Client::Core
 
         UniformSlot slot;
         slot.buffer = cachedBufferManager->CreateUniformBuffer(StandardUniforms::Size());
-        slot.binding = cachedUniformManager->CreateBindingForShader(testShader.get());
 
         if (slot.binding)
+        {
             slot.binding->UpdateBuffer(0, slot.buffer.get(), StandardUniforms::Size());
+
+            if (cachedTextureManager)
+                slot.binding->UpdateTexture(1, cachedTextureManager->GetDefaultTexture());
+        }
 
         uniformPool.push_back(std::move(slot));
         return uniformPool[uniformPoolIndex++];
@@ -275,41 +218,12 @@ namespace RenderStar::Client::Core
             return OnRenderFrameEvent(event.backend);
         });
 
-        logger->info("Event subscriptions set up");
+        auto& windowModule = context.GetDependency<ClientWindowModule>();
 
-        const auto componentModule = context.GetModule<Common::Component::ComponentModule>();
-        const auto windowModule = context.GetModule<ClientWindowModule>();
+        if (auto cameraAffector = context.GetModule<Render::Affectors::CameraAffector>(); cameraAffector.has_value())
+            cameraAffector->get().SetViewportSize(static_cast<int32_t>(windowModule.GetWidth()), static_cast<int32_t>(windowModule.GetHeight()));
 
-        if (!componentModule.has_value())
-        {
-            logger->error("ComponentModule not found");
-            return;
-        }
-
-        componentModule->get().RegisterSubModule(std::make_unique<Gameplay::PlayerControllerAffector>());
-        componentModule->get().RegisterSubModule(std::make_unique<Common::Component::Affectors::TransformAffector>());
-        componentModule->get().RegisterSubModule(std::make_unique<Render::Affectors::CameraAffector>());
-
-        if (windowModule.has_value())
-        {
-            if (auto cameraAffector = context.GetModule<Render::Affectors::CameraAffector>(); cameraAffector.has_value())
-                cameraAffector->get().SetViewportSize(static_cast<int32_t>(windowModule->get().GetWidth()), static_cast<int32_t>(windowModule->get().GetHeight()));
-        }
-
-        playerEntity = componentModule->get().CreateEntity("Player");
-
-        auto& transform = componentModule->get().AddComponent<Common::Component::Transform>(playerEntity);
-        transform.position = glm::vec3(0.0f, 2.0f, 5.0f);
-
-        auto& camera = componentModule->get().AddComponent<Components::Camera>(playerEntity);
-        camera.projectionType = Components::ProjectionType::PERSPECTIVE;
-        camera.fieldOfView = 60.0f;
-        camera.nearPlane = 0.1f;
-        camera.farPlane = 100.0f;
-
-        componentModule->get().AddComponent<Gameplay::PlayerController>(playerEntity);
-
-        logger->info("Player entity created and affectors registered");
+        logger->info("Gameplay logic set up, waiting for player entity from server");
     }
 
     void ClientLifecycleModule::SetupMainLoop() const
@@ -332,49 +246,55 @@ namespace RenderStar::Client::Core
 
         logger->info("Setting up tick handler on ClientCoreEventBus");
 
-        const auto windowModule = context->GetModule<ClientWindowModule>();
-        const auto inputModule = context->GetModule<Input::ClientInputModule>();
-        const auto timeModule = context->GetModule<Common::Time::TimeModule>();
-        const auto componentModule = context->GetModule<Common::Component::ComponentModule>();
-        const auto rendererModule = context->GetModule<RendererModule>();
+        auto* windowModule = &context->GetDependency<ClientWindowModule>();
+        auto* inputModule = &context->GetDependency<Input::ClientInputModule>();
+        auto* timeModule = &context->GetDependency<Common::Time::TimeModule>();
+        auto* componentModule = &context->GetDependency<Common::Component::ComponentModule>();
+        auto* rendererModule = &context->GetDependency<RendererModule>();
+        auto* clientSceneModule = &context->GetDependency<ClientSceneModule>();
+        auto* clientPlayerModule = &context->GetDependency<Gameplay::ClientPlayerModule>();
 
-        if (!windowModule.has_value())
+        auto playerControllerOpt = context->GetModule<Gameplay::PlayerControllerAffector>();
+        Gameplay::PlayerControllerAffector* playerControllerAffector = playerControllerOpt.has_value() ? &playerControllerOpt->get() : nullptr;
+
+        if (!playerControllerAffector)
+            logger->warn("PlayerControllerAffector not found as sub-module, authority context will not be set");
+        else
+            logger->info("PlayerControllerAffector found, authority context will be managed in tick loop");
+
+        coreEventBus->get().SetTickHandler([=, &coreEventBus = coreEventBus->get(), &renderEventBus = renderEventBus->get()]
         {
-            logger->error("WindowModule not found");
-            return;
-        }
+            windowModule->Tick();
+            inputModule->Tick();
 
-        if (!rendererModule.has_value())
-        {
-            logger->error("RendererModule not found");
-            return;
-        }
-
-        coreEventBus->get().SetTickHandler([=]
-        {
-            windowModule->get().Tick();
-
-            if (inputModule.has_value())
-                inputModule->get().Tick();
-
-            if (windowModule->get().ShouldClose())
+            if (windowModule->ShouldClose())
             {
-                if (coreEventBus.has_value())
-                    coreEventBus->get().Shutdown();
-
+                coreEventBus.Shutdown();
                 return;
             }
 
-            if (timeModule.has_value())
-                timeModule->get().Tick();
+            timeModule->Tick();
 
-            if (componentModule.has_value())
-                componentModule->get().RunAffectors();
+            if (clientSceneModule->HasPendingData())
+                clientSceneModule->ProcessPendingEntityData();
 
-            renderEventBus.value().get().Publish(Event::Events::ClientRenderFrameEvent(rendererModule.value().get().GetBackend()));
+            clientPlayerModule->CheckForLocalPlayerEntity(*componentModule);
 
-            if (inputModule.has_value())
-                inputModule->get().EndFrame();
+            if (playerControllerAffector)
+            {
+                int32_t playerId = clientPlayerModule->GetLocalPlayerId();
+
+                if (playerId >= 0)
+                    playerControllerAffector->SetAuthorityContext(Common::Component::AuthorityContext::AsClient(playerId));
+            }
+
+            componentModule->RunAffectors();
+
+            clientSceneModule->SendDirtyEntityUpdates();
+
+            renderEventBus.Publish(Event::Events::ClientRenderFrameEvent(rendererModule->GetBackend()));
+
+            inputModule->EndFrame();
         });
     }
 
@@ -387,6 +307,7 @@ namespace RenderStar::Client::Core
             Input::ClientInputModule,
             Common::Time::TimeModule,
             Gameplay::ClientPlayerModule,
+            Network::ClientNetworkModule,
             ClientSceneModule>();
     }
 }

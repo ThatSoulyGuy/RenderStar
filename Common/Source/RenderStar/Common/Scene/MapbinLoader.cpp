@@ -43,21 +43,34 @@ namespace RenderStar::Common::Scene
         uint32_t groupCount = ReadUint32(ptr + 12);
         ptr += HEADER_SIZE;
 
+        MapbinScene scene;
+        scene.textures.reserve(textureCount);
+
         for (uint32_t i = 0; i < textureCount; ++i)
         {
             if (ptr + TEXTURE_HEADER_SIZE > end)
                 return std::nullopt;
 
+            MapbinTexture texture;
+            texture.materialId = static_cast<int32_t>(ReadUint32(ptr));
+            texture.width = ReadUint32(ptr + 4);
+            texture.height = ReadUint32(ptr + 8);
+            texture.wrapS = ReadUint32(ptr + 12);
+            texture.wrapT = ReadUint32(ptr + 16);
+            texture.minFilter = ReadUint32(ptr + 20);
+            texture.magFilter = ReadUint32(ptr + 24);
             uint32_t pixelDataSize = ReadUint32(ptr + 28);
             ptr += TEXTURE_HEADER_SIZE;
 
             if (ptr + pixelDataSize > end)
                 return std::nullopt;
 
+            texture.pixelData.assign(ptr, ptr + pixelDataSize);
             ptr += pixelDataSize;
+
+            scene.textures.push_back(std::move(texture));
         }
 
-        MapbinScene scene;
         scene.groups.reserve(groupCount);
 
         for (uint32_t i = 0; i < groupCount; ++i)
@@ -65,6 +78,7 @@ namespace RenderStar::Common::Scene
             if (ptr + GROUP_HEADER_SIZE > end)
                 return std::nullopt;
 
+            uint32_t materialId = ReadUint32(ptr);
             ptr += 4;
             uint32_t vertexCount = ReadUint32(ptr);
             ptr += 4;
@@ -78,6 +92,7 @@ namespace RenderStar::Common::Scene
                 return std::nullopt;
 
             MapbinGroup group;
+            group.materialId = static_cast<int32_t>(materialId);
             group.vertexCount = static_cast<int32_t>(vertexCount);
             group.vertexData.resize(static_cast<size_t>(vertexCount) * 8);
 
@@ -89,9 +104,9 @@ namespace RenderStar::Common::Scene
                 group.vertexData[offset + 1] = ReadFloat(ptr + 4);
                 group.vertexData[offset + 2] = ReadFloat(ptr + 8);
 
-                group.vertexData[offset + 3] = ReadFloat(ptr + 12) * 0.5f + 0.5f;
-                group.vertexData[offset + 4] = ReadFloat(ptr + 16) * 0.5f + 0.5f;
-                group.vertexData[offset + 5] = ReadFloat(ptr + 20) * 0.5f + 0.5f;
+                group.vertexData[offset + 3] = 1.0f;
+                group.vertexData[offset + 4] = 1.0f;
+                group.vertexData[offset + 5] = 1.0f;
 
                 group.vertexData[offset + 6] = ReadFloat(ptr + 24);
                 group.vertexData[offset + 7] = ReadFloat(ptr + 28);

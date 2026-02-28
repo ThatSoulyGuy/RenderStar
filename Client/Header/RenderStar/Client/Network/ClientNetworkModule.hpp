@@ -40,8 +40,6 @@ namespace RenderStar::Client::Network
 
         bool Send(const Common::Network::IPacket& packet);
 
-        Common::Network::PacketModule* GetPacketModule() const;
-
         ConnectionState GetState() const;
 
         bool IsConnected() const;
@@ -88,7 +86,9 @@ namespace RenderStar::Client::Network
         asio::io_context ioContext;
         std::unique_ptr<TcpSocket> socket;
         std::thread networkThread;
+        std::mutex sendMutex;
         std::array<uint8_t, RECEIVE_BUFFER_SIZE> receiveBuffer;
         std::vector<uint8_t> accumulationBuffer;
+        Common::Network::PacketModule* packetModule = nullptr;
     };
 }

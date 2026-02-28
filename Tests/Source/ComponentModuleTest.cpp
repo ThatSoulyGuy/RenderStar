@@ -139,9 +139,18 @@ TEST_F(ComponentModuleTest, DestroyEntityRemovesComponents)
 
 TEST_F(ComponentModuleTest, RunAffectorsCallsRegistered)
 {
+    manager->Shutdown();
+
     auto affector = std::make_unique<TestAffector>();
     auto* affectorPtr = affector.get();
-    module->RegisterSubModule(std::move(affector));
+
+    auto cm = ComponentModule::Builder()
+        .Affector(std::move(affector))
+        .Build();
+    module = cm.get();
+
+    manager = ModuleManager::Builder().Module(std::move(cm)).Build();
+    manager->Start();
 
     module->RunAffectors();
     EXPECT_EQ(affectorPtr->callCount, 1);

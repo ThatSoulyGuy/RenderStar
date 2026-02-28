@@ -28,5 +28,6 @@ namespace RenderStar::Client::Gameplay
 
         Input::ClientInputModule* inputModule = nullptr;
         Common::Time::TimeModule* timeModule = nullptr;
+        bool authorityWarningLogged = false;
     };
 }
