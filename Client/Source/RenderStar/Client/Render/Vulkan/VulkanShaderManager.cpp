@@ -4,6 +4,7 @@
 #include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
 #include "RenderStar/Common/Asset/ITextAsset.hpp"
 #include "RenderStar/Common/Asset/IBinaryAsset.hpp"
+#include <regex>
 
 namespace RenderStar::Client::Render::Vulkan
 {
@@ -30,7 +31,17 @@ namespace RenderStar::Client::Render::Vulkan
     {
     }
 
-    VulkanShaderManager::~VulkanShaderManager() = default;
+    VulkanShaderManager::~VulkanShaderManager()
+    {
+        for (auto layout : ownedLayouts)
+        {
+            VulkanDescriptorSetLayout wrapper;
+            wrapper.layout = layout;
+            descriptorModule->DestroyDescriptorSetLayout(wrapper);
+        }
+
+        ownedLayouts.clear();
+    }
 
     void VulkanShaderManager::Initialize(
         VkDevice vulkanDevice,
@@ -56,7 +67,9 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanShader vertexShader = shaderModule->LoadShaderFromGlsl(source.vertexSource, VulkanShaderStage::VERTEX, "vertex");
         VulkanShader fragmentShader = shaderModule->LoadShaderFromGlsl(source.fragmentSource, VulkanShaderStage::FRAGMENT, "fragment");
 
-        program->Initialize(device, renderPass, shaderModule, descriptorModule, vertexShader, fragmentShader, vertexLayout, *resourceManager);
+        VkDescriptorSetLayout layout = CreateDescriptorLayoutFromGlsl(source.vertexSource, source.fragmentSource);
+
+        program->InitializeWithLayout(device, renderPass, shaderModule, vertexShader, fragmentShader, vertexLayout, layout, *resourceManager);
 
         logger->info("Created shader from GLSL source");
 
@@ -153,5 +166,94 @@ namespace RenderStar::Client::Render::Vulkan
     void VulkanShaderManager::DestroyShader(IShaderProgram* shader)
     {
         (void)shader;
+    }
+
+    VkDescriptorSetLayout VulkanShaderManager::CreateDescriptorLayoutFromGlsl(
+        const std::string& vertexGlsl,
+        const std::string& fragmentGlsl)
+    {
+        std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+        std::regex uniformRegex(R"(layout\s*\(\s*binding\s*=\s*(\d+)\s*\)\s*uniform\s+(?!sampler)(\w+))");
+        std::regex samplerRegex(R"(layout\s*\(\s*binding\s*=\s*(\d+)\s*\)\s*uniform\s+sampler\w*\s+(\w+))");
+
+        auto addBindings = [&](const std::string& source, VkShaderStageFlags stageFlag)
+        {
+            std::sregex_iterator it(source.begin(), source.end(), uniformRegex);
+            std::sregex_iterator end;
+
+            for (; it != end; ++it)
+            {
+                uint32_t binding = std::stoul((*it)[1].str());
+
+                bool found = false;
+                for (auto& b : bindings)
+                {
+                    if (b.binding == binding && b.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
+                    {
+                        b.stageFlags |= stageFlag;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    VkDescriptorSetLayoutBinding b{};
+                    b.binding = binding;
+                    b.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                    b.descriptorCount = 1;
+                    b.stageFlags = stageFlag;
+                    bindings.push_back(b);
+                }
+            }
+
+            std::sregex_iterator sit(source.begin(), source.end(), samplerRegex);
+
+            for (; sit != end; ++sit)
+            {
+                uint32_t binding = std::stoul((*sit)[1].str());
+
+                bool found = false;
+                for (auto& b : bindings)
+                {
+                    if (b.binding == binding && b.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+                    {
+                        b.stageFlags |= stageFlag;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    VkDescriptorSetLayoutBinding b{};
+                    b.binding = binding;
+                    b.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                    b.descriptorCount = 1;
+                    b.stageFlags = stageFlag;
+                    b.pImmutableSamplers = nullptr;
+                    bindings.push_back(b);
+                }
+            }
+        };
+
+        addBindings(vertexGlsl, VK_SHADER_STAGE_VERTEX_BIT);
+        addBindings(fragmentGlsl, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+        if (bindings.empty())
+        {
+            VkDescriptorSetLayoutBinding dummy{};
+            dummy.binding = 0;
+            dummy.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            dummy.descriptorCount = 1;
+            dummy.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+            bindings.push_back(dummy);
+        }
+
+        auto result = descriptorModule->CreateDescriptorSetLayout(bindings);
+        ownedLayouts.push_back(result.layout);
+
+        return result.layout;
     }
 }

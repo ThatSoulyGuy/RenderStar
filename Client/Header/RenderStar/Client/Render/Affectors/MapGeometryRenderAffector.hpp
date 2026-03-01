@@ -30,6 +30,22 @@ namespace RenderStar::Client::Render::Affectors
     {
     public:
 
+        struct LoadedMaterial
+        {
+            float roughness = 0.5f;
+            float metallic = 0.0f;
+            float specularStrength = 0.5f;
+            float normalStrength = 1.0f;
+            float aoStrength = 1.0f;
+            float emissionStrength = 1.0f;
+            ITextureHandle* baseColor = nullptr;
+            ITextureHandle* normalMap = nullptr;
+            ITextureHandle* roughnessMap = nullptr;
+            ITextureHandle* metallicMap = nullptr;
+            ITextureHandle* aoMap = nullptr;
+            ITextureHandle* emissionMap = nullptr;
+        };
+
         void Affect(Common::Component::ComponentModule& componentModule) override;
 
         void SetupRenderState(IBufferManager* bufferManager, IUniformManager* uniformManager, ITextureManager* textureManager);
@@ -39,11 +55,16 @@ namespace RenderStar::Client::Render::Affectors
 
         void BuildScene(
             const std::vector<Common::Scene::MapbinGroup>& groups,
-            const std::vector<Common::Scene::MapbinTexture>& textures,
+            const std::vector<Common::Scene::MapbinMaterial>& materials,
+            const std::vector<Common::Scene::MapbinGameObject>& gameObjects,
             Common::Scene::SceneModule& sceneModule,
             Common::Component::ComponentModule& componentModule);
 
+        void SetSceneLightingBuffer(IBufferHandle* buffer);
+        void SetShadowShader(std::unique_ptr<IShaderProgram> shader);
+        void SetShadowMapTexture(ITextureHandle* texture);
         void Render(Common::Component::ComponentModule& componentModule, IRenderBackend* backend, const glm::mat4& viewProjection);
+        void RenderShadowDepth(Common::Component::ComponentModule& componentModule, IRenderBackend* backend, const glm::mat4& lightViewProjection);
         void Cleanup();
 
     protected:
@@ -55,21 +76,35 @@ namespace RenderStar::Client::Render::Affectors
         struct UniformSlot
         {
             std::unique_ptr<IBufferHandle> buffer;
+            std::unique_ptr<IBufferHandle> materialBuffer;
+            std::unique_ptr<IUniformBindingHandle> binding;
+        };
+
+        struct ShadowUniformSlot
+        {
+            std::unique_ptr<IBufferHandle> buffer;
             std::unique_ptr<IUniformBindingHandle> binding;
         };
 
         UniformSlot& AcquireUniformSlot();
+        ShadowUniformSlot& AcquireShadowUniformSlot();
 
         std::unique_ptr<IShaderProgram> shader;
+        std::unique_ptr<IShaderProgram> shadowShader;
+        std::vector<ShadowUniformSlot> shadowUniformPool;
+        size_t shadowUniformPoolIndex = 0;
+        ITextureHandle* shadowMapTexture = nullptr;
         IBufferManager* bufferManager = nullptr;
         IUniformManager* uniformManager = nullptr;
         ITextureManager* textureManager = nullptr;
-        std::unordered_map<int32_t, ITextureHandle*> materialTextures;
+        std::unordered_map<int32_t, LoadedMaterial> loadedMaterials;
         std::vector<UniformSlot> uniformPool;
         size_t uniformPoolIndex = 0;
 
         std::vector<std::unique_ptr<Resource::Mesh>> sceneMeshes;
         std::vector<std::unique_ptr<ITextureHandle>> sceneTextures;
+
+        IBufferHandle* sceneLightingBuffer = nullptr;
 
         Common::Scene::SceneModule* sceneModule = nullptr;
         Common::Asset::AssetModule* assetModule = nullptr;

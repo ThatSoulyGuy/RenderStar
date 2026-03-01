@@ -91,5 +91,6 @@ namespace RenderStar::Client::Render::OpenGL
         std::unique_ptr<OpenGLShaderManagerAdapter> shaderManager;
         std::unique_ptr<OpenGLTextureManager> textureManager;
         std::unique_ptr<OpenGLCommandQueue> commandQueue;
+        uint32_t emptyVAO = 0;
     };
 }

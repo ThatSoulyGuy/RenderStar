@@ -27,6 +27,16 @@ namespace RenderStar::Client::Render::Vulkan
             const VertexLayout& vertexLayout,
             IGraphicsResourceManager& resourceManager);
 
+        void InitializeWithLayout(
+            VkDevice device,
+            VkRenderPass renderPass,
+            VulkanShaderModule* shaderModule,
+            VulkanShader vertexShader,
+            VulkanShader fragmentShader,
+            const VertexLayout& vertexLayout,
+            VkDescriptorSetLayout externalLayout,
+            IGraphicsResourceManager& resourceManager);
+
         void InitializeCompute(
             VulkanShaderModule* shaderModule,
             VulkanShader computeShader,
@@ -53,6 +63,7 @@ namespace RenderStar::Client::Render::Vulkan
     private:
 
         void BuildPipeline(VkRenderPass renderPass, const VertexLayout& vertexLayout);
+        void BuildPipelineWithLayout(VkRenderPass renderPass, const VertexLayout& vertexLayout, VkDescriptorSetLayout layout);
         void DestroyPipeline();
 
         VkFormat GetVulkanFormat(VertexAttributeType type) const;

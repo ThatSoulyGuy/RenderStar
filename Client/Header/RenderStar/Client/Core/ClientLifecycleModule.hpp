@@ -15,6 +15,16 @@ namespace RenderStar::Client::Render
     class ITextureManager;
 }
 
+namespace RenderStar::Client::Render::Platform
+{
+    class RenderingPlatformModule;
+}
+
+namespace RenderStar::Client::Render::Framework
+{
+    class RenderingFrameworkModule;
+}
+
 namespace RenderStar::Common::Event
 {
     struct EventResult;
@@ -60,5 +70,8 @@ namespace RenderStar::Client::Core
         float testRotationAngle = 0.0f;
 
         Common::Component::GameObject playerEntity = Common::Component::GameObject::Invalid();
+
+        Render::Platform::RenderingPlatformModule* platformModule = nullptr;
+        Render::Framework::RenderingFrameworkModule* frameworkModule = nullptr;
     };
 }

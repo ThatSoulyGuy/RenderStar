@@ -12,12 +12,17 @@
 #include "RenderStar/Client/Render/Affectors/PlayerRenderAffector.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
 #include "RenderStar/Client/Render/Components/Camera.hpp"
+#include "RenderStar/Client/Render/Components/Light.hpp"
+#include "RenderStar/Client/Render/Framework/RenderingFrameworkModule.hpp"
+#include "RenderStar/Client/Render/Platform/RenderingPlatformModule.hpp"
 #include "RenderStar/Client/Render/RendererModule.hpp"
 #include "RenderStar/Client/Render/Resource/IBufferManager.hpp"
 #include "RenderStar/Client/Render/Resource/IShaderManager.hpp"
 #include "RenderStar/Client/Render/Resource/ITextureManager.hpp"
 #include "RenderStar/Client/Render/Resource/IUniformManager.hpp"
 #include "RenderStar/Client/Render/Resource/StandardUniforms.hpp"
+#include "RenderStar/Client/Render/Shader/RsslCompiler.hpp"
+#include "RenderStar/Client/Render/Framework/LitVertex.hpp"
 #include "RenderStar/Client/Network/ClientNetworkModule.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
@@ -32,6 +37,15 @@ namespace RenderStar::Client::Core
 {
     void ClientLifecycleModule::OnInitialize(Common::Module::ModuleContext& context)
     {
+        if (auto platformOpt = context.GetModule<Render::Platform::RenderingPlatformModule>(); platformOpt.has_value())
+        {
+            platformModule = &platformOpt->get();
+            logger->info("RenderingPlatformModule detected, enabled={}", platformModule->IsEnabled());
+        }
+
+        if (auto frameworkOpt = context.GetModule<Render::Framework::RenderingFrameworkModule>(); frameworkOpt.has_value())
+            frameworkModule = &frameworkOpt->get();
+
         SetupGameplayLogic(context);
         SetupMainLoop();
 
@@ -47,6 +61,12 @@ namespace RenderStar::Client::Core
 
         if (auto sceneModule = context->GetModule<Common::Scene::SceneModule>(); sceneModule.has_value())
             sceneModule->get().ClearScene();
+
+        if (frameworkModule)
+        {
+            frameworkModule->Cleanup();
+            frameworkModule = nullptr;
+        }
 
         uniformPool.clear();
         cachedBufferManager = nullptr;
@@ -72,11 +92,16 @@ namespace RenderStar::Client::Core
         if (!shaderManager || !bufferManager || !uniformManager)
             return Common::Event::EventResult::Failure("Failed to get managers from renderer backent");
 
-        const auto vertexAsset = assetModule->get().LoadText(Common::Asset::AssetLocation::Parse("renderstar:shader/test.vert"));
-        const auto fragmentAsset = assetModule->get().LoadText(Common::Asset::AssetLocation::Parse("renderstar:shader/test.frag"));
+        const auto rsslAsset = assetModule->get().LoadText(
+            Common::Asset::AssetLocation::Parse("renderstar:shader/scene_geometry.rssl"));
 
-        if (!vertexAsset.IsValid() || !fragmentAsset.IsValid())
-            return Common::Event::EventResult::Failure("Failed to load shader assets");
+        if (!rsslAsset.IsValid())
+            return Common::Event::EventResult::Failure("Failed to load scene_geometry.rssl asset");
+
+        auto compiled = Render::Shader::RsslCompiler::Compile(rsslAsset.Get()->GetContent());
+
+        if (!compiled.IsValid())
+            return Common::Event::EventResult::Failure("Failed to compile scene_geometry.rssl");
 
         cachedBufferManager = bufferManager;
         cachedUniformManager = uniformManager;
@@ -85,25 +110,63 @@ namespace RenderStar::Client::Core
         if (auto cameraAffector = context.GetModule<Render::Affectors::CameraAffector>(); cameraAffector.has_value())
             cameraAffector->get().SetViewportSize(backend->GetWidth(), backend->GetHeight());
 
-        auto shader = shaderManager->CreateFromTextAssets(*vertexAsset, *fragmentAsset);
+        auto shader = shaderManager->CreateFromSource(
+            Render::ShaderSource{compiled.vertexGlsl, compiled.fragmentGlsl, {}});
 
         if (!shader || !shader->IsValid())
             return Common::Event::EventResult::Failure("Failed to create shader program");
 
+        if (frameworkModule)
+            frameworkModule->SetupRenderState(bufferManager);
+
+        Render::IBufferHandle* sceneLightingBuffer = frameworkModule ? frameworkModule->GetSceneLightingBuffer() : nullptr;
+
         if (auto mapGeometryAffector = context.GetModule<Render::Affectors::MapGeometryRenderAffector>(); mapGeometryAffector.has_value())
         {
             mapGeometryAffector->get().SetupRenderState(bufferManager, uniformManager, cachedTextureManager);
+            mapGeometryAffector->get().SetSceneLightingBuffer(sceneLightingBuffer);
             mapGeometryAffector->get().SetShader(std::move(shader));
+
+            const auto shadowRsslAsset = assetModule->get().LoadText(
+                Common::Asset::AssetLocation::Parse("renderstar:shader/shadow_depth.rssl"));
+
+            if (shadowRsslAsset.IsValid() && platformModule && platformModule->IsEnabled())
+            {
+                auto shadowCompiled = Render::Shader::RsslCompiler::Compile(shadowRsslAsset.Get()->GetContent());
+
+                if (shadowCompiled.IsValid())
+                {
+                    auto shadowShader = platformModule->CompileShaderForTarget(
+                        shadowCompiled.vertexGlsl, shadowCompiled.fragmentGlsl,
+                        "shadow_map", Render::Framework::LitVertex::LAYOUT);
+
+                    if (shadowShader && shadowShader->IsValid())
+                        mapGeometryAffector->get().SetShadowShader(std::move(shadowShader));
+                }
+            }
         }
 
         if (auto playerRenderAffector = context.GetModule<Render::Affectors::PlayerRenderAffector>(); playerRenderAffector.has_value())
         {
             playerRenderAffector->get().SetupRenderState(bufferManager, uniformManager, cachedTextureManager);
+            playerRenderAffector->get().SetSceneLightingBuffer(sceneLightingBuffer);
 
-            auto playerShader = shaderManager->CreateFromTextAssets(*vertexAsset, *fragmentAsset);
+            auto playerShader = shaderManager->CreateFromSource(
+                Render::ShaderSource{compiled.vertexGlsl, compiled.fragmentGlsl, {}});
 
             if (playerShader && playerShader->IsValid())
                 playerRenderAffector->get().SetShader(std::move(playerShader));
+        }
+
+        auto& componentModule = context.GetDependency<Common::Component::ComponentModule>();
+
+        if (auto sceneModule = context.GetModule<Common::Scene::SceneModule>(); sceneModule.has_value())
+        {
+            auto lightEntity = sceneModule->get().CreateEntity();
+            componentModule.AddComponent<Render::Components::Light>(lightEntity,
+                Render::Components::Light::Directional(
+                    glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f)),
+                    glm::vec3(1.0f), 1.0f));
         }
 
         logger->info("Render state initialized successfully");
@@ -137,12 +200,19 @@ namespace RenderStar::Client::Core
         glm::mat4 viewProjection(1.0f);
 
         playerEntity = playerModule.GetLocalPlayerEntity();
+        glm::vec3 cameraPosition(0.0f);
 
         if (playerEntity.IsValid())
         {
             if (auto cameraOpt = componentModule.GetComponent<Components::Camera>(playerEntity); cameraOpt.has_value())
                 viewProjection = cameraOpt->get().GetViewProjectionMatrix();
+
+            if (auto transformOpt = componentModule.GetComponent<Common::Component::Transform>(playerEntity); transformOpt.has_value())
+                cameraPosition = transformOpt->get().worldPosition;
         }
+
+        if (frameworkModule)
+            frameworkModule->CollectSceneData(componentModule, cameraPosition);
 
         auto model = glm::mat4(1.0f);
 
@@ -156,11 +226,37 @@ namespace RenderStar::Client::Core
         cubeBuffer->SetSubData(&uniformData, StandardUniforms::Size(), 0);
         backend->ExecuteDrawCommands();
 
-        if (mapGeometryAffectorOpt.has_value())
-            mapGeometryAffectorOpt->get().Render(componentModule, backend, viewProjection);
+        if (platformModule && platformModule->IsEnabled())
+        {
+            if (frameworkModule && mapGeometryAffectorOpt.has_value())
+            {
+                platformModule->BeginTarget("shadow_map", true);
+                mapGeometryAffectorOpt->get().RenderShadowDepth(componentModule, backend, frameworkModule->GetLightViewProjection());
+                backend->ExecuteDrawCommands();
+                platformModule->EndTarget("shadow_map");
 
-        if (auto playerRenderAffectorOpt = context->GetModule<Render::Affectors::PlayerRenderAffector>(); playerRenderAffectorOpt.has_value())
-            playerRenderAffectorOpt->get().Render(componentModule, backend, viewProjection, playerModule.GetLocalPlayerId());
+                auto* shadowTex = platformModule->GetTargetColorTexture("shadow_map");
+                mapGeometryAffectorOpt->get().SetShadowMapTexture(shadowTex);
+            }
+
+            if (mapGeometryAffectorOpt.has_value())
+                mapGeometryAffectorOpt->get().Render(componentModule, backend, viewProjection);
+
+            if (auto playerRenderAffectorOpt = context->GetModule<Render::Affectors::PlayerRenderAffector>(); playerRenderAffectorOpt.has_value())
+                playerRenderAffectorOpt->get().Render(componentModule, backend, viewProjection, playerModule.GetLocalPlayerId());
+
+            platformModule->Execute(backend);
+        }
+        else
+        {
+            if (mapGeometryAffectorOpt.has_value())
+                mapGeometryAffectorOpt->get().Render(componentModule, backend, viewProjection);
+
+            if (auto playerRenderAffectorOpt = context->GetModule<Render::Affectors::PlayerRenderAffector>(); playerRenderAffectorOpt.has_value())
+                playerRenderAffectorOpt->get().Render(componentModule, backend, viewProjection, playerModule.GetLocalPlayerId());
+
+            backend->ExecuteDrawCommands();
+        }
 
         backend->EndFrame();
 

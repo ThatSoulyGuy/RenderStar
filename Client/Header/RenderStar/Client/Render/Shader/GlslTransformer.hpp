@@ -27,5 +27,7 @@ namespace RenderStar::Client::Render::Shader
         static std::string TransformUboBindings(const std::string& source);
 
         static std::string RemovePushConstants(const std::string& source);
+
+        static std::string TransformBuiltins(const std::string& source);
     };
 }

@@ -7,7 +7,11 @@ namespace RenderStar::Client::Render
 {
     enum class TextureFormat
     {
-        RGBA8
+        RGBA8,
+        RGBA16F,
+        RGBA32F,
+        DEPTH24_STENCIL8,
+        DEPTH32F
     };
 
     enum class TextureWrapMode

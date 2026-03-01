@@ -88,6 +88,19 @@ namespace RenderStar::Client::Render::Vulkan
 
         bool IsInitialized() const override;
 
+        VkDevice GetDevice() const;
+        VkPhysicalDevice GetPhysicalDevice() const;
+        VmaAllocator GetAllocator() const;
+        VkQueue GetGraphicsQueue() const;
+        uint32_t GetGraphicsQueueFamily() const;
+        VkRenderPass GetSwapchainRenderPass() const;
+        VkFramebuffer GetSwapchainFramebuffer(uint32_t imageIndex) const;
+        uint32_t GetCurrentImageIndex() const;
+        VulkanShaderModule& GetShaderModuleRef();
+        VulkanDescriptorModule& GetDescriptorModuleRef();
+        VulkanCommandModule& GetCommandModuleRef();
+        VulkanGraphicsResourceManager& GetResourceManagerRef();
+
     private:
 
         void RecreateSwapchain();

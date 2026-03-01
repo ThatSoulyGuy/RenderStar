@@ -1,0 +1,468 @@
+================================================================================
+  MapMaker .mapbin Binary Mesh Format — Version 5 Specification
+================================================================================
+
+Overview
+--------
+The .mapbin format stores baked 3D mesh geometry grouped by material, with
+embedded RGBA textures, PBR material properties, per-texture sampling
+parameters, and a game object table. All data is little-endian. All multi-byte
+integers are unsigned 32-bit (uint32). All floating-point values are IEEE 754
+single-precision (float32).
+
+The file is written sequentially with no padding or alignment gaps between
+fields. Readers should consume fields in the exact order specified below.
+
+Version 5 expands the game object table to include rotation and light
+properties per entry. Earlier versions are still supported by the loader
+(see Section 8).
+
+
+================================================================================
+1. FILE HEADER  (16 bytes)
+================================================================================
+
+  Offset  Size    Type      Description
+  ------  ------  --------  ---------------------------------------------------
+  0x00    4       uint32    Magic number: 0x4D415042 (ASCII "MAPB")
+  0x04    4       uint32    Format version: 5
+  0x08    4       uint32    materialCount — number of material entries (N_mat)
+  0x0C    4       uint32    groupCount — number of geometry groups (N_grp)
+
+
+================================================================================
+2. MATERIAL TABLE  (N_mat entries, variable size)
+================================================================================
+
+Immediately after the header, N_mat material entries appear sequentially.
+Each material entry contains scalar properties followed by a variable number
+of texture slots.
+
+Material Entry
+--------------
+  Size    Type      Field              Description
+  ------  --------  ----------------   ----------------------------------------
+  4       uint32    materialId         Material ID (matches geometry groups)
+  4       float32   normalStrength     Normal map intensity (default 1.0)
+  4       float32   roughness          PBR roughness (default 0.5)
+  4       float32   metallic           PBR metallic (default 0.0)
+  4       float32   specularStrength   Specular intensity (default 0.5)
+  4       float32   detailScale        Detail texture tiling scale (default 1.0)
+  4       float32   emissionStrength   Emission intensity (default 1.0)
+  4       float32   aoStrength         Ambient occlusion strength (default 1.0)
+  4       uint32    slotCount          Number of texture slots (N_slots)
+
+  Followed by N_slots texture slot entries.
+
+Texture Slot Entry
+------------------
+  Size    Type      Field           Description
+  ------  --------  ----------      -------------------------------------------
+  4       uint32    slotType        Texture slot type (see enum below)
+  4       uint32    width           Texture width in pixels
+  4       uint32    height          Texture height in pixels
+  4       uint32    wrapS           Horizontal wrap mode (OpenGL enum value)
+  4       uint32    wrapT           Vertical wrap mode (OpenGL enum value)
+  4       uint32    minFilter       Minification filter (OpenGL enum value)
+  4       uint32    magFilter       Magnification filter (OpenGL enum value)
+  4       uint32    pixelDataSize   Size of pixel data in bytes
+  var     bytes     pixelData       Raw RGBA8888 pixel data (row-major, top to
+                                    bottom, 4 bytes per pixel: R, G, B, A)
+
+  Total pixel data size = width * height * 4 bytes.
+  pixelDataSize confirms this value.
+
+Texture Slot Types (TextureSlotType enum)
+-----------------------------------------
+  Value   Name            Description
+  ------  --------------- -----------------------------------------------
+  0       BASE_COLOR      Diffuse / albedo texture (always present)
+  1       NORMAL          Normal map (tangent-space)
+  2       ROUGHNESS       PBR roughness map
+  3       METALLIC        PBR metallic map
+  4       SPECULAR        Specular map
+  6       DETAIL_ALBEDO   Detail albedo overlay
+  7       DETAIL_NORMAL   Detail normal overlay
+  8       EMISSION        Emission / emissive map
+  9       AO              Ambient occlusion map
+
+  A material always has at least one slot (BASE_COLOR). Additional slots
+  are only present if the user assigned a texture file to that slot.
+
+Wrap modes (OpenGL enum values):
+  GL_REPEAT          = 0x2901 (10497)
+  GL_CLAMP_TO_EDGE   = 0x812F (33071)
+
+Filter modes (OpenGL enum values):
+  GL_NEAREST                = 0x2600 (9728)
+  GL_LINEAR                 = 0x2601 (9729)
+  GL_LINEAR_MIPMAP_LINEAR   = 0x2703 (9987)
+
+
+================================================================================
+3. GEOMETRY GROUPS  (N_grp entries, variable size)
+================================================================================
+
+After all material entries, N_grp geometry groups appear sequentially. Each
+group contains all the mesh data for a single material.
+
+Geometry Group
+--------------
+  Size    Type      Field           Description
+  ------  --------  ----------      -------------------------------------------
+  4       uint32    materialId      Material ID (matches a material entry)
+  4       uint32    vertexCount     Number of vertices (N_vtx)
+  4       uint32    indexCount      Number of indices (N_idx)
+
+  Followed by N_vtx vertex records, then N_idx index values.
+
+Vertex Record (32 bytes each)
+-----------------------------
+  Size    Type      Field      Description
+  ------  --------  --------   ------------------------------------------------
+  4       float32   pos.x      Position X (world-space)
+  4       float32   pos.y      Position Y (world-space)
+  4       float32   pos.z      Position Z (world-space)
+  4       float32   norm.x     Normal X (unit length)
+  4       float32   norm.y     Normal Y (unit length)
+  4       float32   norm.z     Normal Z (unit length)
+  4       float32   uv.u       Texture coordinate U
+  4       float32   uv.v       Texture coordinate V
+
+  Vertices are in world-space. Normals are unit-length face normals (flat
+  shading). UV coordinates are unbound — values outside [0,1] are valid and
+  handled by the texture's wrap mode.
+
+Index Array
+-----------
+  Size    Type      Description
+  ------  --------  -----------------------------------------------------------
+  4       uint32    Vertex index (repeated N_idx times)
+
+  Indices are 0-based relative to the start of THIS group's vertex array.
+  Every 3 consecutive indices form one triangle (triangle list topology).
+  Winding order is counter-clockwise when viewed from the front face.
+
+
+================================================================================
+4. GAME OBJECT TABLE  (v5, variable size)
+================================================================================
+
+After all geometry groups, a game object table appears. Game objects are
+point entities — they have no mesh geometry. Each entry is variable-size:
+the type field determines which additional fields follow.
+
+Game Object Table Header
+------------------------
+  Size    Type      Field              Description
+  ------  --------  ----------------   ----------------------------------------
+  4       uint32    gameObjectCount    Number of game object entries (N_go)
+
+  Followed by N_go game object entries (variable size, read sequentially).
+
+Common Fields (28 bytes, present in ALL entries)
+------------------------------------------------
+  Size    Type      Field        Description
+  ------  --------  ----------   ----------------------------------------------
+  4       uint32    type         Game object type (see enum below)
+  4       float32   pos.x        Position X (world-space)
+  4       float32   pos.y        Position Y (world-space)
+  4       float32   pos.z        Position Z (world-space)
+  4       float32   rot.x        Rotation pitch (degrees)
+  4       float32   rot.y        Rotation yaw (degrees)
+  4       float32   rot.z        Rotation roll (degrees)
+
+Light Fields (+16 bytes, present when type >= 1)
+-------------------------------------------------
+  Size    Type      Field        Description
+  ------  --------  ----------   ----------------------------------------------
+  4       float32   color.r      Light color red   (0–1)
+  4       float32   color.g      Light color green  (0–1)
+  4       float32   color.b      Light color blue   (0–1)
+  4       float32   intensity    Light intensity
+
+Spot Light Fields (+8 bytes, present when type == 2)
+----------------------------------------------------
+  Size    Type      Field        Description
+  ------  --------  ----------   ----------------------------------------------
+  4       float32   innerCone    Inner cone half-angle (degrees)
+  4       float32   outerCone    Outer cone half-angle (degrees)
+
+Entry Sizes by Type
+-------------------
+  Type   Name            Size (bytes)   Fields
+  -----  --------------- -------------- ----------------------------------------
+  0      PLAYER_START    28             common only
+  1      POINT_LIGHT     44             common + light
+  2      SPOT_LIGHT      52             common + light + spot
+  3      SUN_LIGHT       44             common + light
+
+  Positions are in the same world-space coordinate system as geometry
+  vertices (Y-up, scaled by GRID_SIZE).
+
+  Rotation is Euler angles in degrees, applied in YXZ order (yaw, pitch,
+  roll). For PLAYER_START this determines the spawn facing direction. For
+  SPOT_LIGHT and SUN_LIGHT this determines the light direction.
+
+Game Object Types (GameObjectType enum)
+---------------------------------------
+  Value   Name            Description
+  ------  --------------- -----------------------------------------------
+  0       PLAYER_START    Player spawn point (at most one per map)
+  1       POINT_LIGHT     Omnidirectional point light source
+  2       SPOT_LIGHT      Directional spot light source
+  3       SUN_LIGHT       Directional sun / ambient light source
+
+
+================================================================================
+5. COMPLETE FILE LAYOUT SUMMARY
+================================================================================
+
+  +------------------------------------------+
+  | HEADER (16 bytes)                        |
+  |   magic, version, materialCount,         |
+  |   groupCount                             |
+  +------------------------------------------+
+  | MATERIAL 0                               |
+  |   materialId                             |
+  |   7 scalar floats (normalStrength,       |
+  |     roughness, metallic, specular,       |
+  |     detailScale, emission, aoStrength)   |
+  |   slotCount                              |
+  |   SLOT 0 (e.g. BASE_COLOR)              |
+  |     slotType, w, h, wrapS, wrapT,       |
+  |     minFilter, magFilter,               |
+  |     pixelDataSize, pixelData[...]        |
+  |   SLOT 1 (e.g. NORMAL)                  |
+  |     ...                                  |
+  |   ...                                    |
+  +------------------------------------------+
+  | MATERIAL 1                               |
+  |   ...                                    |
+  +------------------------------------------+
+  | ...                                      |
+  +------------------------------------------+
+  | MATERIAL N_mat-1                         |
+  |   ...                                    |
+  +------------------------------------------+
+  | GEOMETRY GROUP 0                         |
+  |   materialId, vertexCount, indexCount,   |
+  |   vertices[vertexCount * 32 bytes],      |
+  |   indices[indexCount * 4 bytes]          |
+  +------------------------------------------+
+  | GEOMETRY GROUP 1                         |
+  |   ...                                    |
+  +------------------------------------------+
+  | ...                                      |
+  +------------------------------------------+
+  | GEOMETRY GROUP N_grp-1                   |
+  |   ...                                    |
+  +------------------------------------------+
+  | GAME OBJECT TABLE (v5)                   |
+  |   gameObjectCount                        |
+  |   entry 0: type, pos, rot               |
+  |            [+ light fields if light]     |
+  |            [+ cone fields if spot]       |
+  |   entry 1: ...  (variable size)         |
+  |   ...                                    |
+  |   entry N_go-1: ...                      |
+  +------------------------------------------+
+  | EOF                                      |
+  +------------------------------------------+
+
+
+================================================================================
+6. DECODING PSEUDOCODE
+================================================================================
+
+  file = open("map_mesh.mapbin", "rb")
+
+  # --- Header ---
+  magic         = read_uint32(file)   # expect 0x4D415042
+  version       = read_uint32(file)   # expect 5 (or 2/3/4 for legacy)
+  materialCount = read_uint32(file)
+  groupCount    = read_uint32(file)
+
+  if version == 2:
+      # Legacy v2 format: flat texture table (one texture per material)
+      # See Section 8 for v2 layout details
+      ...
+
+  elif version >= 3:
+      # --- Materials (v3+) ---
+      materials = []
+      for i in range(materialCount):
+          mat = {}
+          mat.materialId       = read_uint32(file)
+          mat.normalStrength   = read_float32(file)
+          mat.roughness        = read_float32(file)
+          mat.metallic         = read_float32(file)
+          mat.specularStrength = read_float32(file)
+          mat.detailScale      = read_float32(file)
+          mat.emissionStrength = read_float32(file)
+          mat.aoStrength       = read_float32(file)
+          mat.slotCount        = read_uint32(file)
+
+          mat.texSlots = []
+          for s in range(mat.slotCount):
+              slot = {}
+              slot.slotType      = read_uint32(file)
+              slot.width         = read_uint32(file)
+              slot.height        = read_uint32(file)
+              slot.wrapS         = read_uint32(file)
+              slot.wrapT         = read_uint32(file)
+              slot.minFilter     = read_uint32(file)
+              slot.magFilter     = read_uint32(file)
+              slot.pixelDataSize = read_uint32(file)
+              slot.pixels        = read_bytes(file, slot.pixelDataSize)
+              mat.texSlots.append(slot)
+
+          materials.append(mat)
+
+  # --- Geometry Groups (same for all versions) ---
+  groups = []
+  for i in range(groupCount):
+      grp = {}
+      grp.materialId  = read_uint32(file)
+      grp.vertexCount = read_uint32(file)
+      grp.indexCount  = read_uint32(file)
+
+      grp.vertices = []
+      for v in range(grp.vertexCount):
+          vertex = {}
+          vertex.px, vertex.py, vertex.pz = read_float32(file), read_float32(file), read_float32(file)
+          vertex.nx, vertex.ny, vertex.nz = read_float32(file), read_float32(file), read_float32(file)
+          vertex.u, vertex.v              = read_float32(file), read_float32(file)
+          grp.vertices.append(vertex)
+
+      grp.indices = []
+      for j in range(grp.indexCount):
+          grp.indices.append(read_uint32(file))
+
+      groups.append(grp)
+
+  # --- Game Object Table ---
+  gameObjects = []
+
+  if version == 4:
+      # v4 legacy: type + position only (16 bytes per entry)
+      goCount = read_uint32(file)
+      for i in range(goCount):
+          go = {}
+          go.type = read_uint32(file)
+          go.x    = read_float32(file)
+          go.y    = read_float32(file)
+          go.z    = read_float32(file)
+          gameObjects.append(go)
+
+  elif version >= 5:
+      # v5: variable-size entries — type determines which fields follow
+      goCount = read_uint32(file)
+      for i in range(goCount):
+          go = {}
+          go.type = read_uint32(file)
+          go.x    = read_float32(file)
+          go.y    = read_float32(file)
+          go.z    = read_float32(file)
+          go.rotX = read_float32(file)
+          go.rotY = read_float32(file)
+          go.rotZ = read_float32(file)
+
+          if go.type >= 1:   # any light type
+              go.colorR    = read_float32(file)
+              go.colorG    = read_float32(file)
+              go.colorB    = read_float32(file)
+              go.intensity = read_float32(file)
+
+              if go.type == 2:   # SPOT_LIGHT only
+                  go.innerCone = read_float32(file)
+                  go.outerCone = read_float32(file)
+
+          gameObjects.append(go)
+
+
+================================================================================
+7. NOTES
+================================================================================
+
+  - Byte order: All values are little-endian.
+
+  - Coordinate system: Right-handed. Y is up. World units are in the
+    MapMaker grid scale (default GRID_SIZE = 10.0 world units per grid cell).
+
+  - Triangle winding: Counter-clockwise (CCW) front faces, suitable for
+    OpenGL's default GL_CCW front-face convention.
+
+  - Material linkage: Each geometry group references a materialId. A material
+    entry with the same materialId provides the textures and PBR properties
+    for that group. If no material matches, a fallback should be used.
+
+  - Texture format: RGBA8888, 8 bits per channel, 4 channels per pixel,
+    32 bits per pixel total. Row-major order, top-to-bottom. No compression.
+
+  - Rendering with base color only: Readers that don't support PBR can
+    extract only the BASE_COLOR slot (slotType=0) from each material and
+    ignore all other slots and scalar properties.
+
+  - No skeleton, animation, or scene-graph data is included. The file
+    contains static, pre-baked triangle mesh geometry only. Game objects
+    are point entities with no associated geometry.
+
+  - Index values are always relative to the vertex array of their own
+    geometry group (0-based within the group), never global.
+
+  - Groups are sorted by material ID in ascending order.
+
+  - Game object entries are variable-size. The type field determines which
+    additional fields follow (see Section 4). Readers must parse the type
+    first and then read the appropriate number of subsequent fields.
+
+
+================================================================================
+8. BACKWARD COMPATIBILITY
+================================================================================
+
+Version 2
+---------
+Version 2 files use a simpler flat texture table instead of the multi-slot
+material system. The header field at offset 0x08 is called "textureCount"
+in v2 (equivalent to "materialCount" in v3+).
+
+v2 Texture Table (replaces Section 2)
+--------------------------------------
+  N_tex texture entries, each containing:
+
+  Size    Type      Field           Description
+  ------  --------  ----------      -------------------------------------------
+  4       uint32    materialId      Material ID
+  4       uint32    width           Texture width in pixels
+  4       uint32    height          Texture height in pixels
+  4       uint32    wrapS           Horizontal wrap mode
+  4       uint32    wrapT           Vertical wrap mode
+  4       uint32    minFilter       Minification filter
+  4       uint32    magFilter       Magnification filter
+  4       uint32    pixelDataSize   Size of pixel data in bytes
+  var     bytes     pixelData       Raw RGBA8888 pixel data
+
+  Each v2 texture entry is equivalent to a single BASE_COLOR slot with no
+  scalar properties. Geometry groups follow in the same format as v3+.
+  No game object table is present.
+
+Version 3
+---------
+Version 3 uses the same material table format as v5 (Section 2) and the
+same geometry group format (Section 3), but has no game object table.
+The file ends immediately after the last geometry group.
+
+Version 4
+---------
+Version 4 has a game object table with a smaller entry format (16 bytes):
+type (uint32) + position (3 x float32). No rotation or light data.
+
+Dispatch
+--------
+  Loaders should check the version field and dispatch accordingly:
+    version == 2 → flat texture table, no game objects
+    version == 3 → per-material multi-slot format, no game objects
+    version == 4 → per-material multi-slot format + game objects (16 bytes each)
+    version == 5 → per-material multi-slot format + game objects (variable size)

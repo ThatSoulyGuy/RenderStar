@@ -90,6 +90,8 @@ namespace RenderStar::Client::Render::OpenGL
         textureManager->Initialize();
         commandQueue = std::make_unique<OpenGLCommandQueue>();
 
+        glGenVertexArrays(1, &emptyVAO);
+
         initialized = true;
         logger->info("OpenGL render backend initialized ({}x{})", width, height);
     }
@@ -101,6 +103,12 @@ namespace RenderStar::Client::Render::OpenGL
         textureManager.reset();
         uniformManager.reset();
         bufferManager.reset();
+
+        if (emptyVAO != 0)
+        {
+            glDeleteVertexArrays(1, &emptyVAO);
+            emptyVAO = 0;
+        }
 
         initialized = false;
         logger->info("OpenGL render backend destroyed");
@@ -211,6 +219,16 @@ namespace RenderStar::Client::Render::OpenGL
                 glMesh->Bind();
                 glMesh->Draw();
                 glMesh->Unbind();
+            }
+            else if (!glMesh && glShader)
+            {
+                glDisable(GL_CULL_FACE);
+                glDisable(GL_DEPTH_TEST);
+                glBindVertexArray(emptyVAO);
+                glDrawArrays(GL_TRIANGLES, 0, 3);
+                glBindVertexArray(0);
+                glEnable(GL_DEPTH_TEST);
+                glEnable(GL_CULL_FACE);
             }
 
             if (glShader)

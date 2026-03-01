@@ -155,8 +155,8 @@ namespace RenderStar::Client::Render::Vulkan
         VkDescriptorSetLayout layout = vulkanShader->GetDescriptorSetLayout();
 
         std::vector<VkDescriptorPoolSize> poolSizes = {
-            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight },
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxFramesInFlight }
+            { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight * 3 },
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxFramesInFlight * 10 }
         };
 
         VkDescriptorPool pool = descriptorModule->CreateDescriptorPool(poolSizes, maxFramesInFlight);

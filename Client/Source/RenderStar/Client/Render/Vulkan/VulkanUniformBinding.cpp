@@ -2,6 +2,7 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanDescriptorModule.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanBufferHandle.hpp"
 #include "RenderStar/Client/Render/Vulkan/VulkanTextureHandle.hpp"
+#include "RenderStar/Client/Render/Vulkan/VulkanRenderTarget.hpp"
 #include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
 
 namespace RenderStar::Client::Render::Vulkan
@@ -76,11 +77,24 @@ namespace RenderStar::Client::Render::Vulkan
 
     void VulkanUniformBinding::UpdateTexture(int32_t binding, ITextureHandle* texture, int32_t frameIndex)
     {
-        if (released)
+        if (released || !texture)
             return;
 
-        auto* vulkanTexture = static_cast<VulkanTextureHandle*>(texture);
-        if (vulkanTexture == nullptr)
+        VkImageView imageView = VK_NULL_HANDLE;
+        VkSampler sampler = VK_NULL_HANDLE;
+
+        if (auto* vulkanTexture = dynamic_cast<VulkanTextureHandle*>(texture))
+        {
+            imageView = vulkanTexture->GetImageView();
+            sampler = vulkanTexture->GetSampler();
+        }
+        else if (auto* rtAttachment = dynamic_cast<VulkanRenderTargetAttachment*>(texture))
+        {
+            imageView = rtAttachment->GetImageView();
+            sampler = rtAttachment->GetSampler();
+        }
+
+        if (imageView == VK_NULL_HANDLE || sampler == VK_NULL_HANDLE)
             return;
 
         if (frameIndex >= 0 && frameIndex < static_cast<int32_t>(descriptorSets.size()))
@@ -88,8 +102,8 @@ namespace RenderStar::Client::Render::Vulkan
             descriptorModule->UpdateDescriptorSetImage(
                 descriptorSets[frameIndex],
                 binding,
-                vulkanTexture->GetImageView(),
-                vulkanTexture->GetSampler());
+                imageView,
+                sampler);
         }
         else
         {
@@ -98,8 +112,8 @@ namespace RenderStar::Client::Render::Vulkan
                 descriptorModule->UpdateDescriptorSetImage(
                     descriptorSet,
                     binding,
-                    vulkanTexture->GetImageView(),
-                    vulkanTexture->GetSampler());
+                    imageView,
+                    sampler);
             }
         }
     }

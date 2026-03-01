@@ -6,6 +6,7 @@
 #include "RenderStar/Client/Render/Resource/IUniformBindingHandle.hpp"
 #include "RenderStar/Client/Render/Resource/IMesh.hpp"
 #include "RenderStar/Client/Render/Resource/Vertex.hpp"
+#include "RenderStar/Client/Render/Framework/LitVertex.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -92,7 +93,7 @@ namespace RenderStar::Client::Render::Vulkan
             renderPassModule.GetRenderPass(),
             &shaderModule,
             &descriptorModule,
-            Vertex::LAYOUT,
+            Framework::LitVertex::LAYOUT,
             &resourceManager);
 
         uniformManager = std::make_unique<VulkanUniformManager>();
@@ -382,9 +383,71 @@ namespace RenderStar::Client::Render::Vulkan
 
             if (vulkanMesh && vulkanMesh->IsValid())
                 vulkanMesh->RecordDrawCommands(commandBuffer);
+            else if (!vulkanMesh && vulkanShader)
+                vkCmdDraw(commandBuffer, 3, 1, 0, 0);
         }
 
         drawCommands.clear();
+    }
+
+    VkDevice VulkanRenderBackend::GetDevice() const
+    {
+        return deviceModule.GetDevice();
+    }
+
+    VkPhysicalDevice VulkanRenderBackend::GetPhysicalDevice() const
+    {
+        return deviceModule.GetPhysicalDevice();
+    }
+
+    VmaAllocator VulkanRenderBackend::GetAllocator() const
+    {
+        return memoryModule.GetAllocator();
+    }
+
+    VkQueue VulkanRenderBackend::GetGraphicsQueue() const
+    {
+        return deviceModule.GetGraphicsQueue();
+    }
+
+    uint32_t VulkanRenderBackend::GetGraphicsQueueFamily() const
+    {
+        return deviceModule.GetGraphicsQueueFamily();
+    }
+
+    VkRenderPass VulkanRenderBackend::GetSwapchainRenderPass() const
+    {
+        return renderPassModule.GetRenderPass();
+    }
+
+    VkFramebuffer VulkanRenderBackend::GetSwapchainFramebuffer(uint32_t imageIndex) const
+    {
+        return framebufferModule.GetFramebuffer(imageIndex);
+    }
+
+    uint32_t VulkanRenderBackend::GetCurrentImageIndex() const
+    {
+        return currentImageIndex;
+    }
+
+    VulkanShaderModule& VulkanRenderBackend::GetShaderModuleRef()
+    {
+        return shaderModule;
+    }
+
+    VulkanDescriptorModule& VulkanRenderBackend::GetDescriptorModuleRef()
+    {
+        return descriptorModule;
+    }
+
+    VulkanCommandModule& VulkanRenderBackend::GetCommandModuleRef()
+    {
+        return commandModule;
+    }
+
+    VulkanGraphicsResourceManager& VulkanRenderBackend::GetResourceManagerRef()
+    {
+        return resourceManager;
     }
 
     void VulkanRenderBackend::CreateDepthResources()

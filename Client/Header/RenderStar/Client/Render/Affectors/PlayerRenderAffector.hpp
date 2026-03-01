@@ -27,6 +27,7 @@ namespace RenderStar::Client::Render::Affectors
 
         void SetupRenderState(IBufferManager* bufferManager, IUniformManager* uniformManager, ITextureManager* textureManager);
         void SetShader(std::unique_ptr<IShaderProgram> shader);
+        void SetSceneLightingBuffer(IBufferHandle* buffer);
         void Cleanup();
 
         void Render(Common::Component::ComponentModule& componentModule, IRenderBackend* backend,
@@ -37,6 +38,7 @@ namespace RenderStar::Client::Render::Affectors
         struct UniformSlot
         {
             std::unique_ptr<IBufferHandle> buffer;
+            std::unique_ptr<IBufferHandle> materialBuffer;
             std::unique_ptr<IUniformBindingHandle> binding;
         };
 
@@ -50,5 +52,6 @@ namespace RenderStar::Client::Render::Affectors
         ITextureManager* textureManager = nullptr;
         std::vector<UniformSlot> uniformPool;
         size_t uniformPoolIndex = 0;
+        IBufferHandle* sceneLightingBuffer = nullptr;
     };
 }

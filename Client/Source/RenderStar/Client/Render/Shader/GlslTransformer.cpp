@@ -28,6 +28,7 @@ namespace RenderStar::Client::Render::Shader
         result = TransformVersion(result);
         result = TransformUboBindings(result);
         result = RemovePushConstants(result);
+        result = TransformBuiltins(result);
 
         spdlog::debug("Transformed shader from GLSL 450 to GLSL 410");
 
@@ -60,5 +61,18 @@ namespace RenderStar::Client::Render::Shader
     {
         std::regex pushConstantPattern(R"(layout\s*\(\s*push_constant\s*\)\s*uniform[^;]*\{[^}]*\}\s*\w+\s*;)");
         return std::regex_replace(source, pushConstantPattern, "// Push constants removed for OpenGL compatibility");
+    }
+
+    std::string GlslTransformer::TransformBuiltins(const std::string& source)
+    {
+        std::string result = source;
+
+        std::regex vertexIndexPattern(R"(\bgl_VertexIndex\b)");
+        result = std::regex_replace(result, vertexIndexPattern, "gl_VertexID");
+
+        std::regex instanceIndexPattern(R"(\bgl_InstanceIndex\b)");
+        result = std::regex_replace(result, instanceIndexPattern, "gl_InstanceID");
+
+        return result;
     }
 }

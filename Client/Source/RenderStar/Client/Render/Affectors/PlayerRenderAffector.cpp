@@ -3,8 +3,10 @@
 #include "RenderStar/Client/Render/Resource/IBufferManager.hpp"
 #include "RenderStar/Client/Render/Resource/ITextureManager.hpp"
 #include "RenderStar/Client/Render/Resource/IUniformManager.hpp"
+#include "RenderStar/Client/Render/Resource/MaterialProperties.hpp"
 #include "RenderStar/Client/Render/Resource/StandardUniforms.hpp"
-#include "RenderStar/Client/Render/Resource/Vertex.hpp"
+#include "RenderStar/Client/Render/Framework/SceneLightingData.hpp"
+#include "RenderStar/Client/Render/Framework/LitVertex.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Component/Components/PlayerIdentity.hpp"
 #include "RenderStar/Common/Component/Components/Transform.hpp"
@@ -28,6 +30,11 @@ namespace RenderStar::Client::Render::Affectors
         shader = std::move(s);
     }
 
+    void PlayerRenderAffector::SetSceneLightingBuffer(IBufferHandle* buffer)
+    {
+        sceneLightingBuffer = buffer;
+    }
+
     void PlayerRenderAffector::Cleanup()
     {
         uniformPool.clear();
@@ -37,6 +44,7 @@ namespace RenderStar::Client::Render::Affectors
         bufferManager = nullptr;
         uniformManager = nullptr;
         textureManager = nullptr;
+        sceneLightingBuffer = nullptr;
     }
 
     void PlayerRenderAffector::Render(Common::Component::ComponentModule& componentModule, IRenderBackend* backend,
@@ -68,11 +76,12 @@ namespace RenderStar::Client::Render::Affectors
 
             slot.buffer->SetSubData(&uniforms, StandardUniforms::Size(), 0);
 
+            MaterialProperties matProps(0.5f, 0.0f, 1.0f, 0.0f, 0.0f);
+            slot.materialBuffer->SetSubData(&matProps, MaterialProperties::Size(), 0);
+
             if (slot.binding)
                 backend->SubmitDrawCommand(shader.get(), slot.binding.get(), frameIndex, cubeMesh->GetUnderlyingMesh());
         }
-
-        backend->ExecuteDrawCommands();
     }
 
     void PlayerRenderAffector::BuildCubeMesh()
@@ -82,37 +91,37 @@ namespace RenderStar::Client::Render::Affectors
 
         const float h = 0.5f;
 
-        std::vector<Vertex> vertices =
+        std::vector<Framework::LitVertex> vertices =
         {
-            { -h, -h,  h,  1, 1, 1,  0, 0 },
-            {  h, -h,  h,  1, 1, 1,  1, 0 },
-            {  h,  h,  h,  1, 1, 1,  1, 1 },
-            { -h,  h,  h,  1, 1, 1,  0, 1 },
+            { -h, -h,  h,  0, 0, 1,  0, 0,  1, 0, 0 },
+            {  h, -h,  h,  0, 0, 1,  1, 0,  1, 0, 0 },
+            {  h,  h,  h,  0, 0, 1,  1, 1,  1, 0, 0 },
+            { -h,  h,  h,  0, 0, 1,  0, 1,  1, 0, 0 },
 
-            {  h, -h, -h,  1, 1, 1,  0, 0 },
-            { -h, -h, -h,  1, 1, 1,  1, 0 },
-            { -h,  h, -h,  1, 1, 1,  1, 1 },
-            {  h,  h, -h,  1, 1, 1,  0, 1 },
+            {  h, -h, -h,  0, 0,-1,  0, 0, -1, 0, 0 },
+            { -h, -h, -h,  0, 0,-1,  1, 0, -1, 0, 0 },
+            { -h,  h, -h,  0, 0,-1,  1, 1, -1, 0, 0 },
+            {  h,  h, -h,  0, 0,-1,  0, 1, -1, 0, 0 },
 
-            { -h,  h,  h,  1, 1, 1,  0, 0 },
-            {  h,  h,  h,  1, 1, 1,  1, 0 },
-            {  h,  h, -h,  1, 1, 1,  1, 1 },
-            { -h,  h, -h,  1, 1, 1,  0, 1 },
+            { -h,  h,  h,  0, 1, 0,  0, 0,  1, 0, 0 },
+            {  h,  h,  h,  0, 1, 0,  1, 0,  1, 0, 0 },
+            {  h,  h, -h,  0, 1, 0,  1, 1,  1, 0, 0 },
+            { -h,  h, -h,  0, 1, 0,  0, 1,  1, 0, 0 },
 
-            { -h, -h, -h,  1, 1, 1,  0, 0 },
-            {  h, -h, -h,  1, 1, 1,  1, 0 },
-            {  h, -h,  h,  1, 1, 1,  1, 1 },
-            { -h, -h,  h,  1, 1, 1,  0, 1 },
+            { -h, -h, -h,  0,-1, 0,  0, 0,  1, 0, 0 },
+            {  h, -h, -h,  0,-1, 0,  1, 0,  1, 0, 0 },
+            {  h, -h,  h,  0,-1, 0,  1, 1,  1, 0, 0 },
+            { -h, -h,  h,  0,-1, 0,  0, 1,  1, 0, 0 },
 
-            {  h, -h,  h,  1, 1, 1,  0, 0 },
-            {  h, -h, -h,  1, 1, 1,  1, 0 },
-            {  h,  h, -h,  1, 1, 1,  1, 1 },
-            {  h,  h,  h,  1, 1, 1,  0, 1 },
+            {  h, -h,  h,  1, 0, 0,  0, 0,  0, 0,-1 },
+            {  h, -h, -h,  1, 0, 0,  1, 0,  0, 0,-1 },
+            {  h,  h, -h,  1, 0, 0,  1, 1,  0, 0,-1 },
+            {  h,  h,  h,  1, 0, 0,  0, 1,  0, 0,-1 },
 
-            { -h, -h, -h,  1, 1, 1,  0, 0 },
-            { -h, -h,  h,  1, 1, 1,  1, 0 },
-            { -h,  h,  h,  1, 1, 1,  1, 1 },
-            { -h,  h, -h,  1, 1, 1,  0, 1 },
+            { -h, -h, -h, -1, 0, 0,  0, 0,  0, 0, 1 },
+            { -h, -h,  h, -1, 0, 0,  1, 0,  0, 0, 1 },
+            { -h,  h,  h, -1, 0, 0,  1, 1,  0, 0, 1 },
+            { -h,  h, -h, -1, 0, 0,  0, 1,  0, 0, 1 },
         };
 
         std::vector<uint32_t> indices;
@@ -128,7 +137,7 @@ namespace RenderStar::Client::Render::Affectors
             indices.push_back(base + 3);
         }
 
-        cubeMesh = std::make_unique<Resource::Mesh>(*bufferManager, Vertex::LAYOUT, PrimitiveType::TRIANGLES);
+        cubeMesh = std::make_unique<Resource::Mesh>(*bufferManager, Framework::LitVertex::LAYOUT, PrimitiveType::TRIANGLES);
         cubeMesh->SetVertices(vertices);
         cubeMesh->SetIndices(indices);
     }
@@ -140,6 +149,7 @@ namespace RenderStar::Client::Render::Affectors
 
         UniformSlot slot;
         slot.buffer = bufferManager->CreateUniformBuffer(StandardUniforms::Size());
+        slot.materialBuffer = bufferManager->CreateUniformBuffer(MaterialProperties::Size());
         slot.binding = uniformManager->CreateBindingForShader(shader.get());
 
         if (slot.binding)
@@ -147,7 +157,20 @@ namespace RenderStar::Client::Render::Affectors
             slot.binding->UpdateBuffer(0, slot.buffer.get(), StandardUniforms::Size());
 
             if (textureManager)
+            {
                 slot.binding->UpdateTexture(1, textureManager->GetDefaultTexture());
+                slot.binding->UpdateTexture(4, textureManager->GetDefaultTexture());
+                slot.binding->UpdateTexture(5, textureManager->GetDefaultTexture());
+                slot.binding->UpdateTexture(6, textureManager->GetDefaultTexture());
+                slot.binding->UpdateTexture(7, textureManager->GetDefaultTexture());
+                slot.binding->UpdateTexture(8, textureManager->GetDefaultTexture());
+                slot.binding->UpdateTexture(9, textureManager->GetDefaultTexture());
+            }
+
+            if (sceneLightingBuffer)
+                slot.binding->UpdateBuffer(2, sceneLightingBuffer, Framework::SceneLightingData::Size());
+
+            slot.binding->UpdateBuffer(3, slot.materialBuffer.get(), MaterialProperties::Size());
         }
 
         uniformPool.push_back(std::move(slot));

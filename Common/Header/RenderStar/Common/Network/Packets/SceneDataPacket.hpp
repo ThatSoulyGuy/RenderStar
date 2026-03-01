@@ -12,26 +12,39 @@ namespace RenderStar::Common::Network::Packets
     {
     public:
 
-        std::vector<Scene::MapbinTexture> textures;
+        std::vector<Scene::MapbinMaterial> materials;
         std::vector<Scene::MapbinGroup> groups;
 
         void Write(PacketBuffer& buffer) const override
         {
-            buffer.WriteInt32(static_cast<int32_t>(textures.size()));
+            buffer.WriteInt32(static_cast<int32_t>(materials.size()));
 
-            for (const auto& tex : textures)
+            for (const auto& mat : materials)
             {
-                buffer.WriteInt32(tex.materialId);
-                buffer.WriteInt32(static_cast<int32_t>(tex.width));
-                buffer.WriteInt32(static_cast<int32_t>(tex.height));
-                buffer.WriteInt32(static_cast<int32_t>(tex.wrapS));
-                buffer.WriteInt32(static_cast<int32_t>(tex.wrapT));
-                buffer.WriteInt32(static_cast<int32_t>(tex.minFilter));
-                buffer.WriteInt32(static_cast<int32_t>(tex.magFilter));
-                buffer.WriteInt32(static_cast<int32_t>(tex.pixelData.size()));
+                buffer.WriteInt32(mat.materialId);
+                buffer.WriteFloat(mat.normalStrength);
+                buffer.WriteFloat(mat.roughness);
+                buffer.WriteFloat(mat.metallic);
+                buffer.WriteFloat(mat.specularStrength);
+                buffer.WriteFloat(mat.detailScale);
+                buffer.WriteFloat(mat.emissionStrength);
+                buffer.WriteFloat(mat.aoStrength);
+                buffer.WriteInt32(static_cast<int32_t>(mat.textureSlots.size()));
 
-                for (uint8_t byte : tex.pixelData)
-                    buffer.WriteByte(static_cast<std::byte>(byte));
+                for (const auto& slot : mat.textureSlots)
+                {
+                    buffer.WriteInt32(static_cast<int32_t>(slot.slotType));
+                    buffer.WriteInt32(static_cast<int32_t>(slot.width));
+                    buffer.WriteInt32(static_cast<int32_t>(slot.height));
+                    buffer.WriteInt32(static_cast<int32_t>(slot.wrapS));
+                    buffer.WriteInt32(static_cast<int32_t>(slot.wrapT));
+                    buffer.WriteInt32(static_cast<int32_t>(slot.minFilter));
+                    buffer.WriteInt32(static_cast<int32_t>(slot.magFilter));
+                    buffer.WriteInt32(static_cast<int32_t>(slot.pixelData.size()));
+
+                    for (uint8_t byte : slot.pixelData)
+                        buffer.WriteByte(static_cast<std::byte>(byte));
+                }
             }
 
             buffer.WriteInt32(static_cast<int32_t>(groups.size()));
@@ -52,23 +65,37 @@ namespace RenderStar::Common::Network::Packets
 
         void Read(PacketBuffer& buffer) override
         {
-            int32_t textureCount = buffer.ReadInt32();
-            textures.resize(textureCount);
+            int32_t materialCount = buffer.ReadInt32();
+            materials.resize(materialCount);
 
-            for (auto& tex : textures)
+            for (auto& mat : materials)
             {
-                tex.materialId = buffer.ReadInt32();
-                tex.width = static_cast<uint32_t>(buffer.ReadInt32());
-                tex.height = static_cast<uint32_t>(buffer.ReadInt32());
-                tex.wrapS = static_cast<uint32_t>(buffer.ReadInt32());
-                tex.wrapT = static_cast<uint32_t>(buffer.ReadInt32());
-                tex.minFilter = static_cast<uint32_t>(buffer.ReadInt32());
-                tex.magFilter = static_cast<uint32_t>(buffer.ReadInt32());
-                int32_t pixelSize = buffer.ReadInt32();
-                tex.pixelData.resize(pixelSize);
+                mat.materialId = buffer.ReadInt32();
+                mat.normalStrength = buffer.ReadFloat();
+                mat.roughness = buffer.ReadFloat();
+                mat.metallic = buffer.ReadFloat();
+                mat.specularStrength = buffer.ReadFloat();
+                mat.detailScale = buffer.ReadFloat();
+                mat.emissionStrength = buffer.ReadFloat();
+                mat.aoStrength = buffer.ReadFloat();
+                int32_t slotCount = buffer.ReadInt32();
+                mat.textureSlots.resize(slotCount);
 
-                for (uint8_t& byte : tex.pixelData)
-                    byte = static_cast<uint8_t>(buffer.ReadByte());
+                for (auto& slot : mat.textureSlots)
+                {
+                    slot.slotType = static_cast<Scene::TextureSlotType>(buffer.ReadInt32());
+                    slot.width = static_cast<uint32_t>(buffer.ReadInt32());
+                    slot.height = static_cast<uint32_t>(buffer.ReadInt32());
+                    slot.wrapS = static_cast<uint32_t>(buffer.ReadInt32());
+                    slot.wrapT = static_cast<uint32_t>(buffer.ReadInt32());
+                    slot.minFilter = static_cast<uint32_t>(buffer.ReadInt32());
+                    slot.magFilter = static_cast<uint32_t>(buffer.ReadInt32());
+                    int32_t pixelSize = buffer.ReadInt32();
+                    slot.pixelData.resize(pixelSize);
+
+                    for (uint8_t& byte : slot.pixelData)
+                        byte = static_cast<uint8_t>(buffer.ReadByte());
+                }
             }
 
             int32_t groupCount = buffer.ReadInt32();

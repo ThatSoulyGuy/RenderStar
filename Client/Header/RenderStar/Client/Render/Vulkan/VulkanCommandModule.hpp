@@ -41,11 +41,14 @@ namespace RenderStar::Client::Render::Vulkan
 
         VkCommandBuffer GetCurrentCommandBuffer() const;
 
+        bool IsRenderPassActive() const;
+
     private:
 
         std::shared_ptr<spdlog::logger> logger;
         VkCommandPool commandPool;
         std::vector<VkCommandBuffer> commandBuffers;
         VkCommandBuffer currentCommandBuffer;
+        bool renderPassActive = false;
     };
 }

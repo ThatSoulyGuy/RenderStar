@@ -87,6 +87,7 @@ namespace RenderStar::Client::Render::Vulkan
         renderPassInfo.pClearValues = clearValues.data();
 
         vkCmdBeginRenderPass(currentCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        renderPassActive = true;
 
         VkViewport viewport{};
         viewport.x = 0.0f;
@@ -105,7 +106,16 @@ namespace RenderStar::Client::Render::Vulkan
 
     void VulkanCommandModule::EndRenderPass()
     {
+        if (!renderPassActive)
+            return;
+
         vkCmdEndRenderPass(currentCommandBuffer);
+        renderPassActive = false;
+    }
+
+    bool VulkanCommandModule::IsRenderPassActive() const
+    {
+        return renderPassActive;
     }
 
     void VulkanCommandModule::EndRecording()

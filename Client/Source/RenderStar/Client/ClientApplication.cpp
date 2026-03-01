@@ -12,6 +12,8 @@
 #include "RenderStar/Client/Render/Affectors/CameraAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/MapGeometryRenderAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/PlayerRenderAffector.hpp"
+#include "RenderStar/Client/Render/Framework/RenderingFrameworkModule.hpp"
+#include "RenderStar/Client/Render/Platform/RenderingPlatformModule.hpp"
 #include "RenderStar/Client/Render/RendererModule.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Common/Component/Affectors/TransformAffector.hpp"
@@ -72,6 +74,8 @@ namespace RenderStar::Client
             .Module(std::make_unique<Core::ClientWindowModule>())
             .Module(std::make_unique<Input::ClientInputModule>())
             .Module(std::make_unique<Render::RendererModule>())
+            .Module(std::make_unique<Render::Framework::RenderingFrameworkModule>())
+            .Module(std::make_unique<Render::Platform::RenderingPlatformModule>())
             .Module(std::make_unique<Common::Network::PacketModule>())
             .Module(std::make_unique<Network::ClientNetworkModule>())
             .Module(std::make_unique<Core::ClientSceneModule>())

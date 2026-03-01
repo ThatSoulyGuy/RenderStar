@@ -5,6 +5,7 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanShaderModule.hpp"
 #include <spdlog/spdlog.h>
 #include <vulkan/vulkan.h>
+#include <vector>
 
 namespace RenderStar::Client::Render::Vulkan
 {
@@ -38,6 +39,10 @@ namespace RenderStar::Client::Render::Vulkan
 
     private:
 
+        VkDescriptorSetLayout CreateDescriptorLayoutFromGlsl(
+            const std::string& vertexGlsl,
+            const std::string& fragmentGlsl);
+
         std::shared_ptr<spdlog::logger> logger;
         VkDevice device;
         VkRenderPass renderPass;
@@ -45,5 +50,6 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanDescriptorModule* descriptorModule;
         VertexLayout vertexLayout;
         IGraphicsResourceManager* resourceManager;
+        std::vector<VkDescriptorSetLayout> ownedLayouts;
     };
 }

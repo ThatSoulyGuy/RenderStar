@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<render_star>
+    <RenderingPlatformModule>
+        <enabled>true</enabled>
+
+        <target_names>shadow_map, scene_color</target_names>
+
+        <targets>
+            <shadow_map>
+                <format>RGBA32F</format>
+                <depth>true</depth>
+                <match_swapchain>false</match_swapchain>
+                <width>2048</width>
+                <height>2048</height>
+            </shadow_map>
+            <scene_color>
+                <format>RGBA8</format>
+                <depth>true</depth>
+                <match_swapchain>true</match_swapchain>
+            </scene_color>
+        </targets>
+
+        <stage_order>main_geometry, tonemap</stage_order>
+
+        <stages>
+            <main_geometry>
+                <type>geometry</type>
+                <shader>renderstar:shader/scene_geometry.rssl</shader>
+                <output>scene_color</output>
+                <vertex_format>lit</vertex_format>
+                <clear>true</clear>
+            </main_geometry>
+            <tonemap>
+                <type>fullscreen</type>
+                <shader>renderstar:shader/tonemap.rssl</shader>
+                <output>SWAPCHAIN</output>
+                <inputs>scene_color</inputs>
+            </tonemap>
+        </stages>
+    </RenderingPlatformModule>
+</render_star>
