@@ -101,6 +101,7 @@ namespace RenderStar::Client::Render::Vulkan
 
         textureManager = std::make_unique<VulkanTextureManager>();
         textureManager->Initialize(
+            deviceModule.GetPhysicalDevice(),
             deviceModule.GetDevice(),
             memoryModule.GetAllocator(),
             deviceModule.GetGraphicsQueue(),

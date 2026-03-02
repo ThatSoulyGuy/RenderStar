@@ -24,7 +24,8 @@ namespace RenderStar::Client::Render::Vulkan
             VkRenderPass renderPass,
             VkFramebuffer framebuffer,
             int32_t width,
-            int32_t height
+            int32_t height,
+            VkClearColorValue clearColor = { { 0.39f, 0.58f, 0.93f, 1.0f } }
         );
 
         void EndRenderPass();

@@ -29,5 +29,7 @@ namespace RenderStar::Client::Render::Shader
         static std::string RemovePushConstants(const std::string& source);
 
         static std::string TransformBuiltins(const std::string& source);
+
+        static std::string TransformShadowCoordinates(const std::string& source);
     };
 }

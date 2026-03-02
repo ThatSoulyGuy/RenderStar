@@ -25,7 +25,8 @@ namespace RenderStar::Client::Render::Vulkan
             VulkanShader vertexShader,
             VulkanShader fragmentShader,
             const VertexLayout& vertexLayout,
-            IGraphicsResourceManager& resourceManager);
+            IGraphicsResourceManager& resourceManager,
+            VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT);
 
         void InitializeWithLayout(
             VkDevice device,
@@ -35,7 +36,8 @@ namespace RenderStar::Client::Render::Vulkan
             VulkanShader fragmentShader,
             const VertexLayout& vertexLayout,
             VkDescriptorSetLayout externalLayout,
-            IGraphicsResourceManager& resourceManager);
+            IGraphicsResourceManager& resourceManager,
+            VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT);
 
         void InitializeCompute(
             VulkanShaderModule* shaderModule,
@@ -80,5 +82,6 @@ namespace RenderStar::Client::Render::Vulkan
         VkDescriptorSetLayout descriptorSetLayout;
         bool isCompute;
         bool valid;
+        VkSampleCountFlagBits sampleCount;
     };
 }

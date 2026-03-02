@@ -17,6 +17,7 @@
                 <format>RGBA8</format>
                 <depth>true</depth>
                 <match_swapchain>true</match_swapchain>
+                <msaa>4</msaa>
             </scene_color>
         </targets>
 

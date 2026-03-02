@@ -17,6 +17,7 @@ namespace RenderStar::Client::Render::Vulkan
         , descriptorSetLayout(VK_NULL_HANDLE)
         , isCompute(false)
         , valid(false)
+        , sampleCount(VK_SAMPLE_COUNT_1_BIT)
     {
     }
 
@@ -71,7 +72,8 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanShader vertex,
         VulkanShader fragment,
         const VertexLayout& vertexLayout,
-        IGraphicsResourceManager& manager)
+        IGraphicsResourceManager& manager,
+        VkSampleCountFlagBits msaaSamples)
     {
         device = vulkanDevice;
         shaderModule = module;
@@ -79,6 +81,7 @@ namespace RenderStar::Client::Render::Vulkan
         vertexShader = vertex;
         fragmentShader = fragment;
         isCompute = false;
+        sampleCount = msaaSamples;
 
         BuildPipeline(renderPass, vertexLayout);
         valid = (pipeline != VK_NULL_HANDLE);
@@ -94,13 +97,15 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanShader fragment,
         const VertexLayout& vertexLayout,
         VkDescriptorSetLayout externalLayout,
-        IGraphicsResourceManager& manager)
+        IGraphicsResourceManager& manager,
+        VkSampleCountFlagBits msaaSamples)
     {
         device = vulkanDevice;
         shaderModule = module;
         vertexShader = vertex;
         fragmentShader = fragment;
         isCompute = false;
+        sampleCount = msaaSamples;
 
         BuildPipelineWithLayout(renderPass, vertexLayout, externalLayout);
         valid = (pipeline != VK_NULL_HANDLE);
@@ -175,7 +180,7 @@ namespace RenderStar::Client::Render::Vulkan
         VkPipelineMultisampleStateCreateInfo multisampling{};
         multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         multisampling.sampleShadingEnable = VK_FALSE;
-        multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        multisampling.rasterizationSamples = sampleCount;
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
         depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -305,7 +310,7 @@ namespace RenderStar::Client::Render::Vulkan
         VkPipelineMultisampleStateCreateInfo multisampling{};
         multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
         multisampling.sampleShadingEnable = VK_FALSE;
-        multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        multisampling.rasterizationSamples = sampleCount;
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
         depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;

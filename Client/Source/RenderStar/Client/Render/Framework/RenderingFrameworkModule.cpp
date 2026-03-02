@@ -41,10 +41,26 @@ namespace RenderStar::Client::Render::Framework
                 sceneLightingData.directionalDirection = glm::vec4(lightDir, 0.0f);
                 sceneLightingData.directionalColor = glm::vec4(light.color, light.intensity);
 
-                glm::mat4 lightView = glm::lookAt(-lightDir * 50.0f, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-                glm::mat4 lightProj = glm::ortho(-15.0f, 15.0f, -15.0f, 15.0f, 0.1f, 100.0f);
+                constexpr float shadowRadius = 30.0f;
+                constexpr float shadowNear = 0.1f;
+                constexpr float shadowFar = 150.0f;
+                constexpr float shadowMapSize = 2048.0f;
+                constexpr float texelSize = (shadowRadius * 2.0f) / shadowMapSize;
+
+                glm::vec3 up = std::abs(glm::dot(lightDir, glm::vec3(0.0f, 1.0f, 0.0f))) > 0.99f
+                    ? glm::vec3(0.0f, 0.0f, 1.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+
+                glm::mat4 lightView = glm::lookAt(glm::vec3(0.0f) - lightDir, glm::vec3(0.0f), up);
+                glm::vec3 shadowOrigin = glm::vec3(lightView * glm::vec4(cameraPosition, 1.0f));
+                shadowOrigin.x = std::floor(shadowOrigin.x / texelSize) * texelSize;
+                shadowOrigin.y = std::floor(shadowOrigin.y / texelSize) * texelSize;
+                glm::vec3 snappedCenter = glm::vec3(glm::inverse(lightView) * glm::vec4(shadowOrigin, 1.0f));
+
+                lightView = glm::lookAt(snappedCenter - lightDir * (shadowFar * 0.5f), snappedCenter, up);
+                glm::mat4 lightProj = glm::ortho(-shadowRadius, shadowRadius, -shadowRadius, shadowRadius, shadowNear, shadowFar);
                 sceneLightingData.directionalLightVP = lightProj * lightView;
-                sceneLightingData.shadowParams = glm::vec4(1.0f, 0.005f, 2048.0f, 0.0f);
+                constexpr float pcssLightSize = 150.0f;
+                sceneLightingData.shadowParams = glm::vec4(1.0f, 0.0008f, shadowMapSize, pcssLightSize);
             }
             else if (light.type == Components::LightType::POINT && pointCount < MAX_POINT_LIGHTS)
             {

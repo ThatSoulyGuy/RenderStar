@@ -51,6 +51,7 @@ namespace RenderStar::Client::Render::Vulkan
         void Resize(uint32_t width, uint32_t height) override;
         Platform::RenderTargetType GetType() const override;
         bool IsSwapchain() const override;
+        uint32_t GetSampleCount() const override;
 
         VkRenderPass GetRenderPass() const;
         VkFramebuffer GetFramebuffer() const;
@@ -76,6 +77,14 @@ namespace RenderStar::Client::Render::Vulkan
         VkImage depthImage = VK_NULL_HANDLE;
         VmaAllocation depthAllocation = VK_NULL_HANDLE;
         VkImageView depthImageView = VK_NULL_HANDLE;
+
+        VkImage msaaColorImage = VK_NULL_HANDLE;
+        VmaAllocation msaaColorAllocation = VK_NULL_HANDLE;
+        VkImageView msaaColorImageView = VK_NULL_HANDLE;
+
+        VkImage msaaDepthImage = VK_NULL_HANDLE;
+        VmaAllocation msaaDepthAllocation = VK_NULL_HANDLE;
+        VkImageView msaaDepthImageView = VK_NULL_HANDLE;
 
         VkRenderPass renderPass = VK_NULL_HANDLE;
         VkFramebuffer framebuffer = VK_NULL_HANDLE;

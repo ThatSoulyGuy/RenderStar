@@ -7,6 +7,7 @@
 #include "RenderStar/Client/Render/Vulkan/VulkanCommandModule.hpp"
 #include "RenderStar/Client/Render/Resource/Vertex.hpp"
 #include "RenderStar/Client/Render/Resource/IGraphicsResourceManager.hpp"
+#include "RenderStar/Client/Render/Platform/IRenderTarget.hpp"
 #include <regex>
 
 namespace RenderStar::Client::Render::Vulkan
@@ -82,8 +83,8 @@ namespace RenderStar::Client::Render::Vulkan
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings;
 
-        std::regex uniformRegex(R"(layout\s*\(\s*binding\s*=\s*(\d+)\s*\)\s*uniform\s+(?!sampler)(\w+))");
-        std::regex samplerRegex(R"(layout\s*\(\s*binding\s*=\s*(\d+)\s*\)\s*uniform\s+sampler\w*\s+(\w+))");
+        std::regex uniformRegex(R"(layout\s*\([^)]*binding\s*=\s*(\d+)[^)]*\)\s*uniform\s+(?!sampler)(\w+))");
+        std::regex samplerRegex(R"(layout\s*\([^)]*binding\s*=\s*(\d+)[^)]*\)\s*uniform\s+sampler\w*\s+(\w+))");
 
         auto addBindings = [&](const std::string& source, VkShaderStageFlags stageFlag)
         {
@@ -193,6 +194,22 @@ namespace RenderStar::Client::Render::Vulkan
 
         VkDescriptorSetLayout layout = CreateDescriptorLayoutFromGlsl(vertexGlsl, fragmentGlsl);
 
+        VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
+
+        if (target)
+        {
+            uint32_t sc = target->GetSampleCount();
+
+            switch (sc)
+            {
+            case 2: samples = VK_SAMPLE_COUNT_2_BIT; break;
+            case 4: samples = VK_SAMPLE_COUNT_4_BIT; break;
+            case 8: samples = VK_SAMPLE_COUNT_8_BIT; break;
+            case 16: samples = VK_SAMPLE_COUNT_16_BIT; break;
+            default: break;
+            }
+        }
+
         auto program = std::make_unique<VulkanShaderProgram>();
         program->InitializeWithLayout(
             backend->GetDevice(),
@@ -202,7 +219,8 @@ namespace RenderStar::Client::Render::Vulkan
             fragmentShader,
             vertexLayout,
             layout,
-            backend->GetResourceManagerRef());
+            backend->GetResourceManagerRef(),
+            samples);
 
         return program;
     }
@@ -321,11 +339,16 @@ namespace RenderStar::Client::Render::Vulkan
         VkRenderPass renderPass = GetRenderPassForTarget(target);
         VkFramebuffer framebuffer = GetFramebufferForTarget(target);
 
+        VkClearColorValue clearColor = target->IsSwapchain()
+            ? VkClearColorValue{ { 0.39f, 0.58f, 0.93f, 1.0f } }
+            : VkClearColorValue{ { 1.0f, 1.0f, 1.0f, 1.0f } };
+
         commandModule->BeginRenderPass(
             renderPass,
             framebuffer,
             static_cast<int32_t>(target->GetWidth()),
-            static_cast<int32_t>(target->GetHeight()));
+            static_cast<int32_t>(target->GetHeight()),
+            clearColor);
 
         if (target->IsSwapchain())
         {

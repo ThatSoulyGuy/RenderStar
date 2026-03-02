@@ -272,6 +272,9 @@ namespace RenderStar::Client::Render::Affectors
 
             auto& transform = componentModule.AddComponent<Common::Component::Transform>(entity);
             transform.scale = glm::vec3(0.1f);
+            transform.localMatrix = glm::scale(glm::mat4(1.0f), transform.scale);
+            transform.worldMatrix = transform.localMatrix;
+            transform.worldScale = transform.scale;
 
             auto& mapbinMesh = componentModule.AddComponent<Components::MapbinMesh>(entity);
             mapbinMesh.mesh = mesh.get();
@@ -294,7 +297,7 @@ namespace RenderStar::Client::Render::Affectors
                         Components::Light::Point(
                             glm::vec3(obj.colorR, obj.colorG, obj.colorB),
                             obj.intensity,
-                            1.0f));
+                            50.0f));
                     break;
                 }
                 case Common::Scene::GameObjectType::SPOT_LIGHT:
@@ -311,7 +314,7 @@ namespace RenderStar::Client::Render::Affectors
                         dir,
                         glm::vec3(obj.colorR, obj.colorG, obj.colorB),
                         obj.intensity,
-                        1.0f,
+                        50.0f,
                         obj.outerCone);
                     light.spotSoftness = softness;
 
@@ -320,7 +323,7 @@ namespace RenderStar::Client::Render::Affectors
                 }
                 case Common::Scene::GameObjectType::SUN_LIGHT:
                 {
-                    glm::vec3 dir = EulerToDirection(obj.rotX, obj.rotY, obj.rotZ);
+                    glm::vec3 dir = -EulerToDirection(obj.rotX, obj.rotY, obj.rotZ);
 
                     auto lightEntity = sceneModule.CreateEntity();
 

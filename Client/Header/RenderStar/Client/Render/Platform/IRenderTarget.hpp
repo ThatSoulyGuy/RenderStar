@@ -22,6 +22,7 @@ namespace RenderStar::Client::Render::Platform
         TextureFormat colorFormat = TextureFormat::RGBA8;
         bool hasDepth = false;
         bool matchSwapchainSize = true;
+        uint32_t sampleCount = 1;
     };
 
     class IRenderTarget
@@ -45,5 +46,7 @@ namespace RenderStar::Client::Render::Platform
         virtual RenderTargetType GetType() const = 0;
 
         virtual bool IsSwapchain() const = 0;
+
+        virtual uint32_t GetSampleCount() const { return 1; }
     };
 }

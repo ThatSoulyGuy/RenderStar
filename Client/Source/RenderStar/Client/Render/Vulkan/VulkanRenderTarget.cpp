@@ -6,6 +6,18 @@ namespace RenderStar::Client::Render::Vulkan
     namespace
     {
         constexpr VkFormat DEPTH_FORMAT = VK_FORMAT_D32_SFLOAT;
+
+        VkSampleCountFlagBits ToVkSampleCount(uint32_t count)
+        {
+            switch (count)
+            {
+            case 2: return VK_SAMPLE_COUNT_2_BIT;
+            case 4: return VK_SAMPLE_COUNT_4_BIT;
+            case 8: return VK_SAMPLE_COUNT_8_BIT;
+            case 16: return VK_SAMPLE_COUNT_16_BIT;
+            default: return VK_SAMPLE_COUNT_1_BIT;
+            }
+        }
     }
 
     VulkanRenderTargetAttachment::VulkanRenderTargetAttachment(
@@ -65,22 +77,25 @@ namespace RenderStar::Client::Render::Vulkan
     void VulkanRenderTarget::CreateRenderPass()
     {
         VkFormat colorFormat = GetColorFormat();
+        VkSampleCountFlagBits samples = ToVkSampleCount(description.sampleCount);
+        bool msaa = description.sampleCount > 1;
+
+        std::vector<VkAttachmentDescription> attachments;
 
         VkAttachmentDescription colorAttachmentDesc{};
         colorAttachmentDesc.format = colorFormat;
-        colorAttachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+        colorAttachmentDesc.samples = samples;
         colorAttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachmentDesc.storeOp = msaa ? VK_ATTACHMENT_STORE_OP_DONT_CARE : VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        colorAttachmentDesc.finalLayout = msaa ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        attachments.push_back(colorAttachmentDesc);
 
         VkAttachmentReference colorRef{};
         colorRef.attachment = 0;
         colorRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        std::vector<VkAttachmentDescription> attachments = { colorAttachmentDesc };
 
         VkSubpassDescription subpass{};
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -93,7 +108,7 @@ namespace RenderStar::Client::Render::Vulkan
         if (description.hasDepth)
         {
             depthAttachmentDesc.format = DEPTH_FORMAT;
-            depthAttachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+            depthAttachmentDesc.samples = samples;
             depthAttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
             depthAttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
             depthAttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -101,11 +116,32 @@ namespace RenderStar::Client::Render::Vulkan
             depthAttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             depthAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-            depthRef.attachment = 1;
+            depthRef.attachment = static_cast<uint32_t>(attachments.size());
             depthRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
             subpass.pDepthStencilAttachment = &depthRef;
             attachments.push_back(depthAttachmentDesc);
+        }
+
+        VkAttachmentDescription resolveAttachmentDesc{};
+        VkAttachmentReference resolveRef{};
+
+        if (msaa)
+        {
+            resolveAttachmentDesc.format = colorFormat;
+            resolveAttachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+            resolveAttachmentDesc.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            resolveAttachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            resolveAttachmentDesc.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            resolveAttachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            resolveAttachmentDesc.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            resolveAttachmentDesc.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            resolveRef.attachment = static_cast<uint32_t>(attachments.size());
+            resolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+            subpass.pResolveAttachments = &resolveRef;
+            attachments.push_back(resolveAttachmentDesc);
         }
 
         VkSubpassDependency dependency{};
@@ -134,13 +170,52 @@ namespace RenderStar::Client::Render::Vulkan
     void VulkanRenderTarget::Create()
     {
         VkFormat colorFormat = GetColorFormat();
+        VkSampleCountFlagBits samples = ToVkSampleCount(description.sampleCount);
+        bool msaa = description.sampleCount > 1;
+
+        if (msaa)
+        {
+            VkImageCreateInfo msaaColorInfo{};
+            msaaColorInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+            msaaColorInfo.imageType = VK_IMAGE_TYPE_2D;
+            msaaColorInfo.extent = { description.width, description.height, 1 };
+            msaaColorInfo.mipLevels = 1;
+            msaaColorInfo.arrayLayers = 1;
+            msaaColorInfo.format = colorFormat;
+            msaaColorInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+            msaaColorInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            msaaColorInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+            msaaColorInfo.samples = samples;
+            msaaColorInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+            VmaAllocationCreateInfo msaaColorAllocInfo{};
+            msaaColorAllocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+            msaaColorAllocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+
+            if (vmaCreateImage(allocator, &msaaColorInfo, &msaaColorAllocInfo, &msaaColorImage, &msaaColorAllocation, nullptr) != VK_SUCCESS)
+            {
+                logger->error("Failed to create MSAA color image for target '{}'", description.name);
+                return;
+            }
+
+            VkImageViewCreateInfo msaaColorViewInfo{};
+            msaaColorViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            msaaColorViewInfo.image = msaaColorImage;
+            msaaColorViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            msaaColorViewInfo.format = colorFormat;
+            msaaColorViewInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+
+            if (vkCreateImageView(device, &msaaColorViewInfo, nullptr, &msaaColorImageView) != VK_SUCCESS)
+            {
+                logger->error("Failed to create MSAA color image view for target '{}'", description.name);
+                return;
+            }
+        }
 
         VkImageCreateInfo colorImageInfo{};
         colorImageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         colorImageInfo.imageType = VK_IMAGE_TYPE_2D;
-        colorImageInfo.extent.width = description.width;
-        colorImageInfo.extent.height = description.height;
-        colorImageInfo.extent.depth = 1;
+        colorImageInfo.extent = { description.width, description.height, 1 };
         colorImageInfo.mipLevels = 1;
         colorImageInfo.arrayLayers = 1;
         colorImageInfo.format = colorFormat;
@@ -164,11 +239,7 @@ namespace RenderStar::Client::Render::Vulkan
         colorViewInfo.image = colorImage;
         colorViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         colorViewInfo.format = colorFormat;
-        colorViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        colorViewInfo.subresourceRange.baseMipLevel = 0;
-        colorViewInfo.subresourceRange.levelCount = 1;
-        colorViewInfo.subresourceRange.baseArrayLayer = 0;
-        colorViewInfo.subresourceRange.layerCount = 1;
+        colorViewInfo.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
         if (vkCreateImageView(device, &colorViewInfo, nullptr, &colorImageView) != VK_SUCCESS)
         {
@@ -204,22 +275,23 @@ namespace RenderStar::Client::Render::Vulkan
             VkImageCreateInfo depthImageInfo{};
             depthImageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
             depthImageInfo.imageType = VK_IMAGE_TYPE_2D;
-            depthImageInfo.extent.width = description.width;
-            depthImageInfo.extent.height = description.height;
-            depthImageInfo.extent.depth = 1;
+            depthImageInfo.extent = { description.width, description.height, 1 };
             depthImageInfo.mipLevels = 1;
             depthImageInfo.arrayLayers = 1;
             depthImageInfo.format = DEPTH_FORMAT;
             depthImageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
             depthImageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             depthImageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-            depthImageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+            depthImageInfo.samples = msaa ? samples : VK_SAMPLE_COUNT_1_BIT;
             depthImageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
             VmaAllocationCreateInfo depthAllocInfo{};
             depthAllocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-            if (vmaCreateImage(allocator, &depthImageInfo, &depthAllocInfo, &depthImage, &depthAllocation, nullptr) != VK_SUCCESS)
+            VkImage* depthTarget = msaa ? &msaaDepthImage : &depthImage;
+            VmaAllocation* depthAllocTarget = msaa ? &msaaDepthAllocation : &depthAllocation;
+
+            if (vmaCreateImage(allocator, &depthImageInfo, &depthAllocInfo, depthTarget, depthAllocTarget, nullptr) != VK_SUCCESS)
             {
                 logger->error("Failed to create depth image for target '{}'", description.name);
                 return;
@@ -227,35 +299,47 @@ namespace RenderStar::Client::Render::Vulkan
 
             VkImageViewCreateInfo depthViewInfo{};
             depthViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            depthViewInfo.image = depthImage;
+            depthViewInfo.image = *depthTarget;
             depthViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
             depthViewInfo.format = DEPTH_FORMAT;
-            depthViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-            depthViewInfo.subresourceRange.baseMipLevel = 0;
-            depthViewInfo.subresourceRange.levelCount = 1;
-            depthViewInfo.subresourceRange.baseArrayLayer = 0;
-            depthViewInfo.subresourceRange.layerCount = 1;
+            depthViewInfo.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 };
 
-            if (vkCreateImageView(device, &depthViewInfo, nullptr, &depthImageView) != VK_SUCCESS)
+            VkImageView* depthViewTarget = msaa ? &msaaDepthImageView : &depthImageView;
+
+            if (vkCreateImageView(device, &depthViewInfo, nullptr, depthViewTarget) != VK_SUCCESS)
             {
                 logger->error("Failed to create depth image view for target '{}'", description.name);
                 return;
             }
 
             depthAttachment = std::make_unique<VulkanRenderTargetAttachment>(
-                depthImageView, VK_NULL_HANDLE, description.width, description.height);
+                *depthViewTarget, VK_NULL_HANDLE, description.width, description.height);
         }
 
-        std::vector<VkImageView> attachments = { colorImageView };
+        std::vector<VkImageView> fbAttachments;
 
-        if (description.hasDepth)
-            attachments.push_back(depthImageView);
+        if (msaa)
+        {
+            fbAttachments.push_back(msaaColorImageView);
+
+            if (description.hasDepth)
+                fbAttachments.push_back(msaaDepthImageView);
+
+            fbAttachments.push_back(colorImageView);
+        }
+        else
+        {
+            fbAttachments.push_back(colorImageView);
+
+            if (description.hasDepth)
+                fbAttachments.push_back(depthImageView);
+        }
 
         VkFramebufferCreateInfo fbInfo{};
         fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         fbInfo.renderPass = renderPass;
-        fbInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        fbInfo.pAttachments = attachments.data();
+        fbInfo.attachmentCount = static_cast<uint32_t>(fbAttachments.size());
+        fbInfo.pAttachments = fbAttachments.data();
         fbInfo.width = description.width;
         fbInfo.height = description.height;
         fbInfo.layers = 1;
@@ -266,7 +350,7 @@ namespace RenderStar::Client::Render::Vulkan
             return;
         }
 
-        logger->info("Created Vulkan render target '{}' {}x{}", description.name, description.width, description.height);
+        logger->info("Created Vulkan render target '{}' {}x{} ({}x MSAA)", description.name, description.width, description.height, description.sampleCount);
     }
 
     void VulkanRenderTarget::Destroy()
@@ -278,6 +362,32 @@ namespace RenderStar::Client::Render::Vulkan
         {
             vkDestroyFramebuffer(device, framebuffer, nullptr);
             framebuffer = VK_NULL_HANDLE;
+        }
+
+        if (msaaColorImageView != VK_NULL_HANDLE)
+        {
+            vkDestroyImageView(device, msaaColorImageView, nullptr);
+            msaaColorImageView = VK_NULL_HANDLE;
+        }
+
+        if (msaaColorImage != VK_NULL_HANDLE)
+        {
+            vmaDestroyImage(allocator, msaaColorImage, msaaColorAllocation);
+            msaaColorImage = VK_NULL_HANDLE;
+            msaaColorAllocation = VK_NULL_HANDLE;
+        }
+
+        if (msaaDepthImageView != VK_NULL_HANDLE)
+        {
+            vkDestroyImageView(device, msaaDepthImageView, nullptr);
+            msaaDepthImageView = VK_NULL_HANDLE;
+        }
+
+        if (msaaDepthImage != VK_NULL_HANDLE)
+        {
+            vmaDestroyImage(allocator, msaaDepthImage, msaaDepthAllocation);
+            msaaDepthImage = VK_NULL_HANDLE;
+            msaaDepthAllocation = VK_NULL_HANDLE;
         }
 
         if (colorSampler != VK_NULL_HANDLE)
@@ -366,6 +476,11 @@ namespace RenderStar::Client::Render::Vulkan
     bool VulkanRenderTarget::IsSwapchain() const
     {
         return false;
+    }
+
+    uint32_t VulkanRenderTarget::GetSampleCount() const
+    {
+        return description.sampleCount;
     }
 
     VkRenderPass VulkanRenderTarget::GetRenderPass() const

@@ -94,8 +94,13 @@ namespace RenderStar::Client::Render::OpenGL
         }
     }
 
-    void OpenGLPlatformBackend::EndRenderTarget(Platform::IRenderTarget*)
+    void OpenGLPlatformBackend::EndRenderTarget(Platform::IRenderTarget* target)
     {
+        if (target && !target->IsSwapchain())
+        {
+            auto* glTarget = static_cast<OpenGLRenderTarget*>(target);
+            glTarget->Unbind();
+        }
     }
 
     void OpenGLPlatformBackend::BlitToScreen(Platform::IRenderTarget* source)

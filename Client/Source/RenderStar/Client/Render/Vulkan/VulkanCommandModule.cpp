@@ -70,12 +70,14 @@ namespace RenderStar::Client::Render::Vulkan
         VkRenderPass renderPass,
         VkFramebuffer framebuffer,
         int32_t width,
-        int32_t height
+        int32_t height,
+        VkClearColorValue clearColor
     )
     {
-        std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = { { 0.39f, 0.58f, 0.93f, 1.0f } };
+        std::array<VkClearValue, 3> clearValues{};
+        clearValues[0].color = clearColor;
         clearValues[1].depthStencil = { 1.0f, 0 };
+        clearValues[2].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;

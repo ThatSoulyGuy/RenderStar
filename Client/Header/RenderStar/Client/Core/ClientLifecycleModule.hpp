@@ -1,10 +1,7 @@
 #pragma once
 
-#include "RenderStar/Client/Render/Resource/IBufferHandle.hpp"
-#include "RenderStar/Client/Render/Resource/IUniformBindingHandle.hpp"
 #include "RenderStar/Common/Component/GameObject.hpp"
 #include "RenderStar/Common/Module/AbstractModule.hpp"
-#include <memory>
 #include <vector>
 
 namespace RenderStar::Client::Render
@@ -32,12 +29,6 @@ namespace RenderStar::Common::Event
 
 namespace RenderStar::Client::Core
 {
-    struct UniformSlot
-    {
-        std::unique_ptr<Render::IBufferHandle> buffer;
-        std::unique_ptr<Render::IUniformBindingHandle> binding;
-    };
-
     class ClientLifecycleModule final : public Common::Module::AbstractModule
     {
 
@@ -56,18 +47,12 @@ namespace RenderStar::Client::Core
         Common::Event::EventResult OnRenderInitializeEvent(Common::Module::ModuleContext&, Render::IRenderBackend*);
         Common::Event::EventResult OnRenderFrameEvent(Render::IRenderBackend*);
 
-        UniformSlot& AcquireUniformSlot();
-
         void SetupGameplayLogic(Common::Module::ModuleContext& context);
         void SetupMainLoop() const;
 
-        std::vector<UniformSlot> uniformPool;
-        size_t uniformPoolIndex = 0;
         Render::IBufferManager* cachedBufferManager = nullptr;
         Render::IUniformManager* cachedUniformManager = nullptr;
         Render::ITextureManager* cachedTextureManager = nullptr;
-
-        float testRotationAngle = 0.0f;
 
         Common::Component::GameObject playerEntity = Common::Component::GameObject::Invalid();
 

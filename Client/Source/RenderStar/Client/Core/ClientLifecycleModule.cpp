@@ -12,7 +12,6 @@
 #include "RenderStar/Client/Render/Affectors/PlayerRenderAffector.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
 #include "RenderStar/Client/Render/Components/Camera.hpp"
-#include "RenderStar/Client/Render/Components/Light.hpp"
 #include "RenderStar/Client/Render/Framework/RenderingFrameworkModule.hpp"
 #include "RenderStar/Client/Render/Platform/RenderingPlatformModule.hpp"
 #include "RenderStar/Client/Render/RendererModule.hpp"
@@ -20,7 +19,6 @@
 #include "RenderStar/Client/Render/Resource/IShaderManager.hpp"
 #include "RenderStar/Client/Render/Resource/ITextureManager.hpp"
 #include "RenderStar/Client/Render/Resource/IUniformManager.hpp"
-#include "RenderStar/Client/Render/Resource/StandardUniforms.hpp"
 #include "RenderStar/Client/Render/Shader/RsslCompiler.hpp"
 #include "RenderStar/Client/Render/Framework/LitVertex.hpp"
 #include "RenderStar/Client/Network/ClientNetworkModule.hpp"
@@ -68,7 +66,6 @@ namespace RenderStar::Client::Core
             frameworkModule = nullptr;
         }
 
-        uniformPool.clear();
         cachedBufferManager = nullptr;
         cachedUniformManager = nullptr;
         cachedTextureManager = nullptr;
@@ -110,8 +107,19 @@ namespace RenderStar::Client::Core
         if (auto cameraAffector = context.GetModule<Render::Affectors::CameraAffector>(); cameraAffector.has_value())
             cameraAffector->get().SetViewportSize(backend->GetWidth(), backend->GetHeight());
 
-        auto shader = shaderManager->CreateFromSource(
-            Render::ShaderSource{compiled.vertexGlsl, compiled.fragmentGlsl, {}});
+        std::unique_ptr<Render::IShaderProgram> shader;
+
+        if (platformModule && platformModule->IsEnabled())
+        {
+            shader = platformModule->CompileShaderForTarget(
+                compiled.vertexGlsl, compiled.fragmentGlsl,
+                "scene_color", Render::Framework::LitVertex::LAYOUT);
+        }
+        else
+        {
+            shader = shaderManager->CreateFromSource(
+                Render::ShaderSource{compiled.vertexGlsl, compiled.fragmentGlsl, {}});
+        }
 
         if (!shader || !shader->IsValid())
             return Common::Event::EventResult::Failure("Failed to create shader program");
@@ -151,22 +159,22 @@ namespace RenderStar::Client::Core
             playerRenderAffector->get().SetupRenderState(bufferManager, uniformManager, cachedTextureManager);
             playerRenderAffector->get().SetSceneLightingBuffer(sceneLightingBuffer);
 
-            auto playerShader = shaderManager->CreateFromSource(
-                Render::ShaderSource{compiled.vertexGlsl, compiled.fragmentGlsl, {}});
+            std::unique_ptr<Render::IShaderProgram> playerShader;
+
+            if (platformModule && platformModule->IsEnabled())
+            {
+                playerShader = platformModule->CompileShaderForTarget(
+                    compiled.vertexGlsl, compiled.fragmentGlsl,
+                    "scene_color", Render::Framework::LitVertex::LAYOUT);
+            }
+            else
+            {
+                playerShader = shaderManager->CreateFromSource(
+                    Render::ShaderSource{compiled.vertexGlsl, compiled.fragmentGlsl, {}});
+            }
 
             if (playerShader && playerShader->IsValid())
                 playerRenderAffector->get().SetShader(std::move(playerShader));
-        }
-
-        auto& componentModule = context.GetDependency<Common::Component::ComponentModule>();
-
-        if (auto sceneModule = context.GetModule<Common::Scene::SceneModule>(); sceneModule.has_value())
-        {
-            auto lightEntity = sceneModule->get().CreateEntity();
-            componentModule.AddComponent<Render::Components::Light>(lightEntity,
-                Render::Components::Light::Directional(
-                    glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f)),
-                    glm::vec3(1.0f), 1.0f));
         }
 
         logger->info("Render state initialized successfully");
@@ -183,7 +191,6 @@ namespace RenderStar::Client::Core
             return Common::Event::EventResult::Failure("Renderer managers were not initialized");
 
         backend->BeginFrame();
-        uniformPoolIndex = 0;
 
         auto& componentModule = context->GetDependency<Common::Component::ComponentModule>();
         auto& playerModule = context->GetDependency<Gameplay::ClientPlayerModule>();
@@ -191,11 +198,6 @@ namespace RenderStar::Client::Core
 
         if (mapGeometryAffectorOpt.has_value())
             mapGeometryAffectorOpt->get().CheckForNewMapGeometry(componentModule);
-
-        testRotationAngle += 0.5f;
-
-        if (testRotationAngle >= 360.0f)
-            testRotationAngle -= 360.0f;
 
         glm::mat4 viewProjection(1.0f);
 
@@ -213,18 +215,6 @@ namespace RenderStar::Client::Core
 
         if (frameworkModule)
             frameworkModule->CollectSceneData(componentModule, cameraPosition);
-
-        auto model = glm::mat4(1.0f);
-
-        model = glm::rotate(model, glm::radians(testRotationAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-        model = glm::rotate(model, glm::radians(testRotationAngle * 0.5f), glm::vec3(1.0f, 0.0f, 0.0f));
-
-        const StandardUniforms uniformData(model, viewProjection, glm::vec4(1.0f, 0.0f, 0.0f, 0.0f));
-
-        auto& [cubeBuffer, cubeBinding] = AcquireUniformSlot();
-
-        cubeBuffer->SetSubData(&uniformData, StandardUniforms::Size(), 0);
-        backend->ExecuteDrawCommands();
 
         if (platformModule && platformModule->IsEnabled())
         {
@@ -261,26 +251,6 @@ namespace RenderStar::Client::Core
         backend->EndFrame();
 
         return Common::Event::EventResult::Success();
-    }
-
-    UniformSlot& ClientLifecycleModule::AcquireUniformSlot()
-    {
-        if (uniformPoolIndex < uniformPool.size())
-            return uniformPool[uniformPoolIndex++];
-
-        UniformSlot slot;
-        slot.buffer = cachedBufferManager->CreateUniformBuffer(StandardUniforms::Size());
-
-        if (slot.binding)
-        {
-            slot.binding->UpdateBuffer(0, slot.buffer.get(), StandardUniforms::Size());
-
-            if (cachedTextureManager)
-                slot.binding->UpdateTexture(1, cachedTextureManager->GetDefaultTexture());
-        }
-
-        uniformPool.push_back(std::move(slot));
-        return uniformPool[uniformPoolIndex++];
     }
 
     void ClientLifecycleModule::SetupGameplayLogic(Common::Module::ModuleContext& context)

@@ -109,6 +109,7 @@ namespace RenderStar::Client::Render::Platform
             tc.matchSwapchain = config->GetBoolean("targets." + name + ".match_swapchain").value_or(true);
             tc.width = static_cast<uint32_t>(config->GetInteger("targets." + name + ".width").value_or(0));
             tc.height = static_cast<uint32_t>(config->GetInteger("targets." + name + ".height").value_or(0));
+            tc.sampleCount = static_cast<uint32_t>(config->GetInteger("targets." + name + ".msaa").value_or(1));
 
             targetConfigs.push_back(std::move(tc));
         }
@@ -145,6 +146,7 @@ namespace RenderStar::Client::Render::Platform
             desc.colorFormat = tc.format;
             desc.hasDepth = tc.hasDepth;
             desc.matchSwapchainSize = tc.matchSwapchain;
+            desc.sampleCount = tc.sampleCount;
 
             if (!tc.matchSwapchain && tc.width > 0 && tc.height > 0)
             {
@@ -238,6 +240,27 @@ namespace RenderStar::Client::Render::Platform
     {
         if (!frozen || !enabled || !platformBackend)
             return;
+
+        uint32_t currentWidth = platformBackend->GetWidth();
+        uint32_t currentHeight = platformBackend->GetHeight();
+
+        auto* swapchainTarget = GetTarget("SWAPCHAIN");
+
+        if (swapchainTarget && (swapchainTarget->GetWidth() != currentWidth || swapchainTarget->GetHeight() != currentHeight))
+        {
+            swapchainTarget->Resize(currentWidth, currentHeight);
+
+            for (size_t i = 0; i < targetConfigs.size(); i++)
+            {
+                if (targetConfigs[i].matchSwapchain)
+                {
+                    auto* target = GetTarget(targetConfigs[i].name);
+
+                    if (target)
+                        target->Resize(currentWidth, currentHeight);
+                }
+            }
+        }
 
         StageExecutionContext context(platformBackend.get(), targetLookup, backend->GetCurrentFrame());
 

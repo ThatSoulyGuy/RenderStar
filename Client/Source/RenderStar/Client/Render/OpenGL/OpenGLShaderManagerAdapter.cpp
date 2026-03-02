@@ -16,9 +16,12 @@ namespace RenderStar::Client::Render::OpenGL
 
     std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateFromSource(const ShaderSource& source)
     {
+        std::string vertexGlsl = Shader::GlslTransformer::Transform450To410(source.vertexSource, Shader::ShaderType::VERTEX);
+        std::string fragmentGlsl = Shader::GlslTransformer::Transform450To410(source.fragmentSource, Shader::ShaderType::FRAGMENT);
+
         auto program = std::make_unique<OpenGLShaderProgram>();
 
-        if (!program->CompileFromSource(source.vertexSource, source.fragmentSource))
+        if (!program->CompileFromSource(vertexGlsl, fragmentGlsl))
         {
             logger->error("Failed to compile shader from source");
             return nullptr;
@@ -36,8 +39,8 @@ namespace RenderStar::Client::Render::OpenGL
     std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateFromTextAssets(const Common::Asset::ITextAsset& vertexAsset, const Common::Asset::ITextAsset& fragmentAsset)
     {
         ShaderSource source;
-        source.vertexSource = Shader::GlslTransformer::Transform450To410(vertexAsset.GetContent(), Shader::ShaderType::VERTEX);
-        source.fragmentSource = Shader::GlslTransformer::Transform450To410(fragmentAsset.GetContent(), Shader::ShaderType::FRAGMENT);
+        source.vertexSource = vertexAsset.GetContent();
+        source.fragmentSource = fragmentAsset.GetContent();
 
         return CreateFromSource(source);
     }

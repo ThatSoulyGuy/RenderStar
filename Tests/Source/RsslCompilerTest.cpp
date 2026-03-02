@@ -254,7 +254,7 @@ TEST(RsslCompilerTest, CompileEmitsUboWithInstanceName)
         "void main() {}\n");
 
     EXPECT_TRUE(result.IsValid());
-    EXPECT_TRUE(result.vertexGlsl.find("layout(binding = 0) uniform UniformBufferObject {") != std::string::npos);
+    EXPECT_TRUE(result.vertexGlsl.find("layout(std140, binding = 0) uniform UniformBufferObject {") != std::string::npos);
     EXPECT_TRUE(result.vertexGlsl.find("} ubo;") != std::string::npos);
 }
 
@@ -430,7 +430,7 @@ TEST(RsslCompilerTest, CompileSceneGeometryMatchesTestVert)
     EXPECT_TRUE(result.IsValid());
 
     EXPECT_TRUE(result.vertexGlsl.find("#version 450") != std::string::npos);
-    EXPECT_TRUE(result.vertexGlsl.find("layout(binding = 0) uniform UniformBufferObject {") != std::string::npos);
+    EXPECT_TRUE(result.vertexGlsl.find("layout(std140, binding = 0) uniform UniformBufferObject {") != std::string::npos);
     EXPECT_TRUE(result.vertexGlsl.find("    mat4 model;") != std::string::npos);
     EXPECT_TRUE(result.vertexGlsl.find("    mat4 viewProjection;") != std::string::npos);
     EXPECT_TRUE(result.vertexGlsl.find("    vec4 colorTint;") != std::string::npos);
@@ -445,7 +445,7 @@ TEST(RsslCompilerTest, CompileSceneGeometryMatchesTestVert)
     EXPECT_TRUE(result.vertexGlsl.find("gl_Position = ubo.viewProjection * ubo.model * vec4(inPosition, 1.0);") != std::string::npos);
 
     EXPECT_TRUE(result.fragmentGlsl.find("#version 450") != std::string::npos);
-    EXPECT_TRUE(result.fragmentGlsl.find("layout(binding = 0) uniform UniformBufferObject {") != std::string::npos);
+    EXPECT_TRUE(result.fragmentGlsl.find("layout(std140, binding = 0) uniform UniformBufferObject {") != std::string::npos);
     EXPECT_TRUE(result.fragmentGlsl.find("} ubo;") != std::string::npos);
     EXPECT_TRUE(result.fragmentGlsl.find("layout(binding = 1) uniform sampler2D texSampler;") != std::string::npos);
     EXPECT_TRUE(result.fragmentGlsl.find("layout(location = 0) in vec3 fragColor;") != std::string::npos);

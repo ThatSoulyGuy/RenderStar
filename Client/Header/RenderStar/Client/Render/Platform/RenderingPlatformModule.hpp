@@ -73,6 +73,7 @@ namespace RenderStar::Client::Render::Platform
             bool matchSwapchain = true;
             uint32_t width = 0;
             uint32_t height = 0;
+            uint32_t sampleCount = 1;
         };
 
         struct StageConfig

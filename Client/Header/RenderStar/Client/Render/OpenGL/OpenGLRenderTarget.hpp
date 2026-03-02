@@ -24,6 +24,7 @@ namespace RenderStar::Client::Render::OpenGL
         bool IsSwapchain() const override;
 
         uint32_t GetFramebufferHandle() const;
+        uint32_t GetSampleCount() const override;
         void Bind() const;
         void Unbind() const;
 
@@ -35,6 +36,9 @@ namespace RenderStar::Client::Render::OpenGL
         std::shared_ptr<spdlog::logger> logger;
         Platform::RenderTargetDescription description;
         uint32_t fbo = 0;
+        uint32_t msaaFbo = 0;
+        uint32_t msaaColorRbo = 0;
+        uint32_t msaaDepthRbo = 0;
         std::unique_ptr<OpenGLTextureHandle> colorAttachment;
         std::unique_ptr<OpenGLTextureHandle> depthAttachment;
     };

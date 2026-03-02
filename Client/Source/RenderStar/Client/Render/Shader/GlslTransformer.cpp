@@ -29,6 +29,7 @@ namespace RenderStar::Client::Render::Shader
         result = TransformUboBindings(result);
         result = RemovePushConstants(result);
         result = TransformBuiltins(result);
+        result = TransformShadowCoordinates(result);
 
         spdlog::debug("Transformed shader from GLSL 450 to GLSL 410");
 
@@ -74,5 +75,11 @@ namespace RenderStar::Client::Render::Shader
         result = std::regex_replace(result, instanceIndexPattern, "gl_InstanceID");
 
         return result;
+    }
+
+    std::string GlslTransformer::TransformShadowCoordinates(const std::string& source)
+    {
+        std::regex yFlipPattern(R"(vec2\s*\(\s*0\.5\s*,\s*-0\.5\s*\))");
+        return std::regex_replace(source, yFlipPattern, "vec2(0.5, 0.5)");
     }
 }

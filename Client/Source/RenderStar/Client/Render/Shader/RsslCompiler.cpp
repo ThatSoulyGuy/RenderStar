@@ -366,7 +366,7 @@ namespace RenderStar::Client::Render::Shader
                 std::transform(instanceName.begin(), instanceName.end(), instanceName.begin(), ::tolower);
             }
 
-            output += "layout(binding = " + std::to_string(block.binding) + ") uniform " + block.name + " {\n";
+            output += "layout(std140, binding = " + std::to_string(block.binding) + ") uniform " + block.name + " {\n";
             output += block.body;
             output += "} " + instanceName + ";\n\n";
             uboIndex++;

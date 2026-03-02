@@ -111,14 +111,33 @@ namespace RenderStar::Client::Render::OpenGL
         return fbo;
     }
 
+    uint32_t OpenGLRenderTarget::GetSampleCount() const
+    {
+        return description.sampleCount;
+    }
+
     void OpenGLRenderTarget::Bind() const
     {
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        if (msaaFbo != 0)
+            glBindFramebuffer(GL_FRAMEBUFFER, msaaFbo);
+        else
+            glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
         glViewport(0, 0, static_cast<GLsizei>(description.width), static_cast<GLsizei>(description.height));
     }
 
     void OpenGLRenderTarget::Unbind() const
     {
+        if (msaaFbo != 0)
+        {
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, msaaFbo);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo);
+            glBlitFramebuffer(
+                0, 0, static_cast<GLint>(description.width), static_cast<GLint>(description.height),
+                0, 0, static_cast<GLint>(description.width), static_cast<GLint>(description.height),
+                GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        }
+
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
@@ -160,17 +179,73 @@ namespace RenderStar::Client::Render::OpenGL
 
         if (status != GL_FRAMEBUFFER_COMPLETE)
             logger->error("Framebuffer '{}' incomplete: 0x{:X}", description.name, status);
-        else
-            logger->info("Created render target '{}' {}x{} (fbo={})", description.name, description.width, description.height, fbo);
 
         glBindTexture(GL_TEXTURE_2D, 0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        if (description.sampleCount > 1)
+        {
+            GLsizei samples = static_cast<GLsizei>(description.sampleCount);
+
+            glGenFramebuffers(1, &msaaFbo);
+            glBindFramebuffer(GL_FRAMEBUFFER, msaaFbo);
+
+            glGenRenderbuffers(1, &msaaColorRbo);
+            glBindRenderbuffer(GL_RENDERBUFFER, msaaColorRbo);
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples,
+                ToGLInternalFormat(description.colorFormat),
+                static_cast<GLsizei>(description.width),
+                static_cast<GLsizei>(description.height));
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, msaaColorRbo);
+
+            if (description.hasDepth)
+            {
+                glGenRenderbuffers(1, &msaaDepthRbo);
+                glBindRenderbuffer(GL_RENDERBUFFER, msaaDepthRbo);
+                glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, GL_DEPTH24_STENCIL8,
+                    static_cast<GLsizei>(description.width),
+                    static_cast<GLsizei>(description.height));
+                glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, msaaDepthRbo);
+            }
+
+            GLenum msaaStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+            if (msaaStatus != GL_FRAMEBUFFER_COMPLETE)
+                logger->error("MSAA framebuffer '{}' incomplete: 0x{:X}", description.name, msaaStatus);
+            else
+                logger->info("Created render target '{}' {}x{} ({}x MSAA)", description.name, description.width, description.height, description.sampleCount);
+
+            glBindRenderbuffer(GL_RENDERBUFFER, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+        else
+        {
+            logger->info("Created render target '{}' {}x{} (fbo={})", description.name, description.width, description.height, fbo);
+        }
     }
 
     void OpenGLRenderTarget::Destroy()
     {
         colorAttachment.reset();
         depthAttachment.reset();
+
+        if (msaaDepthRbo != 0)
+        {
+            glDeleteRenderbuffers(1, &msaaDepthRbo);
+            msaaDepthRbo = 0;
+        }
+
+        if (msaaColorRbo != 0)
+        {
+            glDeleteRenderbuffers(1, &msaaColorRbo);
+            msaaColorRbo = 0;
+        }
+
+        if (msaaFbo != 0)
+        {
+            glDeleteFramebuffers(1, &msaaFbo);
+            msaaFbo = 0;
+        }
 
         if (fbo != 0)
         {

@@ -81,7 +81,8 @@ namespace RenderStar::Client::Render::OpenGL
         glDepthFunc(GL_LESS);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
-        glFrontFace(GL_CW);
+        glFrontFace(GL_CCW);
+        glEnable(GL_MULTISAMPLE);
 
         bufferManager = std::make_unique<OpenGLBufferManagerAdapter>();
         uniformManager = std::make_unique<OpenGLUniformManagerAdapter>();

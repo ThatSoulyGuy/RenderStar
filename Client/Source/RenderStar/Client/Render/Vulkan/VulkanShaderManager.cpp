@@ -174,8 +174,8 @@ namespace RenderStar::Client::Render::Vulkan
     {
         std::vector<VkDescriptorSetLayoutBinding> bindings;
 
-        std::regex uniformRegex(R"(layout\s*\(\s*binding\s*=\s*(\d+)\s*\)\s*uniform\s+(?!sampler)(\w+))");
-        std::regex samplerRegex(R"(layout\s*\(\s*binding\s*=\s*(\d+)\s*\)\s*uniform\s+sampler\w*\s+(\w+))");
+        std::regex uniformRegex(R"(layout\s*\([^)]*binding\s*=\s*(\d+)[^)]*\)\s*uniform\s+(?!sampler)(\w+))");
+        std::regex samplerRegex(R"(layout\s*\([^)]*binding\s*=\s*(\d+)[^)]*\)\s*uniform\s+sampler\w*\s+(\w+))");
 
         auto addBindings = [&](const std::string& source, VkShaderStageFlags stageFlag)
         {

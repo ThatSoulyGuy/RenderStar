@@ -15,7 +15,7 @@ namespace RenderStar::Client::Render::Vulkan
         VulkanTextureManager();
         ~VulkanTextureManager() override;
 
-        void Initialize(VkDevice device, VmaAllocator allocator, VkQueue graphicsQueue, uint32_t graphicsQueueFamily, IGraphicsResourceManager* resourceManager);
+        void Initialize(VkPhysicalDevice physicalDevice, VkDevice device, VmaAllocator allocator, VkQueue graphicsQueue, uint32_t graphicsQueueFamily, IGraphicsResourceManager* resourceManager);
         void Destroy();
 
         std::unique_ptr<ITextureHandle> CreateFromMemory(
@@ -26,8 +26,9 @@ namespace RenderStar::Client::Render::Vulkan
     private:
 
         void CreateDefaultTexture();
-        void TransitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+        void TransitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
         void CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+        void GenerateMipmaps(VkImage image, uint32_t width, uint32_t height, uint32_t mipLevels);
         VkCommandBuffer BeginSingleTimeCommands();
         void EndSingleTimeCommands(VkCommandBuffer commandBuffer);
 
@@ -35,6 +36,7 @@ namespace RenderStar::Client::Render::Vulkan
         VkFilter ToVulkanFilter(TextureFilterMode mode) const;
 
         std::shared_ptr<spdlog::logger> logger;
+        VkPhysicalDevice physicalDevice;
         VkDevice device;
         VmaAllocator allocator;
         VkQueue graphicsQueue;
