@@ -110,6 +110,7 @@ namespace RenderStar::Client::Render::Platform
             tc.width = static_cast<uint32_t>(config->GetInteger("targets." + name + ".width").value_or(0));
             tc.height = static_cast<uint32_t>(config->GetInteger("targets." + name + ".height").value_or(0));
             tc.sampleCount = static_cast<uint32_t>(config->GetInteger("targets." + name + ".msaa").value_or(1));
+            tc.scale = config->GetFloat("targets." + name + ".scale").value_or(1.0f);
 
             targetConfigs.push_back(std::move(tc));
         }
@@ -147,6 +148,7 @@ namespace RenderStar::Client::Render::Platform
             desc.hasDepth = tc.hasDepth;
             desc.matchSwapchainSize = tc.matchSwapchain;
             desc.sampleCount = tc.sampleCount;
+            desc.scale = tc.scale;
 
             if (!tc.matchSwapchain && tc.width > 0 && tc.height > 0)
             {
@@ -257,7 +259,11 @@ namespace RenderStar::Client::Render::Platform
                     auto* target = GetTarget(targetConfigs[i].name);
 
                     if (target)
-                        target->Resize(currentWidth, currentHeight);
+                    {
+                        uint32_t scaledWidth = static_cast<uint32_t>(currentWidth * targetConfigs[i].scale);
+                        uint32_t scaledHeight = static_cast<uint32_t>(currentHeight * targetConfigs[i].scale);
+                        target->Resize(scaledWidth, scaledHeight);
+                    }
                 }
             }
         }

@@ -3,7 +3,7 @@
     <RenderingPlatformModule>
         <enabled>true</enabled>
 
-        <target_names>shadow_map, scene_color</target_names>
+        <target_names>shadow_map, scene_color, ssao_raw, ssao_blur, bloom_threshold, bloom_down_1, bloom_down_2, bloom_up_1, bloom_up_0</target_names>
 
         <targets>
             <shadow_map>
@@ -14,14 +14,56 @@
                 <height>2048</height>
             </shadow_map>
             <scene_color>
-                <format>RGBA8</format>
+                <format>RGBA16F</format>
                 <depth>true</depth>
                 <match_swapchain>true</match_swapchain>
                 <msaa>4</msaa>
             </scene_color>
+            <ssao_raw>
+                <format>RGBA8</format>
+                <depth>false</depth>
+                <match_swapchain>true</match_swapchain>
+                <scale>0.5</scale>
+            </ssao_raw>
+            <ssao_blur>
+                <format>RGBA8</format>
+                <depth>false</depth>
+                <match_swapchain>true</match_swapchain>
+                <scale>0.5</scale>
+            </ssao_blur>
+            <bloom_threshold>
+                <format>RGBA16F</format>
+                <depth>false</depth>
+                <match_swapchain>true</match_swapchain>
+                <scale>0.5</scale>
+            </bloom_threshold>
+            <bloom_down_1>
+                <format>RGBA16F</format>
+                <depth>false</depth>
+                <match_swapchain>true</match_swapchain>
+                <scale>0.25</scale>
+            </bloom_down_1>
+            <bloom_down_2>
+                <format>RGBA16F</format>
+                <depth>false</depth>
+                <match_swapchain>true</match_swapchain>
+                <scale>0.125</scale>
+            </bloom_down_2>
+            <bloom_up_1>
+                <format>RGBA16F</format>
+                <depth>false</depth>
+                <match_swapchain>true</match_swapchain>
+                <scale>0.25</scale>
+            </bloom_up_1>
+            <bloom_up_0>
+                <format>RGBA16F</format>
+                <depth>false</depth>
+                <match_swapchain>true</match_swapchain>
+                <scale>0.5</scale>
+            </bloom_up_0>
         </targets>
 
-        <stage_order>main_geometry, tonemap</stage_order>
+        <stage_order>main_geometry, ssao, ssao_blur, bloom_extract, bloom_down_1, bloom_down_2, bloom_up_1, bloom_up_0, tonemap</stage_order>
 
         <stages>
             <main_geometry>
@@ -31,11 +73,53 @@
                 <vertex_format>lit</vertex_format>
                 <clear>true</clear>
             </main_geometry>
+            <ssao>
+                <type>fullscreen</type>
+                <shader>renderstar:shader/ssao.rssl</shader>
+                <output>ssao_raw</output>
+                <inputs>scene_color</inputs>
+            </ssao>
+            <ssao_blur>
+                <type>fullscreen</type>
+                <shader>renderstar:shader/ssao_blur.rssl</shader>
+                <output>ssao_blur</output>
+                <inputs>ssao_raw, scene_color</inputs>
+            </ssao_blur>
+            <bloom_extract>
+                <type>fullscreen</type>
+                <shader>renderstar:shader/bloom_threshold.rssl</shader>
+                <output>bloom_threshold</output>
+                <inputs>scene_color</inputs>
+            </bloom_extract>
+            <bloom_down_1>
+                <type>fullscreen</type>
+                <shader>renderstar:shader/bloom_downsample.rssl</shader>
+                <output>bloom_down_1</output>
+                <inputs>bloom_threshold</inputs>
+            </bloom_down_1>
+            <bloom_down_2>
+                <type>fullscreen</type>
+                <shader>renderstar:shader/bloom_downsample.rssl</shader>
+                <output>bloom_down_2</output>
+                <inputs>bloom_down_1</inputs>
+            </bloom_down_2>
+            <bloom_up_1>
+                <type>fullscreen</type>
+                <shader>renderstar:shader/bloom_upsample.rssl</shader>
+                <output>bloom_up_1</output>
+                <inputs>bloom_down_2, bloom_down_1</inputs>
+            </bloom_up_1>
+            <bloom_up_0>
+                <type>fullscreen</type>
+                <shader>renderstar:shader/bloom_upsample.rssl</shader>
+                <output>bloom_up_0</output>
+                <inputs>bloom_up_1, bloom_threshold</inputs>
+            </bloom_up_0>
             <tonemap>
                 <type>fullscreen</type>
                 <shader>renderstar:shader/tonemap.rssl</shader>
                 <output>SWAPCHAIN</output>
-                <inputs>scene_color</inputs>
+                <inputs>scene_color, bloom_up_0, ssao_blur</inputs>
             </tonemap>
         </stages>
     </RenderingPlatformModule>

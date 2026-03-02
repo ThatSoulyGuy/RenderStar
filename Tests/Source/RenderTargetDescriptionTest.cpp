@@ -13,6 +13,7 @@ TEST(RenderTargetDescriptionTest, DefaultDescription)
     EXPECT_EQ(desc.colorFormat, TextureFormat::RGBA8);
     EXPECT_FALSE(desc.hasDepth);
     EXPECT_TRUE(desc.matchSwapchainSize);
+    EXPECT_FLOAT_EQ(desc.scale, 1.0f);
 }
 
 TEST(RenderTargetDescriptionTest, CustomDescription)

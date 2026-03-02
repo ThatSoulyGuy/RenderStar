@@ -12,6 +12,11 @@ namespace RenderStar::Client::Render
     class ITextureManager;
 }
 
+namespace RenderStar::Client::Render::Affectors
+{
+    class SkyboxRenderAffector;
+}
+
 namespace RenderStar::Client::Render::Platform
 {
     class RenderingPlatformModule;

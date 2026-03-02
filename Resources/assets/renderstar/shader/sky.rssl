@@ -1,0 +1,66 @@
+#rssl 1
+
+@uniform SkyData : binding(0)
+{
+    mat4 viewProjectionNoTranslation;
+    vec4 sunDirection;
+    vec4 sunColor;
+    vec4 ambientColor;
+    vec4 skyParams;
+}
+
+@stage vertex
+
+@input inPosition : location(0), vec3
+@input inNormal : location(1), vec3
+@input inTexCoord : location(2), vec2
+@input inTangent : location(3), vec3
+
+@output fragWorldDir : location(0), vec3
+
+void main() {
+    fragWorldDir = inPosition;
+    vec4 clipPos = ubo.viewProjectionNoTranslation * vec4(inPosition, 1.0);
+    gl_Position = vec4(clipPos.xy, clipPos.w * 0.99999, clipPos.w);
+}
+
+@stage fragment
+
+@input fragWorldDir : location(0), vec3
+
+@output outColor : location(0), vec4
+
+void main() {
+    vec3 viewDir = normalize(fragWorldDir);
+
+    vec3 sunDir = normalize(ubo.sunDirection.xyz);
+    vec3 sunColor = ubo.sunColor.rgb * ubo.sunColor.w;
+    vec3 ambientBase = ubo.ambientColor.rgb * ubo.ambientColor.w;
+    float skyExposure = ubo.skyParams.x;
+
+    float elevation = viewDir.y;
+    float sunDot = max(dot(viewDir, sunDir), 0.0);
+
+    vec3 zenithColor = ambientBase * vec3(0.7, 0.85, 1.5);
+    vec3 horizonColor = ambientBase * vec3(1.2, 1.1, 0.9);
+
+    vec3 horizonFwd = normalize(vec3(viewDir.x, 0.0, viewDir.z) + vec3(0.001));
+    float sunHorizDot = max(dot(horizonFwd, sunDir), 0.0);
+    horizonColor += sunColor * 0.15 * sunHorizDot;
+
+    float skyGrad = smoothstep(0.0, 0.6, max(elevation, 0.0));
+    vec3 sky = mix(horizonColor, zenithColor, skyGrad);
+
+    sky += sunColor * pow(sunDot, 8.0) * 0.5;
+
+    float diskMask = smoothstep(0.9995, 0.9999, sunDot);
+    sky += sunColor * diskMask * 5.0;
+
+    vec3 groundColor = ambientBase * vec3(0.3, 0.25, 0.2);
+    float groundBlend = smoothstep(-0.05, 0.05, elevation);
+    vec3 skyColor = mix(groundColor, sky, groundBlend);
+
+    skyColor *= skyExposure;
+
+    outColor = vec4(max(skyColor, vec3(0.0)), 100.0);
+}

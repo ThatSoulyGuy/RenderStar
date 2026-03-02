@@ -12,6 +12,7 @@
 #include "RenderStar/Client/Render/Affectors/CameraAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/MapGeometryRenderAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/PlayerRenderAffector.hpp"
+#include "RenderStar/Client/Render/Affectors/SkyboxRenderAffector.hpp"
 #include "RenderStar/Client/Render/Framework/RenderingFrameworkModule.hpp"
 #include "RenderStar/Client/Render/Platform/RenderingPlatformModule.hpp"
 #include "RenderStar/Client/Render/RendererModule.hpp"
@@ -67,6 +68,7 @@ namespace RenderStar::Client
                 .Affector(std::make_unique<Gameplay::PlayerControllerAffector>())
                 .Affector(std::make_unique<Common::Component::Affectors::TransformAffector>())
                 .Affector(std::make_unique<Render::Affectors::CameraAffector>())
+                .Affector(std::make_unique<Render::Affectors::SkyboxRenderAffector>())
                 .Affector(std::make_unique<Render::Affectors::MapGeometryRenderAffector>())
                 .Affector(std::make_unique<Render::Affectors::PlayerRenderAffector>())
                 .Build())

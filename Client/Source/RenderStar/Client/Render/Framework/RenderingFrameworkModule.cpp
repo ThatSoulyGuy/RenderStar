@@ -59,7 +59,7 @@ namespace RenderStar::Client::Render::Framework
                 lightView = glm::lookAt(snappedCenter - lightDir * (shadowFar * 0.5f), snappedCenter, up);
                 glm::mat4 lightProj = glm::ortho(-shadowRadius, shadowRadius, -shadowRadius, shadowRadius, shadowNear, shadowFar);
                 sceneLightingData.directionalLightVP = lightProj * lightView;
-                constexpr float pcssLightSize = 150.0f;
+                constexpr float pcssLightSize = 60.0f;
                 sceneLightingData.shadowParams = glm::vec4(1.0f, 0.0008f, shadowMapSize, pcssLightSize);
             }
             else if (light.type == Components::LightType::POINT && pointCount < MAX_POINT_LIGHTS)
@@ -111,6 +111,11 @@ namespace RenderStar::Client::Render::Framework
     IBufferHandle* RenderingFrameworkModule::GetSceneLightingBuffer() const
     {
         return sceneLightingBuffer.get();
+    }
+
+    const SceneLightingData& RenderingFrameworkModule::GetSceneLightingData() const
+    {
+        return sceneLightingData;
     }
 
     glm::mat4 RenderingFrameworkModule::GetLightViewProjection() const

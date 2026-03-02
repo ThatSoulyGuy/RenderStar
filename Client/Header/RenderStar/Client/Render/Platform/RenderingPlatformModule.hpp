@@ -74,6 +74,7 @@ namespace RenderStar::Client::Render::Platform
             uint32_t width = 0;
             uint32_t height = 0;
             uint32_t sampleCount = 1;
+            float scale = 1.0f;
         };
 
         struct StageConfig

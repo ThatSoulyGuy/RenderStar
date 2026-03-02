@@ -160,6 +160,7 @@ namespace RenderStar::Client::Render::Affectors
                 loaded.normalStrength = mat.normalStrength;
                 loaded.aoStrength = mat.aoStrength;
                 loaded.emissionStrength = mat.emissionStrength;
+                loaded.detailScale = mat.detailScale;
 
                 for (const auto& slot : mat.textureSlots)
                 {
@@ -196,6 +197,15 @@ namespace RenderStar::Client::Render::Affectors
                                 break;
                             case Common::Scene::TextureSlotType::EMISSION:
                                 loaded.emissionMap = rawPtr;
+                                break;
+                            case Common::Scene::TextureSlotType::SPECULAR:
+                                loaded.specularMap = rawPtr;
+                                break;
+                            case Common::Scene::TextureSlotType::DETAIL_ALBEDO:
+                                loaded.detailAlbedoMap = rawPtr;
+                                break;
+                            case Common::Scene::TextureSlotType::DETAIL_NORMAL:
+                                loaded.detailNormalMap = rawPtr;
                                 break;
                             default:
                                 break;
@@ -375,6 +385,9 @@ namespace RenderStar::Client::Render::Affectors
             ITextureHandle* aoTex = defaultTex;
             ITextureHandle* emissionTex = defaultTex;
             ITextureHandle* normalTex = defaultTex;
+            ITextureHandle* specularTex = defaultTex;
+            ITextureHandle* detailAlbedoTex = defaultTex;
+            ITextureHandle* detailNormalTex = defaultTex;
             MaterialProperties matProps;
 
             auto it = loadedMaterials.find(mapbinMesh.materialId);
@@ -395,10 +408,20 @@ namespace RenderStar::Client::Render::Affectors
                     emissionTex = mat.emissionMap;
                 if (mat.normalMap)
                     normalTex = mat.normalMap;
+                if (mat.specularMap)
+                    specularTex = mat.specularMap;
+                if (mat.detailAlbedoMap)
+                    detailAlbedoTex = mat.detailAlbedoMap;
+                if (mat.detailNormalMap)
+                    detailNormalTex = mat.detailNormalMap;
 
                 float effectiveEmission = mat.emissionMap ? mat.emissionStrength : 0.0f;
                 float effectiveNormal = mat.normalMap ? mat.normalStrength : 0.0f;
-                matProps = MaterialProperties(mat.roughness, mat.metallic, mat.aoStrength, effectiveEmission, effectiveNormal);
+                float effectiveSpecular = mat.specularMap ? mat.specularStrength : 0.5f;
+                bool hasDetail = mat.detailAlbedoMap || mat.detailNormalMap;
+                float effectiveDetailScale = hasDetail ? mat.detailScale : 0.0f;
+                matProps = MaterialProperties(mat.roughness, mat.metallic, mat.aoStrength, effectiveEmission,
+                    effectiveNormal, effectiveSpecular, effectiveDetailScale);
             }
 
             slot.materialBuffer->SetSubData(&matProps, MaterialProperties::Size(), 0);
@@ -421,6 +444,12 @@ namespace RenderStar::Client::Render::Affectors
 
                 if (normalTex)
                     slot.binding->UpdateTexture(9, normalTex, frameIndex);
+                if (specularTex)
+                    slot.binding->UpdateTexture(10, specularTex, frameIndex);
+                if (detailAlbedoTex)
+                    slot.binding->UpdateTexture(11, detailAlbedoTex, frameIndex);
+                if (detailNormalTex)
+                    slot.binding->UpdateTexture(12, detailNormalTex, frameIndex);
 
                 backend->SubmitDrawCommand(shader.get(), slot.binding.get(), frameIndex, mapbinMesh.mesh->GetUnderlyingMesh());
             }
@@ -515,6 +544,9 @@ namespace RenderStar::Client::Render::Affectors
                 slot.binding->UpdateTexture(7, textureManager->GetDefaultTexture());
                 slot.binding->UpdateTexture(8, textureManager->GetDefaultTexture());
                 slot.binding->UpdateTexture(9, textureManager->GetDefaultTexture());
+                slot.binding->UpdateTexture(10, textureManager->GetDefaultTexture());
+                slot.binding->UpdateTexture(11, textureManager->GetDefaultTexture());
+                slot.binding->UpdateTexture(12, textureManager->GetDefaultTexture());
             }
 
             if (sceneLightingBuffer)

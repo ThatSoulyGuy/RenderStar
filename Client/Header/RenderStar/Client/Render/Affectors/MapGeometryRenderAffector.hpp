@@ -38,12 +38,16 @@ namespace RenderStar::Client::Render::Affectors
             float normalStrength = 1.0f;
             float aoStrength = 1.0f;
             float emissionStrength = 1.0f;
+            float detailScale = 1.0f;
             ITextureHandle* baseColor = nullptr;
             ITextureHandle* normalMap = nullptr;
             ITextureHandle* roughnessMap = nullptr;
             ITextureHandle* metallicMap = nullptr;
             ITextureHandle* aoMap = nullptr;
             ITextureHandle* emissionMap = nullptr;
+            ITextureHandle* specularMap = nullptr;
+            ITextureHandle* detailAlbedoMap = nullptr;
+            ITextureHandle* detailNormalMap = nullptr;
         };
 
         void Affect(Common::Component::ComponentModule& componentModule) override;

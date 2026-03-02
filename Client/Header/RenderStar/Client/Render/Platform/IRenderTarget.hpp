@@ -23,6 +23,7 @@ namespace RenderStar::Client::Render::Platform
         bool hasDepth = false;
         bool matchSwapchainSize = true;
         uint32_t sampleCount = 1;
+        float scale = 1.0f;
     };
 
     class IRenderTarget

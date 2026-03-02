@@ -10,6 +10,7 @@
 #include "RenderStar/Client/Render/Affectors/CameraAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/MapGeometryRenderAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/PlayerRenderAffector.hpp"
+#include "RenderStar/Client/Render/Affectors/SkyboxRenderAffector.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
 #include "RenderStar/Client/Render/Components/Camera.hpp"
 #include "RenderStar/Client/Render/Framework/RenderingFrameworkModule.hpp"
@@ -177,6 +178,39 @@ namespace RenderStar::Client::Core
                 playerRenderAffector->get().SetShader(std::move(playerShader));
         }
 
+        if (auto skyboxAffector = context.GetModule<Render::Affectors::SkyboxRenderAffector>(); skyboxAffector.has_value())
+        {
+            skyboxAffector->get().SetupRenderState(bufferManager, uniformManager);
+
+            const auto skyRsslAsset = assetModule->get().LoadText(
+                Common::Asset::AssetLocation::Parse("renderstar:shader/sky.rssl"));
+
+            if (skyRsslAsset.IsValid())
+            {
+                auto skyCompiled = Render::Shader::RsslCompiler::Compile(skyRsslAsset.Get()->GetContent());
+
+                if (skyCompiled.IsValid())
+                {
+                    std::unique_ptr<Render::IShaderProgram> skyShader;
+
+                    if (platformModule && platformModule->IsEnabled())
+                    {
+                        skyShader = platformModule->CompileShaderForTarget(
+                            skyCompiled.vertexGlsl, skyCompiled.fragmentGlsl,
+                            "scene_color", Render::Framework::LitVertex::LAYOUT);
+                    }
+                    else
+                    {
+                        skyShader = shaderManager->CreateFromSource(
+                            Render::ShaderSource{skyCompiled.vertexGlsl, skyCompiled.fragmentGlsl, {}});
+                    }
+
+                    if (skyShader && skyShader->IsValid())
+                        skyboxAffector->get().SetShader(std::move(skyShader));
+                }
+            }
+        }
+
         logger->info("Render state initialized successfully");
 
         return Common::Event::EventResult::Success();
@@ -227,6 +261,39 @@ namespace RenderStar::Client::Core
 
                 auto* shadowTex = platformModule->GetTargetColorTexture("shadow_map");
                 mapGeometryAffectorOpt->get().SetShadowMapTexture(shadowTex);
+            }
+
+            if (auto skyboxAffectorOpt = context->GetModule<Render::Affectors::SkyboxRenderAffector>(); skyboxAffectorOpt.has_value())
+            {
+                glm::mat4 viewMatrix(1.0f);
+                glm::mat4 projectionMatrix(1.0f);
+
+                if (playerEntity.IsValid())
+                {
+                    if (auto cameraOpt = componentModule.GetComponent<Components::Camera>(playerEntity); cameraOpt.has_value())
+                    {
+                        viewMatrix = cameraOpt->get().viewMatrix;
+                        projectionMatrix = cameraOpt->get().projectionMatrix;
+                    }
+                }
+
+                glm::vec3 sunDir(0.0f, -1.0f, 0.0f);
+                glm::vec3 sunCol(1.0f);
+                float sunInt = 1.0f;
+                glm::vec3 ambCol(0.15f);
+                float ambInt = 1.0f;
+
+                if (frameworkModule)
+                {
+                    auto& sceneLighting = frameworkModule->GetSceneLightingData();
+                    sunDir = glm::vec3(sceneLighting.directionalDirection);
+                    sunCol = glm::vec3(sceneLighting.directionalColor);
+                    sunInt = sceneLighting.directionalColor.w;
+                    ambCol = glm::vec3(sceneLighting.ambientColor);
+                    ambInt = sceneLighting.ambientColor.w;
+                }
+
+                skyboxAffectorOpt->get().Render(backend, viewMatrix, projectionMatrix, sunDir, sunCol, sunInt, ambCol, ambInt);
             }
 
             if (mapGeometryAffectorOpt.has_value())

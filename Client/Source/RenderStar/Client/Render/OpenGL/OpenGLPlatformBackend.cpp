@@ -21,8 +21,8 @@ namespace RenderStar::Client::Render::OpenGL
 
         if (desc.matchSwapchainSize)
         {
-            desc.width = backend->GetWidth();
-            desc.height = backend->GetHeight();
+            desc.width = static_cast<uint32_t>(backend->GetWidth() * desc.scale);
+            desc.height = static_cast<uint32_t>(backend->GetHeight() * desc.scale);
         }
 
         return std::make_unique<OpenGLRenderTarget>(desc);

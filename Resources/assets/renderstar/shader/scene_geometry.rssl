@@ -37,6 +37,9 @@
 @sampler emissionMap : binding(7)
 @sampler shadowMap : binding(8)
 @sampler normalMap : binding(9)
+@sampler specularMap : binding(10)
+@sampler detailAlbedoMap : binding(11)
+@sampler detailNormalMap : binding(12)
 
 @stage vertex
 
@@ -103,6 +106,67 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+vec3 FresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness) {
+    return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
+vec2 EnvBRDFApprox(float roughness, float NdotV) {
+    vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
+    vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
+    vec4 r = roughness * c0 + c1;
+    float a004 = min(r.x * r.x, exp2(-9.28 * NdotV)) * r.x + r.y;
+    return vec2(-1.04, 1.04) * a004 + r.zw;
+}
+
+vec3 ProceduralEnvironment(vec3 R, float roughness) {
+    vec3 sunDir = normalize(-scenelighting.directionalDirection.xyz);
+    vec3 sunColor = scenelighting.directionalColor.rgb * scenelighting.directionalColor.w;
+    vec3 ambientBase = scenelighting.ambientColor.rgb * scenelighting.ambientColor.w;
+
+    float blur = roughness * roughness;
+    float elevation = R.y;
+    float sunDot = max(dot(R, sunDir), 0.0);
+
+    vec3 zenithColor = ambientBase * vec3(0.7, 0.85, 1.5);
+    vec3 horizonColor = ambientBase * vec3(1.2, 1.1, 0.9);
+
+    vec3 horizonFwd = normalize(vec3(R.x, 0.0, R.z) + vec3(0.001));
+    float sunHorizDot = max(dot(horizonFwd, sunDir), 0.0);
+    horizonColor += sunColor * 0.15 * sunHorizDot;
+
+    float skyGrad = smoothstep(0.0, 0.6, max(elevation, 0.0));
+    vec3 sky = mix(horizonColor, zenithColor, skyGrad);
+
+    sky += sunColor * pow(sunDot, 8.0) * 0.5;
+    float diskMask = smoothstep(0.997 - blur * 0.1, 0.999, sunDot);
+    sky += sunColor * diskMask * (1.0 - blur) * 3.0;
+
+    vec3 groundColor = ambientBase * vec3(0.3, 0.25, 0.2);
+    float groundBlend = smoothstep(-0.05, 0.05, elevation);
+    vec3 env = mix(groundColor, sky, groundBlend);
+
+    vec3 avgEnv = ambientBase * 0.6;
+    env = mix(env, avgEnv, blur);
+
+    return max(env, vec3(0.0));
+}
+
+vec3 ProceduralIrradiance(vec3 N) {
+    vec3 sunDir = normalize(-scenelighting.directionalDirection.xyz);
+    vec3 sunColor = scenelighting.directionalColor.rgb * scenelighting.directionalColor.w;
+    vec3 ambientBase = scenelighting.ambientColor.rgb * scenelighting.ambientColor.w;
+
+    vec3 skyIrr = ambientBase * vec3(0.85, 0.9, 1.15);
+    vec3 groundIrr = ambientBase * vec3(0.3, 0.25, 0.2);
+    float upness = N.y * 0.5 + 0.5;
+    vec3 irradiance = mix(groundIrr, skyIrr, upness);
+
+    float NdotSun = max(dot(N, sunDir), 0.0);
+    irradiance += sunColor * NdotSun * 0.1;
+
+    return irradiance;
+}
+
 float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir) {
     vec4 fragPosLightSpace = scenelighting.directionalLightVP * vec4(fragPos, 1.0);
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
@@ -112,18 +176,19 @@ float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir) {
 
     float currentDepth = projCoords.z;
     float NdotL = dot(normal, lightDir);
-    float bias = max(scenelighting.shadowParams.y * 2.5 * (1.0 - NdotL), scenelighting.shadowParams.y);
+    float pcfBias = max(scenelighting.shadowParams.y * 2.5 * (1.0 - NdotL), scenelighting.shadowParams.y);
     float lightSize = scenelighting.shadowParams.w;
     vec2 texelSize = 1.0 / vec2(scenelighting.shadowParams.z);
 
+    float searchBias = scenelighting.shadowParams.y * 0.25;
     float searchRadius = 20.0 * texelSize.x;
     float blockerSum = 0.0;
     int blockerCount = 0;
-    for (int x = -2; x <= 2; x++) {
-        for (int y = -2; y <= 2; y++) {
-            vec2 offset = vec2(x, y) * searchRadius / 2.0;
+    for (int x = -3; x <= 3; x++) {
+        for (int y = -3; y <= 3; y++) {
+            vec2 offset = vec2(x, y) * searchRadius / 3.0;
             float d = texture(shadowMap, projCoords.xy + offset).r;
-            if (d < currentDepth - bias) {
+            if (d < currentDepth - searchBias) {
                 blockerSum += d;
                 blockerCount++;
             }
@@ -134,22 +199,22 @@ float ShadowCalculation(vec3 fragPos, vec3 normal, vec3 lightDir) {
 
     float avgBlockerDepth = blockerSum / float(blockerCount);
     float penumbra = lightSize * (currentDepth - avgBlockerDepth) / avgBlockerDepth;
-    float filterRadius = clamp(penumbra, 0.0, 20.0) * texelSize.x;
+    float filterRadius = clamp(penumbra, 0.0, 60.0) * texelSize.x;
 
     float shadow = 0.0;
-    for (int x = -2; x <= 2; x++) {
-        for (int y = -2; y <= 2; y++) {
-            vec2 offset = vec2(x, y) * filterRadius / 2.0;
+    for (int x = -3; x <= 3; x++) {
+        for (int y = -3; y <= 3; y++) {
+            vec2 offset = vec2(x, y) * filterRadius / 3.0;
             float d = texture(shadowMap, projCoords.xy + offset).r;
-            shadow += currentDepth - bias > d ? 1.0 : 0.0;
+            shadow += currentDepth - pcfBias > d ? 1.0 : 0.0;
         }
     }
-    return 1.0 - shadow / 25.0;
+    return 1.0 - shadow / 49.0;
 }
 
-vec3 CookTorranceBRDF(vec3 N, vec3 V, vec3 L, vec3 albedo, float roughness, float metallic, vec3 radiance) {
+vec3 CookTorranceBRDF(vec3 N, vec3 V, vec3 L, vec3 albedo, float roughness, float metallic, float dielectricF0, vec3 radiance) {
     vec3 H = normalize(V + L);
-    vec3 F0 = mix(vec3(0.04), albedo, metallic);
+    vec3 F0 = mix(vec3(dielectricF0), albedo, metallic);
 
     float NDF = DistributionGGX(N, H, roughness);
     float G = GeometrySmith(N, V, L, roughness);
@@ -168,6 +233,14 @@ vec3 CookTorranceBRDF(vec3 N, vec3 V, vec3 L, vec3 albedo, float roughness, floa
 void main() {
     vec4 texColor = texture(texSampler, fragTexCoord);
     vec3 albedo = pow(texColor.rgb, vec3(2.2));
+
+    float detailScale = materialdata.materialParams2.z;
+    if (detailScale > 0.0) {
+        vec2 detailUV = fragTexCoord * detailScale;
+        vec3 detailColor = texture(detailAlbedoMap, detailUV).rgb;
+        albedo *= detailColor;
+    }
+
     vec3 tintedAlbedo = mix(albedo, ubo.colorTint.rgb, ubo.colorTint.a);
 
     float roughness = materialdata.materialParams.x * texture(roughnessMap, fragTexCoord).r;
@@ -176,6 +249,10 @@ void main() {
     float aoStrength = materialdata.materialParams.z;
     float emissionStrength = materialdata.materialParams.w;
 
+    float specularStrength = materialdata.materialParams2.y;
+    float specSample = texture(specularMap, fragTexCoord).r;
+    float dielectricF0 = 0.08 * specularStrength * specSample;
+
     float ao = mix(1.0, texture(aoMap, fragTexCoord).r, aoStrength);
     vec3 emission = texture(emissionMap, fragTexCoord).rgb * emissionStrength;
 
@@ -183,17 +260,44 @@ void main() {
     mat3 TBN = mat3(normalize(fragTBN0), normalize(fragTBN1), normalize(fragTBN2));
     vec3 sampledNormal = texture(normalMap, fragTexCoord).rgb * 2.0 - 1.0;
     sampledNormal.xy *= normalStrength;
+
+    if (detailScale > 0.0) {
+        vec2 detailUV = fragTexCoord * detailScale;
+        vec3 detailNorm = texture(detailNormalMap, detailUV).rgb * 2.0 - 1.0;
+        sampledNormal.xy += detailNorm.xy;
+    }
+
     vec3 N = normalize(TBN * sampledNormal);
     vec3 V = normalize(scenelighting.cameraPosition.xyz - fragPosition);
 
-    vec3 ambient = scenelighting.ambientColor.rgb * scenelighting.ambientColor.w * tintedAlbedo * ao;
+    vec3 F0 = mix(vec3(dielectricF0), tintedAlbedo, metallic);
+    float NdotV = max(dot(N, V), 0.001);
+
+    vec3 F_ibl = FresnelSchlickRoughness(NdotV, F0, roughness);
+    vec3 kD_ibl = (1.0 - F_ibl) * (1.0 - metallic);
+
+    vec3 irradiance = ProceduralIrradiance(N);
+    vec3 diffuseIBL = irradiance * kD_ibl * tintedAlbedo;
+
+    vec3 R = reflect(-V, N);
+    vec3 prefilteredColor = ProceduralEnvironment(R, roughness);
+    vec2 envBRDF = EnvBRDFApprox(roughness, NdotV);
+    vec3 specularIBL = prefilteredColor * (F0 * envBRDF.x + envBRDF.y);
+
+    float Ess = envBRDF.x + envBRDF.y;
+    float Ems = 1.0 - Ess;
+    vec3 Favg = F0 + (1.0 - F0) / 21.0;
+    vec3 FmsEms = Ems * Favg / (1.0 - Favg * Ems);
+    specularIBL += FmsEms * prefilteredColor * Ess;
+
+    vec3 ambient = (diffuseIBL + specularIBL) * ao;
 
     vec3 Lo = vec3(0.0);
 
     vec3 dirL = normalize(-scenelighting.directionalDirection.xyz);
     vec3 dirRadiance = scenelighting.directionalColor.rgb * scenelighting.directionalColor.w;
     float shadow = scenelighting.shadowParams.x > 0.5 ? ShadowCalculation(fragPosition, N, dirL) : 1.0;
-    Lo += CookTorranceBRDF(N, V, dirL, tintedAlbedo, roughness, metallic, dirRadiance) * shadow;
+    Lo += CookTorranceBRDF(N, V, dirL, tintedAlbedo, roughness, metallic, dielectricF0, dirRadiance) * shadow;
 
     for (int i = 0; i < scenelighting.pointLightCount; i++) {
         int base = i * 2;
@@ -209,7 +313,7 @@ void main() {
         attenuation *= attenuation;
 
         vec3 radiance = lightCol * lightIntensity * attenuation;
-        Lo += CookTorranceBRDF(N, V, Lp, tintedAlbedo, roughness, metallic, radiance);
+        Lo += CookTorranceBRDF(N, V, Lp, tintedAlbedo, roughness, metallic, dielectricF0, radiance);
     }
 
     for (int i = 0; i < scenelighting.spotLightCount; i++) {
@@ -233,13 +337,10 @@ void main() {
         float coneFalloff = clamp((theta - cosOuter) / max(cosInner - cosOuter, 0.001), 0.0, 1.0);
 
         vec3 radiance = lightCol * lightIntensity * attenuation * coneFalloff;
-        Lo += CookTorranceBRDF(N, V, Ls, tintedAlbedo, roughness, metallic, radiance);
+        Lo += CookTorranceBRDF(N, V, Ls, tintedAlbedo, roughness, metallic, dielectricF0, radiance);
     }
 
     vec3 color = ambient + Lo + emission;
 
-    color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0 / 2.2));
-
-    outColor = vec4(color, 1.0);
+    outColor = vec4(color, 1.0 / gl_FragCoord.w);
 }

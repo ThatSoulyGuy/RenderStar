@@ -156,7 +156,7 @@ namespace RenderStar::Client::Render::Vulkan
 
         std::vector<VkDescriptorPoolSize> poolSizes = {
             { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, maxFramesInFlight * 3 },
-            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxFramesInFlight * 10 }
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxFramesInFlight * 16 }
         };
 
         VkDescriptorPool pool = descriptorModule->CreateDescriptorPool(poolSizes, maxFramesInFlight);

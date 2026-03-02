@@ -23,6 +23,7 @@ namespace RenderStar::Client::Render::Framework
         void CollectSceneData(Common::Component::ComponentModule& componentModule,
                               const glm::vec3& cameraPosition);
         IBufferHandle* GetSceneLightingBuffer() const;
+        const SceneLightingData& GetSceneLightingData() const;
         glm::mat4 GetLightViewProjection() const;
         void SetAmbientLight(glm::vec3 color, float intensity);
         void Cleanup();

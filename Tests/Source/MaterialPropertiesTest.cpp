@@ -11,7 +11,7 @@ TEST(MaterialPropertiesTest, DefaultParams)
     EXPECT_FLOAT_EQ(m.params.z, 1.0f);
     EXPECT_FLOAT_EQ(m.params.w, 0.0f);
     EXPECT_FLOAT_EQ(m.params2.x, 1.0f);
-    EXPECT_FLOAT_EQ(m.params2.y, 0.0f);
+    EXPECT_FLOAT_EQ(m.params2.y, 0.5f);
     EXPECT_FLOAT_EQ(m.params2.z, 0.0f);
     EXPECT_FLOAT_EQ(m.params2.w, 0.0f);
 }

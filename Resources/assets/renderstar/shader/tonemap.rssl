@@ -1,6 +1,8 @@
 #rssl 1
 
 @sampler sceneColor : binding(0)
+@sampler bloomTexture : binding(1)
+@sampler ssaoTexture : binding(2)
 
 @stage vertex
 
@@ -22,7 +24,28 @@ void main() {
 
 @output outColor : location(0), vec4
 
+vec3 ACESFilm(vec3 x) {
+    float a = 2.51;
+    float b = 0.03;
+    float c = 2.43;
+    float d = 0.59;
+    float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
 void main() {
     vec3 color = texture(sceneColor, fragTexCoord).rgb;
+    vec3 bloom = texture(bloomTexture, fragTexCoord).rgb;
+    float ao = texture(ssaoTexture, fragTexCoord).r;
+
+    float bloomIntensity = 0.04;
+    color += bloom * bloomIntensity;
+
+    color *= ao;
+
+    color = ACESFilm(color);
+
+    color = pow(color, vec3(1.0 / 2.2));
+
     outColor = vec4(color, 1.0);
 }
