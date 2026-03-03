@@ -342,6 +342,17 @@ namespace RenderStar::Client::Render::Platform
         return nullptr;
     }
 
+    IRenderPlatformStage* RenderingPlatformModule::GetStage(const std::string& name) const
+    {
+        for (const auto& stage : stages)
+        {
+            if (stage->GetName() == name)
+                return stage.get();
+        }
+
+        return nullptr;
+    }
+
     std::unique_ptr<IShaderProgram> RenderingPlatformModule::CompileShaderForTarget(
         const std::string& vertexGlsl,
         const std::string& fragmentGlsl,

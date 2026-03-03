@@ -1,5 +1,6 @@
 #include "RenderStar/Client/Render/Affectors/MapGeometryRenderAffector.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
+#include "RenderStar/Client/Render/Components/AdaptiveVolume.hpp"
 #include "RenderStar/Client/Render/Components/Light.hpp"
 #include "RenderStar/Client/Render/Components/MapbinMesh.hpp"
 #include "RenderStar/Client/Render/Framework/LitVertex.hpp"
@@ -342,6 +343,39 @@ namespace RenderStar::Client::Render::Affectors
                             dir,
                             glm::vec3(obj.colorR, obj.colorG, obj.colorB),
                             obj.intensity));
+                    break;
+                }
+                case Common::Scene::GameObjectType::ADAPTIVE_VOLUME:
+                {
+                    auto volumeEntity = sceneModule.CreateEntity();
+                    auto& transform = componentModule.AddComponent<Common::Component::Transform>(volumeEntity);
+                    transform.position = glm::vec3(obj.posX, obj.posY, obj.posZ) * 0.1f;
+
+                    glm::mat4 rot(1.0f);
+                    rot = glm::rotate(rot, glm::radians(obj.rotY), glm::vec3(0.0f, 1.0f, 0.0f));
+                    rot = glm::rotate(rot, glm::radians(obj.rotX), glm::vec3(1.0f, 0.0f, 0.0f));
+                    rot = glm::rotate(rot, glm::radians(obj.rotZ), glm::vec3(0.0f, 0.0f, 1.0f));
+                    transform.rotation = glm::quat_cast(rot);
+                    transform.localMatrix = glm::translate(glm::mat4(1.0f), transform.position) * rot;
+                    transform.worldMatrix = transform.localMatrix;
+                    transform.worldPosition = transform.position;
+
+                    Components::AdaptiveVolume volume;
+                    volume.halfExtents = glm::vec3(obj.halfExtentX, obj.halfExtentY, obj.halfExtentZ) * 0.1f;
+                    volume.blendDistance = obj.blendDistance * 0.1f;
+                    volume.priority = obj.priority;
+                    volume.overrideMask = obj.overrideMask;
+
+                    volume.settings.exposureBias = obj.exposureBias;
+                    volume.settings.bloomIntensity = obj.bloomIntensity;
+                    volume.settings.contrast = obj.contrast;
+                    volume.settings.saturation = obj.saturation;
+                    volume.settings.vignetteStrength = obj.vignetteStrength;
+                    volume.settings.temperature = obj.temperature;
+                    volume.settings.fogColor = glm::vec4(obj.fogColorR, obj.fogColorG, obj.fogColorB, obj.fogDensity);
+                    volume.settings.colorFilter = glm::vec4(obj.colorFilterR, obj.colorFilterG, obj.colorFilterB, obj.colorFilterStrength);
+
+                    componentModule.AddComponent<Components::AdaptiveVolume>(volumeEntity, volume);
                     break;
                 }
                 default:

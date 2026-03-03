@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+namespace RenderStar::Client::Render { class IUniformBindingHandle; }
+
 namespace RenderStar::Client::Render::Platform
 {
     class FullscreenStage : public IRenderPlatformStage
@@ -29,6 +31,9 @@ namespace RenderStar::Client::Render::Platform
         bool IsEnabled() const override;
         void SetEnabled(bool enabled) override;
 
+        void SetUniformBinding(IUniformBindingHandle* binding);
+        IShaderProgram* GetShader() const;
+
     private:
 
         std::string name;
@@ -38,5 +43,6 @@ namespace RenderStar::Client::Render::Platform
         std::string outputTargetName;
         bool enabled = true;
         std::unique_ptr<IShaderProgram> shader;
+        IUniformBindingHandle* externalBinding = nullptr;
     };
 }

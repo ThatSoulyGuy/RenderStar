@@ -83,14 +83,35 @@ namespace RenderStar::Client::Render::Platform
                 inputTargets.push_back(inputTarget);
         }
 
+        if (externalBinding)
+        {
+            for (uint32_t i = 0; i < inputTargets.size(); i++)
+            {
+                auto* colorAttachment = inputTargets[i]->GetColorAttachment(0);
+
+                if (colorAttachment)
+                    externalBinding->UpdateTexture(static_cast<int32_t>(i), colorAttachment, context.GetFrameIndex());
+            }
+        }
+
         backend->BindInputTextures(inputTargets, shader.get(), context.GetFrameIndex());
 
         backend->BeginRenderTarget(target, true);
 
-        backend->SubmitDrawCommand(shader.get(), nullptr, context.GetFrameIndex(), nullptr);
+        backend->SubmitDrawCommand(shader.get(), externalBinding, context.GetFrameIndex(), nullptr);
         backend->ExecuteDrawCommands();
 
         backend->EndRenderTarget(target);
+    }
+
+    void FullscreenStage::SetUniformBinding(IUniformBindingHandle* binding)
+    {
+        externalBinding = binding;
+    }
+
+    IShaderProgram* FullscreenStage::GetShader() const
+    {
+        return shader.get();
     }
 
     bool FullscreenStage::IsEnabled() const

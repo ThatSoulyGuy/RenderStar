@@ -7,15 +7,15 @@ Overview
 The .mapbin format stores baked 3D mesh geometry grouped by material, with
 embedded RGBA textures, PBR material properties, per-texture sampling
 parameters, and a game object table. All data is little-endian. All multi-byte
-integers are unsigned 32-bit (uint32). All floating-point values are IEEE 754
-single-precision (float32).
+integers are unsigned 32-bit (uint32) unless noted otherwise. All
+floating-point values are IEEE 754 single-precision (float32).
 
 The file is written sequentially with no padding or alignment gaps between
 fields. Readers should consume fields in the exact order specified below.
 
-Version 5 expands the game object table to include rotation and light
-properties per entry. Earlier versions are still supported by the loader
-(see Section 8).
+Version 5 introduces variable-size game object entries: each type stores
+only the fields it needs (rotation, light data, volume data, etc.).
+Earlier versions are still supported by the loader (see Section 8).
 
 
 ================================================================================
@@ -172,8 +172,8 @@ Common Fields (28 bytes, present in ALL entries)
   4       float32   rot.y        Rotation yaw (degrees)
   4       float32   rot.z        Rotation roll (degrees)
 
-Light Fields (+16 bytes, present when type >= 1)
--------------------------------------------------
+Light Fields (+16 bytes, present when type 1–3)
+------------------------------------------------
   Size    Type      Field        Description
   ------  --------  ----------   ----------------------------------------------
   4       float32   color.r      Light color red   (0–1)
@@ -188,30 +188,65 @@ Spot Light Fields (+8 bytes, present when type == 2)
   4       float32   innerCone    Inner cone half-angle (degrees)
   4       float32   outerCone    Outer cone half-angle (degrees)
 
+Adaptive Volume Fields (+80 bytes, present when type == 5)
+----------------------------------------------------------
+  Size    Type      Field                Description
+  ------  --------  -------------------  ------------------------------------------
+  4       float32   halfExtentX          OBB half-extent X (oriented by rotation)
+  4       float32   halfExtentY          OBB half-extent Y
+  4       float32   halfExtentZ          OBB half-extent Z
+  4       float32   blendDistance         Fade distance at volume edges (world units)
+  4       int32     priority             Higher priority wins on overlap
+  4       uint32    overrideMask         Bitfield: which params below are active
+  4       float32   exposureBias         Multiplier on auto-exposure          (bit 0)
+  4       float32   bloomIntensity       Bloom strength (0–1)                 (bit 1)
+  4       float32   contrast             0.5–2.0, 1.05 default               (bit 2)
+  4       float32   saturation           0–2.0, 1.1 default                  (bit 3)
+  4       float32   vignetteStrength     0–1, 0.15 default                   (bit 4)
+  4       float32   temperature          White balance -1 to +1, 0 neutral   (bit 5)
+  4       float32   fogColorR            Fog color R                          (bit 6)
+  4       float32   fogColorG            Fog color G
+  4       float32   fogColorB            Fog color B
+  4       float32   fogDensity           Fog density (0 = off)
+  4       float32   colorFilterR         Post-process color filter R          (bit 7)
+  4       float32   colorFilterG         Post-process color filter G
+  4       float32   colorFilterB         Post-process color filter B
+  4       float32   colorFilterStrength  Filter strength (0 = off)
+
+  The OBB is centered at the position from the common header, oriented by
+  the rotation, with the half-extents above. blendDistance controls the
+  fade at volume edges. overrideMask bits select which post-process
+  parameters are active — unset bits mean "inherit from the lower-priority
+  volume or global defaults".
+
 Entry Sizes by Type
 -------------------
-  Type   Name            Size (bytes)   Fields
-  -----  --------------- -------------- ----------------------------------------
-  0      PLAYER_START    28             common only
-  1      POINT_LIGHT     44             common + light
-  2      SPOT_LIGHT      52             common + light + spot
-  3      SUN_LIGHT       44             common + light
+  Type   Name              Size (bytes)   Fields
+  -----  ----------------- -------------- ----------------------------------------
+  0      PLAYER_START      28             common only
+  1      POINT_LIGHT       44             common + light
+  2      SPOT_LIGHT        52             common + light + spot
+  3      SUN_LIGHT         44             common + light
+  5      ADAPTIVE_VOLUME   108            common + adaptive volume
 
   Positions are in the same world-space coordinate system as geometry
   vertices (Y-up, scaled by GRID_SIZE).
 
   Rotation is Euler angles in degrees, applied in YXZ order (yaw, pitch,
   roll). For PLAYER_START this determines the spawn facing direction. For
-  SPOT_LIGHT and SUN_LIGHT this determines the light direction.
+  SPOT_LIGHT and SUN_LIGHT this determines the light direction. For
+  ADAPTIVE_VOLUME this orients the OBB.
 
 Game Object Types (GameObjectType enum)
 ---------------------------------------
-  Value   Name            Description
-  ------  --------------- -----------------------------------------------
-  0       PLAYER_START    Player spawn point (at most one per map)
-  1       POINT_LIGHT     Omnidirectional point light source
-  2       SPOT_LIGHT      Directional spot light source
-  3       SUN_LIGHT       Directional sun / ambient light source
+  Value   Name              Description
+  ------  ----------------- -----------------------------------------------
+  0       PLAYER_START      Player spawn point (at most one per map)
+  1       POINT_LIGHT       Omnidirectional point light source
+  2       SPOT_LIGHT        Directional spot light source
+  3       SUN_LIGHT         Directional sun / ambient light source
+  4       (reserved)
+  5       ADAPTIVE_VOLUME   Post-process / environment volume (OBB)
 
 
 ================================================================================
@@ -261,8 +296,9 @@ Game Object Types (GameObjectType enum)
   | GAME OBJECT TABLE (v5)                   |
   |   gameObjectCount                        |
   |   entry 0: type, pos, rot               |
-  |            [+ light fields if light]     |
-  |            [+ cone fields if spot]       |
+  |     [+ light if type 1-3]               |
+  |     [+ spot  if type 2]                 |
+  |     [+ volume if type 5]               |
   |   entry 1: ...  (variable size)         |
   |   ...                                    |
   |   entry N_go-1: ...                      |
@@ -368,7 +404,7 @@ Game Object Types (GameObjectType enum)
           go.rotY = read_float32(file)
           go.rotZ = read_float32(file)
 
-          if go.type >= 1:   # any light type
+          if go.type >= 1 and go.type <= 3:   # light types
               go.colorR    = read_float32(file)
               go.colorG    = read_float32(file)
               go.colorB    = read_float32(file)
@@ -377,6 +413,28 @@ Game Object Types (GameObjectType enum)
               if go.type == 2:   # SPOT_LIGHT only
                   go.innerCone = read_float32(file)
                   go.outerCone = read_float32(file)
+
+          elif go.type == 5:   # ADAPTIVE_VOLUME
+              go.halfExtentX = read_float32(file)
+              go.halfExtentY = read_float32(file)
+              go.halfExtentZ = read_float32(file)
+              go.blendDistance = read_float32(file)
+              go.priority      = read_int32(file)
+              go.overrideMask  = read_uint32(file)
+              go.exposureBias      = read_float32(file)
+              go.bloomIntensity    = read_float32(file)
+              go.contrast          = read_float32(file)
+              go.saturation        = read_float32(file)
+              go.vignetteStrength  = read_float32(file)
+              go.temperature       = read_float32(file)
+              go.fogColorR         = read_float32(file)
+              go.fogColorG         = read_float32(file)
+              go.fogColorB         = read_float32(file)
+              go.fogDensity        = read_float32(file)
+              go.colorFilterR      = read_float32(file)
+              go.colorFilterG      = read_float32(file)
+              go.colorFilterB      = read_float32(file)
+              go.colorFilterStrength = read_float32(file)
 
           gameObjects.append(go)
 

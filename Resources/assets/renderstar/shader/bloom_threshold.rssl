@@ -31,5 +31,7 @@ void main() {
     soft = clamp(soft, 0.0, 2.0 * knee);
     soft = soft * soft / (4.0 * knee + 0.00001);
     float contribution = max(soft, brightness - threshold) / max(brightness, 0.00001);
-    outColor = vec4(color * max(contribution, 0.0), 1.0);
+    vec3 bloomColor = color * max(contribution, 0.0);
+    bloomColor = min(bloomColor, vec3(5.0));
+    outColor = vec4(bloomColor, 1.0);
 }

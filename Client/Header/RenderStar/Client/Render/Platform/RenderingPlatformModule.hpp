@@ -43,6 +43,8 @@ namespace RenderStar::Client::Render::Platform
 
         IShaderProgram* GetGeometryShader() const;
 
+        IRenderPlatformStage* GetStage(const std::string& name) const;
+
         [[nodiscard]]
         std::vector<std::type_index> GetDependencies() const override;
 

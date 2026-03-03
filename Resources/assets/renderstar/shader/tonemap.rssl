@@ -4,6 +4,20 @@
 @sampler bloomTexture : binding(1)
 @sampler ssaoTexture : binding(2)
 
+@uniform PostProcessParams : binding(3)
+{
+    float exposureBias;
+    float exposureMin;
+    float exposureMax;
+    float bloomIntensity;
+    float contrast;
+    float saturation;
+    float vignetteStrength;
+    float temperature;
+    vec4 fogColor;
+    vec4 colorFilter;
+}
+
 @stage vertex
 
 @output fragTexCoord : location(0), vec2
@@ -38,14 +52,41 @@ void main() {
     vec3 bloom = texture(bloomTexture, fragTexCoord).rgb;
     float ao = texture(ssaoTexture, fragTexCoord).r;
 
-    float bloomIntensity = 0.04;
-    color += bloom * bloomIntensity;
+    color += bloom * ubo.bloomIntensity;
 
     color *= ao;
 
+    color *= ubo.exposureBias;
+
+    // ACES tonemapping
     color = ACESFilm(color);
 
+    // Color grading (in gamma space for perceptual correctness)
     color = pow(color, vec3(1.0 / 2.2));
 
+    // Contrast (centered on mid-gray)
+    color = mix(vec3(0.5), color, ubo.contrast);
+
+    // Saturation
+    float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    color = mix(vec3(luma), color, ubo.saturation);
+
+    // Temperature (warm/cool shift)
+    if (abs(ubo.temperature) > 0.001) {
+        float t = ubo.temperature;
+        color *= vec3(1.0 + t * 0.1, 1.0, 1.0 - t * 0.1);
+    }
+
+    // Color filter
+    if (ubo.colorFilter.a > 0.0) {
+        color = mix(color, color * ubo.colorFilter.rgb, ubo.colorFilter.a);
+    }
+
+    // Vignette
+    vec2 vignetteUV = fragTexCoord * 2.0 - 1.0;
+    float vignette = 1.0 - dot(vignetteUV, vignetteUV) * ubo.vignetteStrength;
+    color *= clamp(vignette, 0.0, 1.0);
+
+    color = clamp(color, vec3(0.0), vec3(1.0));
     outColor = vec4(color, 1.0);
 }

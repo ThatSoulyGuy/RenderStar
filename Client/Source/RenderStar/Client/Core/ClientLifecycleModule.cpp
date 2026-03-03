@@ -10,10 +10,13 @@
 #include "RenderStar/Client/Render/Affectors/CameraAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/MapGeometryRenderAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/PlayerRenderAffector.hpp"
+#include "RenderStar/Client/Render/Affectors/AdaptiveVolumeAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/SkyboxRenderAffector.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
 #include "RenderStar/Client/Render/Components/Camera.hpp"
+#include "RenderStar/Client/Render/Framework/PostProcessData.hpp"
 #include "RenderStar/Client/Render/Framework/RenderingFrameworkModule.hpp"
+#include "RenderStar/Client/Render/Platform/FullscreenStage.hpp"
 #include "RenderStar/Client/Render/Platform/RenderingPlatformModule.hpp"
 #include "RenderStar/Client/Render/RendererModule.hpp"
 #include "RenderStar/Client/Render/Resource/IBufferManager.hpp"
@@ -60,6 +63,8 @@ namespace RenderStar::Client::Core
 
         if (auto sceneModule = context->GetModule<Common::Scene::SceneModule>(); sceneModule.has_value())
             sceneModule->get().ClearScene();
+
+        postProcessBinding.reset();
 
         if (frameworkModule)
         {
@@ -211,6 +216,31 @@ namespace RenderStar::Client::Core
             }
         }
 
+        if (frameworkModule && platformModule && platformModule->IsEnabled())
+        {
+            auto* postProcessBuffer = frameworkModule->GetPostProcessBuffer();
+
+            if (postProcessBuffer)
+            {
+                auto* tonemapStage = dynamic_cast<Render::Platform::FullscreenStage*>(
+                    platformModule->GetStage("tonemap"));
+
+                if (tonemapStage && tonemapStage->GetShader())
+                {
+                    postProcessBinding = uniformManager->CreateBindingForShader(tonemapStage->GetShader());
+
+                    if (postProcessBinding)
+                    {
+                        postProcessBinding->UpdateBuffer(
+                            3, postProcessBuffer, Render::Framework::PostProcessData::Size());
+                        tonemapStage->SetUniformBinding(postProcessBinding.get());
+
+                        logger->info("PostProcess UBO bound to tonemap stage at binding 3");
+                    }
+                }
+            }
+        }
+
         logger->info("Render state initialized successfully");
 
         return Common::Event::EventResult::Success();
@@ -248,7 +278,16 @@ namespace RenderStar::Client::Core
         }
 
         if (frameworkModule)
+        {
             frameworkModule->CollectSceneData(componentModule, cameraPosition);
+
+            if (auto volumeAffectorOpt = context->GetModule<Render::Affectors::AdaptiveVolumeAffector>();
+                volumeAffectorOpt.has_value())
+            {
+                frameworkModule->UploadPostProcessData(
+                    volumeAffectorOpt->get().GetResolvedPostProcessData());
+            }
+        }
 
         if (platformModule && platformModule->IsEnabled())
         {

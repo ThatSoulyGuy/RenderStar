@@ -2,6 +2,7 @@
 
 #include "RenderStar/Common/Component/GameObject.hpp"
 #include "RenderStar/Common/Module/AbstractModule.hpp"
+#include <memory>
 #include <vector>
 
 namespace RenderStar::Client::Render
@@ -9,6 +10,7 @@ namespace RenderStar::Client::Render
     class IRenderBackend;
     class IBufferManager;
     class IUniformManager;
+    class IUniformBindingHandle;
     class ITextureManager;
 }
 
@@ -63,5 +65,6 @@ namespace RenderStar::Client::Core
 
         Render::Platform::RenderingPlatformModule* platformModule = nullptr;
         Render::Framework::RenderingFrameworkModule* frameworkModule = nullptr;
+        std::unique_ptr<Render::IUniformBindingHandle> postProcessBinding;
     };
 }

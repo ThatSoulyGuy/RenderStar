@@ -51,10 +51,15 @@ void main() {
     float skyGrad = smoothstep(0.0, 0.6, max(elevation, 0.0));
     vec3 sky = mix(horizonColor, zenithColor, skyGrad);
 
-    sky += sunColor * pow(sunDot, 8.0) * 0.5;
+    sky += sunColor * pow(sunDot, 16.0) * 0.3;
 
+    // Clamp atmosphere below bloom threshold so cube-edge interpolation
+    // seams don't create visible lines in the bloom pass.
+    sky = min(sky, vec3(0.95));
+
+    // Only the sun disk itself should exceed bloom threshold.
     float diskMask = smoothstep(0.9995, 0.9999, sunDot);
-    sky += sunColor * diskMask * 5.0;
+    sky += sunColor * diskMask * 1.5;
 
     vec3 groundColor = ambientBase * vec3(0.3, 0.25, 0.2);
     float groundBlend = smoothstep(-0.05, 0.05, elevation);

@@ -351,7 +351,9 @@ namespace RenderStar::Common::Scene
             obj.rotZ = ReadFloat(ptr + 24);
             ptr += V5_GAME_OBJECT_COMMON_SIZE;
 
-            if (static_cast<uint32_t>(obj.type) >= 1)
+            uint32_t typeVal = static_cast<uint32_t>(obj.type);
+
+            if (typeVal >= 1 && typeVal <= 3)
             {
                 if (ptr + V5_LIGHT_FIELDS_SIZE > end)
                     return false;
@@ -371,6 +373,38 @@ namespace RenderStar::Common::Scene
                     obj.outerCone = ReadFloat(ptr + 4);
                     ptr += V5_SPOT_FIELDS_SIZE;
                 }
+            }
+            else if (obj.type == GameObjectType::ADAPTIVE_VOLUME)
+            {
+                if (ptr + V5_VOLUME_FIELDS_SIZE > end)
+                    return false;
+
+                obj.halfExtentX = ReadFloat(ptr);
+                obj.halfExtentY = ReadFloat(ptr + 4);
+                obj.halfExtentZ = ReadFloat(ptr + 8);
+                obj.blendDistance = ReadFloat(ptr + 12);
+
+                int32_t priorityVal;
+                std::memcpy(&priorityVal, ptr + 16, sizeof(int32_t));
+                obj.priority = priorityVal;
+
+                obj.overrideMask = ReadUint32(ptr + 20);
+                obj.exposureBias = ReadFloat(ptr + 24);
+                obj.bloomIntensity = ReadFloat(ptr + 28);
+                obj.contrast = ReadFloat(ptr + 32);
+                obj.saturation = ReadFloat(ptr + 36);
+                obj.vignetteStrength = ReadFloat(ptr + 40);
+                obj.temperature = ReadFloat(ptr + 44);
+                obj.fogColorR = ReadFloat(ptr + 48);
+                obj.fogColorG = ReadFloat(ptr + 52);
+                obj.fogColorB = ReadFloat(ptr + 56);
+                obj.fogDensity = ReadFloat(ptr + 60);
+                obj.colorFilterR = ReadFloat(ptr + 64);
+                obj.colorFilterG = ReadFloat(ptr + 68);
+                obj.colorFilterB = ReadFloat(ptr + 72);
+                obj.colorFilterStrength = ReadFloat(ptr + 76);
+
+                ptr += V5_VOLUME_FIELDS_SIZE;
             }
 
             scene.gameObjects.push_back(obj);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "RenderStar/Client/Render/Framework/PostProcessData.hpp"
 #include "RenderStar/Client/Render/Framework/SceneLightingData.hpp"
 #include "RenderStar/Client/Render/Resource/IBufferHandle.hpp"
 #include "RenderStar/Common/Module/AbstractModule.hpp"
@@ -26,6 +27,11 @@ namespace RenderStar::Client::Render::Framework
         const SceneLightingData& GetSceneLightingData() const;
         glm::mat4 GetLightViewProjection() const;
         void SetAmbientLight(glm::vec3 color, float intensity);
+
+        void UploadPostProcessData(const PostProcessData& data);
+        IBufferHandle* GetPostProcessBuffer() const;
+        const PostProcessData& GetPostProcessData() const;
+
         void Cleanup();
 
     protected:
@@ -36,6 +42,8 @@ namespace RenderStar::Client::Render::Framework
 
         std::unique_ptr<IBufferHandle> sceneLightingBuffer;
         SceneLightingData sceneLightingData{};
+        std::unique_ptr<IBufferHandle> postProcessBuffer;
+        PostProcessData postProcessData = PostProcessData::Defaults();
         glm::vec3 ambientColor = glm::vec3(0.15f);
         float ambientIntensity = 1.0f;
         IBufferManager* bufferManager = nullptr;

@@ -17,7 +17,13 @@ namespace RenderStar::Client::Render::Framework
         bufferManager = bm;
 
         if (bufferManager)
+        {
             sceneLightingBuffer = bufferManager->CreateUniformBuffer(SceneLightingData::Size());
+            postProcessBuffer = bufferManager->CreateUniformBuffer(PostProcessData::Size());
+
+            postProcessData = PostProcessData::Defaults();
+            postProcessBuffer->SetSubData(&postProcessData, PostProcessData::Size(), 0);
+        }
     }
 
     void RenderingFrameworkModule::CollectSceneData(Common::Component::ComponentModule& componentModule,
@@ -123,6 +129,24 @@ namespace RenderStar::Client::Render::Framework
         return sceneLightingData.directionalLightVP;
     }
 
+    void RenderingFrameworkModule::UploadPostProcessData(const PostProcessData& data)
+    {
+        postProcessData = data;
+
+        if (postProcessBuffer)
+            postProcessBuffer->SetSubData(&postProcessData, PostProcessData::Size(), 0);
+    }
+
+    IBufferHandle* RenderingFrameworkModule::GetPostProcessBuffer() const
+    {
+        return postProcessBuffer.get();
+    }
+
+    const PostProcessData& RenderingFrameworkModule::GetPostProcessData() const
+    {
+        return postProcessData;
+    }
+
     void RenderingFrameworkModule::SetAmbientLight(glm::vec3 color, float intensity)
     {
         ambientColor = color;
@@ -133,6 +157,8 @@ namespace RenderStar::Client::Render::Framework
     {
         sceneLightingBuffer.reset();
         sceneLightingData = SceneLightingData{};
+        postProcessBuffer.reset();
+        postProcessData = PostProcessData::Defaults();
         bufferManager = nullptr;
     }
 }

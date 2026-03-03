@@ -25,7 +25,8 @@ namespace RenderStar::Common::Scene
         PLAYER_START = 0,
         POINT_LIGHT = 1,
         SPOT_LIGHT = 2,
-        SUN_LIGHT = 3
+        SUN_LIGHT = 3,
+        ADAPTIVE_VOLUME = 5
     };
 
     struct MapbinGameObject
@@ -33,9 +34,27 @@ namespace RenderStar::Common::Scene
         GameObjectType type = GameObjectType::PLAYER_START;
         float posX = 0.0f, posY = 0.0f, posZ = 0.0f;
         float rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f;
+
+        // Light fields (types 1-3)
         float colorR = 1.0f, colorG = 1.0f, colorB = 1.0f;
         float intensity = 1.0f;
         float innerCone = 0.0f, outerCone = 0.0f;
+
+        // Adaptive volume fields (type 5)
+        float halfExtentX = 5.0f, halfExtentY = 5.0f, halfExtentZ = 5.0f;
+        float blendDistance = 1.0f;
+        int32_t priority = 0;
+        uint32_t overrideMask = 0;
+        float exposureBias = 1.0f;
+        float bloomIntensity = 0.04f;
+        float contrast = 1.05f;
+        float saturation = 1.1f;
+        float vignetteStrength = 0.15f;
+        float temperature = 0.0f;
+        float fogColorR = 0.7f, fogColorG = 0.8f, fogColorB = 0.9f;
+        float fogDensity = 0.0f;
+        float colorFilterR = 1.0f, colorFilterG = 1.0f, colorFilterB = 1.0f;
+        float colorFilterStrength = 0.0f;
     };
 
     struct MapbinTextureSlot
@@ -121,5 +140,6 @@ namespace RenderStar::Common::Scene
         static constexpr size_t V5_GAME_OBJECT_COMMON_SIZE = 28;
         static constexpr size_t V5_LIGHT_FIELDS_SIZE = 16;
         static constexpr size_t V5_SPOT_FIELDS_SIZE = 8;
+        static constexpr size_t V5_VOLUME_FIELDS_SIZE = 80;
     };
 }
