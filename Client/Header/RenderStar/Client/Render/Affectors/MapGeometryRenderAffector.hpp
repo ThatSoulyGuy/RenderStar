@@ -15,6 +15,7 @@
 
 namespace RenderStar::Common::Scene { class SceneModule; }
 namespace RenderStar::Common::Asset { class AssetModule; }
+namespace RenderStar::Common::Physics { class PhysicsModule; }
 
 namespace RenderStar::Client::Render
 {
@@ -112,7 +113,8 @@ namespace RenderStar::Client::Render::Affectors
 
         Common::Scene::SceneModule* sceneModule = nullptr;
         Common::Asset::AssetModule* assetModule = nullptr;
+        Common::Physics::PhysicsModule* physicsModule = nullptr;
         std::unordered_set<int32_t> processedMapEntities;
-        bool guardWarningLogged = false;
+        std::unordered_set<int32_t> physicsProcessedEntities;
     };
 }

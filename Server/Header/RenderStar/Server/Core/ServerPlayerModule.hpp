@@ -27,6 +27,11 @@ namespace RenderStar::Server::Network
     class ServerNetworkModule;
 }
 
+namespace RenderStar::Server::Physics
+{
+    class ServerPhysicsModule;
+}
+
 namespace RenderStar::Server::Core
 {
     class ServerSceneModule;
@@ -60,6 +65,7 @@ namespace RenderStar::Server::Core
         Common::Scene::SceneModule* sceneModule = nullptr;
         Common::Component::ComponentModule* componentModule = nullptr;
         ServerSceneModule* serverSceneModule = nullptr;
+        Physics::ServerPhysicsModule* serverPhysicsModule = nullptr;
 
         int32_t nextPlayerId = 0;
         std::unordered_map<int32_t, PlayerState> players;

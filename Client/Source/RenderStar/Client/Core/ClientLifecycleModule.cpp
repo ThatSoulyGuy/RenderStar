@@ -260,9 +260,6 @@ namespace RenderStar::Client::Core
         auto& playerModule = context->GetDependency<Gameplay::ClientPlayerModule>();
         auto mapGeometryAffectorOpt = context->GetModule<Render::Affectors::MapGeometryRenderAffector>();
 
-        if (mapGeometryAffectorOpt.has_value())
-            mapGeometryAffectorOpt->get().CheckForNewMapGeometry(componentModule);
-
         glm::mat4 viewProjection(1.0f);
 
         playerEntity = playerModule.GetLocalPlayerEntity();
@@ -431,6 +428,9 @@ namespace RenderStar::Client::Core
         else
             logger->info("PlayerControllerAffector found, authority context will be managed in tick loop");
 
+        auto mapGeometryOpt = context->GetModule<Render::Affectors::MapGeometryRenderAffector>();
+        Render::Affectors::MapGeometryRenderAffector* mapGeometryAffector = mapGeometryOpt.has_value() ? &mapGeometryOpt->get() : nullptr;
+
         coreEventBus->get().SetTickHandler([=, &coreEventBus = coreEventBus->get(), &renderEventBus = renderEventBus->get()]
         {
             windowModule->Tick();
@@ -447,6 +447,9 @@ namespace RenderStar::Client::Core
             if (clientSceneModule->HasPendingData())
                 clientSceneModule->ProcessPendingEntityData();
 
+            if (mapGeometryAffector)
+                mapGeometryAffector->CheckForNewMapGeometry(*componentModule);
+
             clientPlayerModule->CheckForLocalPlayerEntity(*componentModule);
 
             if (playerControllerAffector)
@@ -455,9 +458,15 @@ namespace RenderStar::Client::Core
 
                 if (playerId >= 0)
                     playerControllerAffector->SetAuthorityContext(Common::Component::AuthorityContext::AsClient(playerId));
+
+                clientPlayerModule->SetPlayerControllerAffector(playerControllerAffector);
             }
 
+            clientPlayerModule->ProcessServerStateUpdates(*componentModule);
+
             componentModule->RunAffectors();
+
+            clientPlayerModule->SendInputToServer(*componentModule);
 
             clientSceneModule->SendDirtyEntityUpdates();
 

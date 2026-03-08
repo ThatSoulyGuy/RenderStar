@@ -10,6 +10,7 @@
 #include "RenderStar/Common/Network/Packets/ComponentUpdatePacket.hpp"
 #include "RenderStar/Common/Network/Packets/EntityCreatePacket.hpp"
 #include "RenderStar/Common/Network/Packets/PlayerAssignPacket.hpp"
+#include "RenderStar/Common/Network/Packets/PlayerInputPacket.hpp"
 #include "RenderStar/Common/Scene/SceneModule.hpp"
 #include "RenderStar/Server/Core/ServerSceneModule.hpp"
 #include "RenderStar/Server/Event/Buses/ServerCoreEventBus.hpp"
@@ -17,6 +18,8 @@
 #include "RenderStar/Server/Event/Events/ClientLeftEvent.hpp"
 #include "RenderStar/Server/Event/Events/PacketReceivedEvent.hpp"
 #include "RenderStar/Server/Network/ServerNetworkModule.hpp"
+#include "RenderStar/Server/Physics/ServerPhysicsModule.hpp"
+#include <glm/glm.hpp>
 
 namespace RenderStar::Server::Core
 {
@@ -26,6 +29,7 @@ namespace RenderStar::Server::Core
         sceneModule = &context.GetDependency<Common::Scene::SceneModule>();
         componentModule = &context.GetDependency<Common::Component::ComponentModule>();
         serverSceneModule = &context.GetDependency<ServerSceneModule>();
+        serverPhysicsModule = &context.GetDependency<Physics::ServerPhysicsModule>();
 
         sceneModule->RegisterSerializableComponent<Common::Component::PlayerIdentity>();
         sceneModule->RegisterSerializableComponent<Common::Component::Transform>();
@@ -65,8 +69,10 @@ namespace RenderStar::Server::Core
 
         auto entity = sceneModule->CreateEntity("Player_" + std::to_string(playerId));
 
+        glm::vec3 spawnPos = serverPhysicsModule->GetSpawnPosition();
+
         auto& transform = componentModule->AddComponent<Common::Component::Transform>(entity);
-        transform.position = glm::vec3(0.0f, 2.0f, 5.0f);
+        transform.position = spawnPos;
 
         componentModule->AddComponent<Common::Component::PlayerIdentity>(entity,
             Common::Component::PlayerIdentity{ playerId });
@@ -86,6 +92,8 @@ namespace RenderStar::Server::Core
         state.connection = connection;
         state.entity = entity;
         players[playerId] = std::move(state);
+
+        serverPhysicsModule->OnPlayerJoined(playerId, entity, connection, spawnPos);
 
         logger->info("Player {} joined from {}, entity id={}", playerId, connection->remoteAddress, entity.id);
     }
@@ -109,6 +117,8 @@ namespace RenderStar::Server::Core
         auto entity = players[leftPlayerId].entity;
         players.erase(leftPlayerId);
 
+        serverPhysicsModule->OnPlayerLeft(leftPlayerId);
+
         if (entity.IsValid())
             serverSceneModule->DestroyAndBroadcastEntity(entity);
 
@@ -117,6 +127,19 @@ namespace RenderStar::Server::Core
 
     void ServerPlayerModule::OnPacketReceived(std::shared_ptr<Network::ClientConnection> connection, Common::Network::IPacket& packet)
     {
+        if (auto* inputPacket = dynamic_cast<Common::Network::Packets::PlayerInputPacket*>(&packet))
+        {
+            int32_t playerId = FindPlayerIdByConnection(*connection);
+
+            if (playerId >= 0)
+            {
+                serverPhysicsModule->QueueInput(playerId, inputPacket->sequenceNumber,
+                    inputPacket->inputFlags, inputPacket->yaw, inputPacket->pitch, inputPacket->deltaTime);
+            }
+
+            return;
+        }
+
         auto* updatePacket = dynamic_cast<Common::Network::Packets::ComponentUpdatePacket*>(&packet);
 
         if (!updatePacket)
@@ -160,6 +183,7 @@ namespace RenderStar::Server::Core
             Network::ServerNetworkModule,
             Common::Scene::SceneModule,
             Common::Component::ComponentModule,
-            ServerSceneModule>();
+            ServerSceneModule,
+            Physics::ServerPhysicsModule>();
     }
 }

@@ -24,8 +24,11 @@
 #include "RenderStar/Common/Module/ModuleManager.hpp"
 #include "RenderStar/Common/Network/PacketModule.hpp"
 #include "RenderStar/Client/Core/ClientSceneModule.hpp"
+#include "RenderStar/Common/Physics/PhysicsModule.hpp"
 #include "RenderStar/Common/Scene/SceneModule.hpp"
 #include "RenderStar/Common/Time/TimeModule.hpp"
+#include "RenderStar/Client/Render/Affectors/PlayerPhysicsAffector.hpp"
+#include "RenderStar/Client/Render/Affectors/RemotePlayerInterpolationAffector.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -65,8 +68,11 @@ namespace RenderStar::Client
             .Module(std::make_unique<Common::Configuration::ConfigurationModule>(resourceBasePath))
             .Module(std::make_unique<Common::Asset::AssetModule>(resourceBasePath))
             .Module(std::make_unique<Common::Time::TimeModule>())
+            .Module(std::make_unique<Common::Physics::PhysicsModule>())
             .Module(Common::Component::ComponentModule::Builder()
                 .Affector(std::make_unique<Gameplay::PlayerControllerAffector>())
+                .Affector(std::make_unique<Render::Affectors::PlayerPhysicsAffector>())
+                .Affector(std::make_unique<Render::Affectors::RemotePlayerInterpolationAffector>())
                 .Affector(std::make_unique<Common::Component::Affectors::TransformAffector>())
                 .Affector(std::make_unique<Render::Affectors::CameraAffector>())
                 .Affector(std::make_unique<Render::Affectors::AdaptiveVolumeAffector>())

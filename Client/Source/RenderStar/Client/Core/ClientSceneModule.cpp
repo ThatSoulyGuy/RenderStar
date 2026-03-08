@@ -263,6 +263,10 @@ namespace RenderStar::Client::Core
         for (int32_t localId : dirtyIds)
         {
             Common::Component::GameObject entity{ localId };
+
+            if (componentModule->HasComponent<Common::Component::PlayerIdentity>(entity))
+                continue;
+
             auto authority = componentModule->GetEntityAuthority(entity);
 
             if (authority.level != Common::Component::AuthorityLevel::CLIENT)

@@ -39,10 +39,6 @@ namespace RenderStar::Client::Render::Affectors
 
             Transform& transform = transformOpt.value().get();
 
-            float posX = transform.worldMatrix[3][0];
-            float posY = transform.worldMatrix[3][1];
-            float posZ = transform.worldMatrix[3][2];
-
             glm::vec3 forward = glm::normalize(glm::vec3(
                 -transform.worldMatrix[2][0],
                 -transform.worldMatrix[2][1],
@@ -55,7 +51,7 @@ namespace RenderStar::Client::Render::Affectors
                 transform.worldMatrix[1][2]
             ));
 
-            glm::vec3 position(posX, posY, posZ);
+            glm::vec3 position = glm::vec3(transform.worldMatrix[3]) + camera.eyeOffset;
             glm::vec3 target = position + forward;
 
             camera.viewMatrix = glm::lookAt(position, target, up);

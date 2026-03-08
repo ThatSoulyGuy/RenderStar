@@ -11,7 +11,10 @@
 #include "RenderStar/Server/Event/Events/ServerPreinitializationEvent.hpp"
 #include "RenderStar/Server/Event/Events/ServerInitializationEvent.hpp"
 #include "RenderStar/Server/Network/ServerNetworkModule.hpp"
+#include "RenderStar/Server/Physics/ServerPhysicsModule.hpp"
 #include "RenderStar/Common/Network/PacketModule.hpp"
+#include "RenderStar/Common/Physics/PhysicsModule.hpp"
+#include "RenderStar/Common/Time/TimeModule.hpp"
 #include <filesystem>
 
 namespace RenderStar::Server
@@ -29,12 +32,15 @@ namespace RenderStar::Server
             .Module<Common::Configuration::ConfigurationModule>(std::move(configModule))
             .Module<Common::Asset::AssetModule>(std::make_unique<Common::Asset::AssetModule>(basePath))
             .Module<Common::Network::PacketModule>(std::make_unique<Common::Network::PacketModule>())
+            .Module<Common::Time::TimeModule>(std::make_unique<Common::Time::TimeModule>())
+            .Module<Common::Physics::PhysicsModule>(std::make_unique<Common::Physics::PhysicsModule>())
             .Module<Network::ServerNetworkModule>(Network::ServerNetworkModule::FromArguments(argc, argv, configModuleRef))
             .Module<Common::Component::ComponentModule>(std::make_unique<Common::Component::ComponentModule>())
             .Module<Common::Scene::SceneModule>(std::make_unique<Common::Scene::SceneModule>())
             .Module<Core::ServerSceneModule>(std::make_unique<Core::ServerSceneModule>())
             .Module<Core::ServerLifecycleModule>(std::make_unique<Core::ServerLifecycleModule>())
             .Module<Core::ServerPlayerModule>(std::make_unique<Core::ServerPlayerModule>())
+            .Module<Physics::ServerPhysicsModule>(std::make_unique<Physics::ServerPhysicsModule>())
             .Build();
 
         manager->Start();

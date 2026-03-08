@@ -6,6 +6,8 @@
 #include "RenderStar/Common/Network/Packets/SceneDataPacket.hpp"
 #include "RenderStar/Common/Network/Packets/ComponentUpdatePacket.hpp"
 #include "RenderStar/Common/Network/Packets/AuthorityChangePacket.hpp"
+#include "RenderStar/Common/Network/Packets/PlayerInputPacket.hpp"
+#include "RenderStar/Common/Network/Packets/PlayerStatePacket.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
 
 namespace RenderStar::Common::Network
@@ -71,6 +73,8 @@ namespace RenderStar::Common::Network
         RegisterPacket<Packets::EntityDestroyPacket>();
         RegisterPacket<Packets::ComponentUpdatePacket>();
         RegisterPacket<Packets::AuthorityChangePacket>();
+        RegisterPacket<Packets::PlayerInputPacket>();
+        RegisterPacket<Packets::PlayerStatePacket>();
     }
 
     void PacketModule::OnInitialize(Module::ModuleContext& context)

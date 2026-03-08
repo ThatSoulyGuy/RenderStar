@@ -52,6 +52,13 @@ FetchContent_Declare(
 )
 
 FetchContent_Declare(
+    bullet3
+    GIT_REPOSITORY https://github.com/bulletphysics/bullet3.git
+    GIT_TAG 3.25
+    GIT_SHALLOW TRUE
+)
+
+FetchContent_Declare(
     VulkanMemoryAllocator
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
     GIT_TAG v3.1.0
@@ -69,7 +76,16 @@ set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(glm glfw spdlog pugixml googletest VulkanMemoryAllocator)
+set(CMAKE_POLICY_VERSION_MINIMUM "3.5" CACHE STRING "" FORCE)
+
+set(USE_GRAPHICAL_BENCHMARK OFF CACHE BOOL "" FORCE)
+set(BUILD_BULLET2_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_CPU_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_OPENGL3_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(glm glfw spdlog pugixml googletest VulkanMemoryAllocator bullet3)
 
 FetchContent_GetProperties(glad)
 if(NOT glad_POPULATED)

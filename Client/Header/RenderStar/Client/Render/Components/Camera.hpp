@@ -20,6 +20,8 @@ namespace RenderStar::Client::Render::Components
         float aspectRatio{ 16.0f / 9.0f };
         float orthographicSize{ 10.0f };
 
+        glm::vec3 eyeOffset{ 0.0f, 0.6f, 0.0f };
+
         glm::mat4 viewMatrix{ 1.0f };
         glm::mat4 projectionMatrix{ 1.0f };
 

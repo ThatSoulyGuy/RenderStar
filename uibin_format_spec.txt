@@ -1,0 +1,119 @@
+================================================================================
+  .uibin File Format Specification  (Version 1)
+================================================================================
+
+A .uibin file is a self-contained, binary-packed UI scene produced by UIMaker2's
+"Bake" command. It bundles the scene definition (JSON) together with every
+referenced asset (images, fonts) into a single file that can be loaded by a
+game engine at runtime without any external file dependencies.
+
+All multi-byte integers are unsigned 32-bit, big-endian.
+
+--------------------------------------------------------------------------------
+  Header
+--------------------------------------------------------------------------------
+
+  Offset  Size    Description
+  ------  ------  --------------------------------------------------------------
+  0       4       Magic bytes: ASCII "UIBN" (0x5549424E)
+  4       4       Format version (uint32, currently 1)
+  8       4       JSON data length in bytes (uint32) [jsonLen]
+  12      4       Asset count (uint32)               [assetCount]
+
+--------------------------------------------------------------------------------
+  JSON Section
+--------------------------------------------------------------------------------
+
+  Offset  Size      Description
+  ------  --------  ------------------------------------------------------------
+  16      jsonLen   UTF-8 encoded JSON string (compact, no trailing null)
+
+The JSON describes the UI element hierarchy. It is the same structure as the
+authoring .json format but with all file paths rewritten to relative asset keys
+(e.g. "assets/hero.png") that correspond to entries in the asset table below.
+
+JSON structure (abbreviated):
+
+  {
+    "id":   "<uuid>",
+    "name": "Root",
+    "components": [
+      {
+        "kind": "Image",
+        "imagePath": "assets/hero.png",   <-- references asset table
+        "assetPath": "",
+        ...
+      }
+    ],
+    "children": [ ... ]
+  }
+
+Component "kind" values and their properties are documented by each component
+class in UIMaker2. Common kinds: Transform, Image, Text, Button, Panel,
+ProgressBar, Toggle, Dropdown, TextInput, Icon, Sprite, Tooltip, Modal,
+TabContainer, RadialMenu, Minimap, DragSlot, ListRepeater, StackLayout,
+GridLayout, ScrollBox.
+
+Path-bearing JSON keys (any key ending in "Path"):
+  imagePath   - texture / image file
+  fontPath    - TTF / OTF font file
+  iconPath    - icon image file
+  assetPath   - general asset reference
+
+--------------------------------------------------------------------------------
+  Asset Table
+--------------------------------------------------------------------------------
+
+Immediately after the JSON section. Repeated [assetCount] times:
+
+  Size    Description
+  ------  ------------------------------------------------------------------
+  4       Asset key length in bytes (uint32) [keyLen]
+  keyLen  Asset key string (UTF-8, e.g. "assets/hero.png")
+  4       Asset data length in bytes (uint32) [dataLen]
+  dataLen Raw asset file data (PNG, JPG, TTF, OTF, etc.)
+
+The asset key matches the value used in the JSON section's path fields.
+To resolve an asset reference found in the JSON, look up the key in the
+asset table and use the corresponding raw data.
+
+--------------------------------------------------------------------------------
+  Reading Pseudocode
+--------------------------------------------------------------------------------
+
+  file = open("scene.uibin", "rb")
+
+  magic   = file.read(4)           -- must be "UIBN"
+  version = read_uint32(file)      -- must be 1
+  jsonLen = read_uint32(file)
+  assetCount = read_uint32(file)
+
+  jsonData = file.read(jsonLen)
+  scene = json_parse(jsonData)
+
+  assets = {}
+  for i in 0 .. assetCount-1:
+      keyLen  = read_uint32(file)
+      key     = file.read(keyLen).decode("utf-8")
+      dataLen = read_uint32(file)
+      data    = file.read(dataLen)
+      assets[key] = data
+
+  -- Now resolve scene component paths:
+  -- For each component property ending in "Path",
+  -- look up its value in the assets table to get the raw bytes.
+  -- Load textures / fonts from those bytes.
+
+--------------------------------------------------------------------------------
+  Notes
+--------------------------------------------------------------------------------
+
+- Byte order: all uint32 values are big-endian.
+- The JSON section uses compact formatting (no extra whitespace).
+- Asset keys use forward slashes as path separators regardless of platform.
+- If a component references a path that has no matching asset table entry,
+  the asset was missing at bake time. Handle gracefully (placeholder texture).
+- The format does not use compression. Implementors may apply external
+  compression (gzip, LZ4, etc.) around the entire .uibin if desired.
+- Version field allows future format extensions. Readers should reject
+  versions they do not understand.

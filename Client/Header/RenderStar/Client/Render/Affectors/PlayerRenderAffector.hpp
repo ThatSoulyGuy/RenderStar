@@ -43,10 +43,10 @@ namespace RenderStar::Client::Render::Affectors
         };
 
         UniformSlot& AcquireUniformSlot();
-        void BuildCubeMesh();
+        void BuildCapsuleMesh(float radius, float cylinderHeight, int slices, int rings);
 
         std::unique_ptr<IShaderProgram> shader;
-        std::unique_ptr<Resource::Mesh> cubeMesh;
+        std::unique_ptr<Resource::Mesh> capsuleMesh;
         IBufferManager* bufferManager = nullptr;
         IUniformManager* uniformManager = nullptr;
         ITextureManager* textureManager = nullptr;

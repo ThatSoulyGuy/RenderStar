@@ -15,6 +15,13 @@ target_link_libraries(RenderStarCommon PUBLIC
     glm::glm
     spdlog::spdlog
     pugixml::pugixml
+    BulletDynamics
+    BulletCollision
+    LinearMath
+)
+
+target_include_directories(RenderStarCommon PUBLIC
+    $<BUILD_INTERFACE:${bullet3_SOURCE_DIR}/src>
 )
 
 target_compile_definitions(RenderStarCommon PUBLIC

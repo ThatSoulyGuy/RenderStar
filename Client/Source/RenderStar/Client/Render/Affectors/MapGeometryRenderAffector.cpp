@@ -17,6 +17,7 @@
 #include "RenderStar/Common/Component/Components/MapGeometry.hpp"
 #include "RenderStar/Common/Component/Components/Transform.hpp"
 #include "RenderStar/Common/Module/ModuleContext.hpp"
+#include "RenderStar/Common/Physics/PhysicsModule.hpp"
 #include "RenderStar/Common/Scene/SceneModule.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -64,8 +65,13 @@ namespace RenderStar::Client::Render::Affectors
         else
             logger->error("MapGeometryRenderAffector: AssetModule not found");
 
-        logger->info("MapGeometryRenderAffector initialized: sceneModule={}, assetModule={}",
-            static_cast<void*>(sceneModule), static_cast<void*>(assetModule));
+        auto physicsOpt = context.GetModule<Common::Physics::PhysicsModule>();
+
+        if (physicsOpt.has_value())
+            physicsModule = &physicsOpt->get();
+
+        logger->info("MapGeometryRenderAffector initialized: sceneModule={}, assetModule={}, physicsModule={}",
+            static_cast<void*>(sceneModule), static_cast<void*>(assetModule), static_cast<void*>(physicsModule));
     }
 
     void MapGeometryRenderAffector::Affect(Common::Component::ComponentModule&)
@@ -94,27 +100,62 @@ namespace RenderStar::Client::Render::Affectors
 
     void MapGeometryRenderAffector::CheckForNewMapGeometry(Common::Component::ComponentModule& componentModule)
     {
-        if (!sceneModule || !assetModule || !bufferManager)
-        {
-            if (!guardWarningLogged)
-            {
-                logger->warn("CheckForNewMapGeometry guard failed: sceneModule={}, assetModule={}, bufferManager={}",
-                    static_cast<void*>(sceneModule), static_cast<void*>(assetModule), static_cast<void*>(bufferManager));
-                guardWarningLogged = true;
-            }
-
+        if (!sceneModule || !assetModule)
             return;
-        }
 
         auto& pool = componentModule.GetPool<Common::Component::MapGeometry>();
 
         for (auto [entity, mapGeometry] : pool)
         {
+            // Create physics collision meshes immediately (no render dependency)
+            if (!physicsProcessedEntities.contains(entity.id) && physicsModule)
+            {
+                auto binaryAsset = assetModule->LoadBinary(Common::Asset::AssetLocation::Parse(mapGeometry.assetPath));
+
+                if (binaryAsset.IsValid())
+                {
+                    auto scene = Common::Scene::MapbinLoader::Load(binaryAsset.Get()->GetDataView());
+
+                    if (scene.has_value())
+                    {
+                        constexpr float mapScale = 0.1f;
+
+                        for (const auto& group : scene->groups)
+                        {
+                            int32_t vertexCount = group.vertexCount;
+                            int32_t indexCount = static_cast<int32_t>(group.indices.size());
+
+                            if (vertexCount > 0 && indexCount > 0)
+                            {
+                                physicsModule->CreateStaticTriangleMesh(
+                                    group.vertexData.data(), vertexCount, 8,
+                                    group.indices.data(), indexCount, mapScale);
+                            }
+                        }
+
+                        // Only mark as processed after successful mesh creation
+                        physicsProcessedEntities.insert(entity.id);
+                        logger->info("Created {} client-side collision meshes", scene->groups.size());
+                    }
+                    else
+                    {
+                        logger->warn("Failed to parse mapbin for physics: {}", mapGeometry.assetPath);
+                    }
+                }
+                else
+                {
+                    logger->warn("Physics mesh deferred: mapbin asset not yet available for '{}'", mapGeometry.assetPath);
+                }
+            }
+
+            // Create render meshes only when renderer is ready
             if (processedMapEntities.contains(entity.id))
                 continue;
 
+            if (!bufferManager)
+                continue;
+
             logger->info("CheckForNewMapGeometry: found new MapGeometry entity id={}, assetPath='{}'", entity.id, mapGeometry.assetPath);
-            processedMapEntities.insert(entity.id);
 
             auto binaryAsset = assetModule->LoadBinary(Common::Asset::AssetLocation::Parse(mapGeometry.assetPath));
 
@@ -132,6 +173,7 @@ namespace RenderStar::Client::Render::Affectors
                 continue;
             }
 
+            processedMapEntities.insert(entity.id);
             BuildScene(scene->groups, scene->materials, scene->gameObjects, *sceneModule, componentModule);
 
             logger->info("Loaded map geometry from '{}': {} groups, {} materials",
@@ -546,6 +588,7 @@ namespace RenderStar::Client::Render::Affectors
         shadowUniformPool.clear();
         shadowUniformPoolIndex = 0;
         processedMapEntities.clear();
+        physicsProcessedEntities.clear();
         shader.reset();
         shadowShader.reset();
         shadowMapTexture = nullptr;
