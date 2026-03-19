@@ -5,6 +5,12 @@
 #include <span>
 #include <vector>
 
+namespace RenderStar::Common::Asset
+{
+    class AssetModule;
+    class AssetLocation;
+}
+
 namespace RenderStar::Common::Scene
 {
     enum class TextureSlotType : uint32_t
@@ -101,7 +107,8 @@ namespace RenderStar::Common::Scene
     {
     public:
 
-        static std::optional<MapbinScene> Load(std::span<const uint8_t> data);
+        static std::optional<MapbinScene> Load(const Asset::AssetLocation& location, Asset::AssetModule& assetModule);
+        static std::optional<MapbinScene> Parse(std::span<const uint8_t> data);
 
     private:
 

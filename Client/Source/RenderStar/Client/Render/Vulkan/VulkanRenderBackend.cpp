@@ -360,25 +360,102 @@ namespace RenderStar::Client::Render::Vulkan
 
     void VulkanRenderBackend::SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh)
     {
-        drawCommands.push_back(VulkanDrawCommand{ shader, uniformBinding, frameIndex, mesh });
+        VulkanDrawCommand cmd;
+        cmd.type = VulkanDrawCommand::Type::Draw;
+        cmd.shader = shader;
+        cmd.uniformBinding = uniformBinding;
+        cmd.frameIndex = frameIndex;
+        cmd.mesh = mesh;
+        drawCommands.push_back(cmd);
+    }
+
+    void VulkanRenderBackend::BeginOverlayPass()
+    {
+        commandModule.EndRenderPass();
+
+        commandModule.BeginRenderPass(
+            renderPassModule.GetOverlayRenderPass(),
+            framebufferModule.GetFramebuffer(currentImageIndex),
+            swapchainModule.GetWidth(),
+            swapchainModule.GetHeight()
+        );
+    }
+
+    void VulkanRenderBackend::EndOverlayPass()
+    {
+        commandModule.EndRenderPass();
+    }
+
+    void VulkanRenderBackend::SetScissorRect(int32_t x, int32_t y, uint32_t w, uint32_t h)
+    {
+        VkCommandBuffer commandBuffer = commandModule.GetCommandBuffer(currentFrame);
+        VkRect2D scissor{};
+        scissor.offset = { x, y };
+        scissor.extent = { w, h };
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    }
+
+    void VulkanRenderBackend::ClearScissorRect()
+    {
+        VkCommandBuffer commandBuffer = commandModule.GetCommandBuffer(currentFrame);
+        VkRect2D scissor{};
+        scissor.offset = { 0, 0 };
+        scissor.extent = { width, height };
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    }
+
+    void VulkanRenderBackend::SubmitSetScissor(int32_t x, int32_t y, uint32_t w, uint32_t h)
+    {
+        VulkanDrawCommand cmd;
+        cmd.type = VulkanDrawCommand::Type::SetScissor;
+        cmd.scissorX = x;
+        cmd.scissorY = y;
+        cmd.scissorW = w;
+        cmd.scissorH = h;
+        drawCommands.push_back(cmd);
+    }
+
+    void VulkanRenderBackend::SubmitClearScissor()
+    {
+        VulkanDrawCommand cmd;
+        cmd.type = VulkanDrawCommand::Type::ClearScissor;
+        drawCommands.push_back(cmd);
     }
 
     void VulkanRenderBackend::ExecuteDrawCommands()
     {
         VkCommandBuffer commandBuffer = commandModule.GetCommandBuffer(currentFrame);
 
-        for (const auto& [shader, uniformBinding, frameIndex, mesh] : drawCommands)
+        for (const auto& cmd : drawCommands)
         {
-            auto* vulkanShader = dynamic_cast<VulkanShaderProgram*>(shader);
-            auto* vulkanMesh = dynamic_cast<VulkanMesh*>(mesh);
-            const auto* vulkanBinding = dynamic_cast<VulkanUniformBinding*>(uniformBinding);
+            if (cmd.type == VulkanDrawCommand::Type::SetScissor)
+            {
+                VkRect2D scissor{};
+                scissor.offset = { cmd.scissorX, cmd.scissorY };
+                scissor.extent = { cmd.scissorW, cmd.scissorH };
+                vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+                continue;
+            }
+
+            if (cmd.type == VulkanDrawCommand::Type::ClearScissor)
+            {
+                VkRect2D scissor{};
+                scissor.offset = { 0, 0 };
+                scissor.extent = { width, height };
+                vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+                continue;
+            }
+
+            auto* vulkanShader = dynamic_cast<VulkanShaderProgram*>(cmd.shader);
+            auto* vulkanMesh = dynamic_cast<VulkanMesh*>(cmd.mesh);
+            const auto* vulkanBinding = dynamic_cast<VulkanUniformBinding*>(cmd.uniformBinding);
 
             if (vulkanShader)
                 vulkanShader->BindPipeline(commandBuffer);
 
-            if (vulkanShader && vulkanBinding && frameIndex >= 0 && frameIndex < vulkanBinding->GetFrameCount())
+            if (vulkanShader && vulkanBinding && cmd.frameIndex >= 0 && cmd.frameIndex < vulkanBinding->GetFrameCount())
             {
-                VkDescriptorSet descriptorSet = vulkanBinding->GetDescriptorSets()[frameIndex];
+                VkDescriptorSet descriptorSet = vulkanBinding->GetDescriptorSets()[cmd.frameIndex];
                 vulkanShader->BindDescriptorSet(commandBuffer, descriptorSet);
             }
 

@@ -67,10 +67,13 @@ namespace RenderStar::Client::Render::OpenGL
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, ToGLFilter(description.magFilter));
 
         GLenum minFilter = ToGLFilter(description.minFilter);
-        if (minFilter == GL_LINEAR)
-            minFilter = GL_LINEAR_MIPMAP_LINEAR;
-        else if (minFilter == GL_NEAREST)
-            minFilter = GL_NEAREST_MIPMAP_NEAREST;
+        if (description.generateMipmaps)
+        {
+            if (minFilter == GL_LINEAR)
+                minFilter = GL_LINEAR_MIPMAP_LINEAR;
+            else if (minFilter == GL_NEAREST)
+                minFilter = GL_NEAREST_MIPMAP_NEAREST;
+        }
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter);
 
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
@@ -78,8 +81,11 @@ namespace RenderStar::Client::Render::OpenGL
             static_cast<GLsizei>(description.height),
             0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 16.0f);
+        if (description.generateMipmaps)
+        {
+            glGenerateMipmap(GL_TEXTURE_2D);
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 16.0f);
+        }
 
         glBindTexture(GL_TEXTURE_2D, 0);
 

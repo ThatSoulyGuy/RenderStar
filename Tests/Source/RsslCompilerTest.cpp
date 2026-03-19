@@ -512,3 +512,169 @@ TEST(RsslCompilerTest, FullscreenShaderNoVertexInputs)
     EXPECT_TRUE(result.fragmentGlsl.find("layout(location = 0) in vec2 fragTexCoord;") != std::string::npos);
     EXPECT_TRUE(result.fragmentGlsl.find("texture(sceneColor, fragTexCoord)") != std::string::npos);
 }
+
+// ── New feature tests ──────────────────────────────────────────────────
+
+TEST(RsslCompilerTest, ParseIncludeDirective)
+{
+    auto resolver = [](const std::string& path, const std::string&) -> std::string
+    {
+        if (path == "common.rssl")
+        {
+            return
+                "@uniform Globals : binding(0)\n"
+                "{\n"
+                "    mat4 viewProj;\n"
+                "}\n";
+        }
+
+        throw std::runtime_error("File not found: " + path);
+    };
+
+    auto result = RsslCompiler::Parse(
+        "#rssl 1\n"
+        "\n"
+        "#include \"common.rssl\"\n"
+        "\n"
+        "@stage vertex\n"
+        "void main() { gl_Position = ubo.viewProj * vec4(0.0); }\n",
+        resolver, "test.rssl");
+
+    EXPECT_TRUE(result.IsValid());
+    EXPECT_EQ(result.uniformBlocks.size(), 1);
+    EXPECT_EQ(result.uniformBlocks[0].name, "Globals");
+    EXPECT_EQ(result.uniformBlocks[0].binding, 0);
+}
+
+TEST(RsslCompilerTest, ParseIncludeCircularDetection)
+{
+    auto resolver = [](const std::string& path, const std::string&) -> std::string
+    {
+        if (path == "a.rssl")
+            return "#include \"b.rssl\"\n";
+        if (path == "b.rssl")
+            return "#include \"a.rssl\"\n";
+
+        throw std::runtime_error("File not found: " + path);
+    };
+
+    auto result = RsslCompiler::Parse(
+        "#rssl 1\n"
+        "#include \"a.rssl\"\n"
+        "@stage vertex\n"
+        "void main() {}\n",
+        resolver, "root.rssl");
+
+    EXPECT_TRUE(result.IsValid());
+}
+
+TEST(RsslCompilerTest, CompileNestedInclude)
+{
+    auto resolver = [](const std::string& path, const std::string&) -> std::string
+    {
+        if (path == "outer.rssl")
+        {
+            return "#include \"inner.rssl\"\n"
+                   "@sampler outerTex : binding(1)\n";
+        }
+        if (path == "inner.rssl")
+        {
+            return
+                "@uniform Camera : binding(0)\n"
+                "{\n"
+                "    mat4 vp;\n"
+                "}\n";
+        }
+
+        throw std::runtime_error("File not found: " + path);
+    };
+
+    auto result = RsslCompiler::Compile(
+        "#rssl 1\n"
+        "#include \"outer.rssl\"\n"
+        "@stage vertex\n"
+        "void main() { gl_Position = ubo.vp * vec4(0.0); }\n",
+        resolver, "test.rssl");
+
+    EXPECT_TRUE(result.IsValid());
+    EXPECT_TRUE(result.vertexGlsl.find("uniform Camera") != std::string::npos);
+    EXPECT_TRUE(result.vertexGlsl.find("sampler2D outerTex") != std::string::npos);
+}
+
+TEST(RsslCompilerTest, CompileIncludeOnce)
+{
+    int resolveCount = 0;
+
+    auto resolver = [&](const std::string& path, const std::string&) -> std::string
+    {
+        if (path == "shared.rssl")
+        {
+            resolveCount++;
+            return
+                "@uniform Shared : binding(0)\n"
+                "{\n"
+                "    float time;\n"
+                "}\n";
+        }
+
+        throw std::runtime_error("File not found: " + path);
+    };
+
+    auto result = RsslCompiler::Parse(
+        "#rssl 1\n"
+        "#include \"shared.rssl\"\n"
+        "#include \"shared.rssl\"\n"
+        "@stage vertex\n"
+        "void main() {}\n",
+        resolver, "test.rssl");
+
+    EXPECT_TRUE(result.IsValid());
+    EXPECT_EQ(result.uniformBlocks.size(), 1);
+    EXPECT_EQ(resolveCount, 1);
+}
+
+TEST(RsslCompilerTest, ParseDefineDirective)
+{
+    auto resolver = [](const std::string&, const std::string&) -> std::string
+    {
+        return "";
+    };
+
+    auto result = RsslCompiler::Compile(
+        "#rssl 1\n"
+        "\n"
+        "#define MAX_LIGHTS 4\n"
+        "\n"
+        "@stage vertex\n"
+        "void main() {\n"
+        "    for (int i = 0; i < MAX_LIGHTS; i++) {}\n"
+        "}\n",
+        resolver, "test.rssl");
+
+    EXPECT_TRUE(result.IsValid());
+    EXPECT_TRUE(result.vertexGlsl.find("MAX_LIGHTS") == std::string::npos);
+    EXPECT_TRUE(result.vertexGlsl.find("i < 4") != std::string::npos);
+}
+
+TEST(RsslCompilerTest, CompileErrorHasLineNumbers)
+{
+    auto result = RsslCompiler::Parse(
+        "#rssl 1\n"
+        "\n"
+        "@uniform A : binding(0)\n"
+        "{\n"
+        "    mat4 m;\n"
+        "}\n"
+        "\n"
+        "@uniform B : binding(0)\n"
+        "{\n"
+        "    mat4 n;\n"
+        "}\n"
+        "\n"
+        "@stage vertex\n"
+        "void main() {}\n");
+
+    EXPECT_FALSE(result.IsValid());
+    EXPECT_FALSE(result.errors.empty());
+    EXPECT_TRUE(result.errors[0].find("error:") != std::string::npos);
+}

@@ -319,3 +319,116 @@ TEST(RsslCompilerEdgeCaseTest, ComputeStageWithUniformAndSampler)
     EXPECT_TRUE(result.computeGlsl.find("} ubo;") != std::string::npos);
     EXPECT_TRUE(result.computeGlsl.find("sampler2D inputTex") != std::string::npos);
 }
+
+// ── New feature edge cases ─────────────────────────────────────────────
+
+TEST(RsslCompilerEdgeCaseTest, IncludeWithoutResolverFails)
+{
+    auto result = RsslCompiler::Parse(
+        "#rssl 1\n"
+        "#include \"common.rssl\"\n"
+        "@stage vertex\n"
+        "void main() {}\n");
+
+    EXPECT_TRUE(result.IsValid());
+    EXPECT_TRUE(result.sharedGlsl.find("#include") != std::string::npos);
+}
+
+TEST(RsslCompilerEdgeCaseTest, IncludeMissingFileFails)
+{
+    auto resolver = [](const std::string& path, const std::string&) -> std::string
+    {
+        throw std::runtime_error("File not found: " + path);
+    };
+
+    auto result = RsslCompiler::Parse(
+        "#rssl 1\n"
+        "#include \"nonexistent.rssl\"\n"
+        "@stage vertex\n"
+        "void main() {}\n",
+        resolver, "test.rssl");
+
+    EXPECT_FALSE(result.IsValid());
+    EXPECT_FALSE(result.errors.empty());
+}
+
+TEST(RsslCompilerEdgeCaseTest, DefineDuplicateNameWorks)
+{
+    auto resolver = [](const std::string&, const std::string&) -> std::string
+    {
+        return "";
+    };
+
+    auto result = RsslCompiler::Compile(
+        "#rssl 1\n"
+        "#define X 1\n"
+        "#define X 2\n"
+        "@stage vertex\n"
+        "void main() { int a = X; }\n",
+        resolver, "test.rssl");
+
+    EXPECT_TRUE(result.IsValid());
+    EXPECT_TRUE(result.vertexGlsl.find("int a = 2") != std::string::npos);
+}
+
+TEST(RsslCompilerEdgeCaseTest, DefineSubstitutesInUniformBody)
+{
+    auto resolver = [](const std::string&, const std::string&) -> std::string
+    {
+        return "";
+    };
+
+    auto result = RsslCompiler::Compile(
+        "#rssl 1\n"
+        "#define NUM_LIGHTS 4\n"
+        "@uniform Lighting : binding(0)\n"
+        "{\n"
+        "    vec4 lights[NUM_LIGHTS];\n"
+        "}\n"
+        "@stage vertex\n"
+        "void main() {}\n",
+        resolver, "test.rssl");
+
+    EXPECT_TRUE(result.IsValid());
+    EXPECT_TRUE(result.vertexGlsl.find("lights[4]") != std::string::npos);
+    EXPECT_TRUE(result.vertexGlsl.find("NUM_LIGHTS") == std::string::npos);
+}
+
+TEST(RsslCompilerEdgeCaseTest, DefineWordBoundary)
+{
+    auto resolver = [](const std::string&, const std::string&) -> std::string
+    {
+        return "";
+    };
+
+    auto result = RsslCompiler::Compile(
+        "#rssl 1\n"
+        "#define X 99\n"
+        "@stage vertex\n"
+        "void main() { int XX = X; }\n",
+        resolver, "test.rssl");
+
+    EXPECT_TRUE(result.IsValid());
+    EXPECT_TRUE(result.vertexGlsl.find("int XX = 99") != std::string::npos);
+}
+
+TEST(RsslCompilerEdgeCaseTest, IncludeWithSamplerAndStage)
+{
+    auto resolver = [](const std::string& path, const std::string&) -> std::string
+    {
+        if (path == "shared.rssl")
+            return "@sampler sharedTex : binding(0)\n";
+
+        throw std::runtime_error("File not found: " + path);
+    };
+
+    auto result = RsslCompiler::Compile(
+        "#rssl 1\n"
+        "#include \"shared.rssl\"\n"
+        "@stage fragment\n"
+        "void main() { vec4 c = texture(sharedTex, vec2(0.0)); }\n",
+        resolver, "test.rssl");
+
+    EXPECT_TRUE(result.IsValid());
+    EXPECT_TRUE(result.fragmentGlsl.find("sampler2D sharedTex") != std::string::npos);
+}

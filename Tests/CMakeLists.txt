@@ -27,8 +27,7 @@ target_sources(RenderStarTests PRIVATE
     Source/ConfigurationTest.cpp
     Source/HierarchyTest.cpp
     Source/TransformTest.cpp
-    Source/GlslVersionTest.cpp
-    Source/GlslTransformerTest.cpp
+    Source/RsslBackendEmitterTest.cpp
     Source/VertexTest.cpp
     Source/VertexLayoutTest.cpp
     Source/StandardUniformsTest.cpp
@@ -62,7 +61,6 @@ target_sources(RenderStarTests PRIVATE
     ${CMAKE_SOURCE_DIR}/Client/Source/RenderStar/Client/Render/Platform/GeometryStage.cpp
     ${CMAKE_SOURCE_DIR}/Client/Source/RenderStar/Client/Render/Platform/FullscreenStage.cpp
     ${CMAKE_SOURCE_DIR}/Client/Source/RenderStar/Client/Render/Platform/ComputeStage.cpp
-    ${CMAKE_SOURCE_DIR}/Client/Source/RenderStar/Client/Render/Shader/GlslTransformer.cpp
     ${CMAKE_SOURCE_DIR}/Client/Source/RenderStar/Client/Render/Shader/RsslCompiler.cpp
     ${CMAKE_SOURCE_DIR}/Client/Source/RenderStar/Client/Render/Components/Camera.cpp
     ${CMAKE_SOURCE_DIR}/Client/Source/RenderStar/Client/Render/Framework/LitVertex.cpp

@@ -37,6 +37,13 @@ namespace RenderStar::Client::Render::Platform
             const std::string& targetName,
             const VertexLayout& vertexLayout);
 
+        std::unique_ptr<IShaderProgram> CompileOverlayShader(
+            const std::string& vertexGlsl,
+            const std::string& fragmentGlsl,
+            const VertexLayout& vertexLayout);
+
+        Shader::RsslTarget GetRsslTarget() const;
+
         bool IsFrozen() const;
 
         bool IsEnabled() const;

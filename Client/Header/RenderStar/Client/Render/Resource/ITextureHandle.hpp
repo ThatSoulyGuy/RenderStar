@@ -35,6 +35,7 @@ namespace RenderStar::Client::Render
         TextureWrapMode wrapT = TextureWrapMode::REPEAT;
         TextureFilterMode minFilter = TextureFilterMode::LINEAR;
         TextureFilterMode magFilter = TextureFilterMode::LINEAR;
+        bool generateMipmaps = true;
     };
 
     class ITextureHandle : public IGraphicsResource

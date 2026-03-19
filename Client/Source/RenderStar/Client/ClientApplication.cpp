@@ -29,6 +29,7 @@
 #include "RenderStar/Common/Time/TimeModule.hpp"
 #include "RenderStar/Client/Render/Affectors/PlayerPhysicsAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/RemotePlayerInterpolationAffector.hpp"
+#include "RenderStar/Client/UI/UIStackModule.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -90,6 +91,7 @@ namespace RenderStar::Client
             .Module(std::make_unique<Network::ClientNetworkModule>())
             .Module(std::make_unique<Core::ClientSceneModule>())
             .Module(std::make_unique<Gameplay::ClientPlayerModule>())
+            .Module(std::make_unique<UI::UIStackModule>())
             .Module(std::make_unique<Core::ClientLifecycleModule>())
             .Build();
 

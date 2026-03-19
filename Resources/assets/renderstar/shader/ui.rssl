@@ -1,0 +1,66 @@
+#rssl 1
+
+@uniform UITransform : binding(0)
+{
+    vec4 positionAndSize;
+    vec4 uvRect;
+    vec4 colorTint;
+    vec2 screenSize;
+    float rotationDegrees;
+    float cornerRadius;
+}
+
+@sampler uiTexture : binding(1)
+
+@stage vertex
+
+@input inPosition : location(0), vec2
+@input inTexCoord : location(1), vec2
+
+@output fragTexCoord : location(0), vec2
+@output fragQuadPos : location(1), vec2
+
+void main() {
+    float x = ubo.positionAndSize.x + inPosition.x * ubo.positionAndSize.z;
+    float y = ubo.positionAndSize.y + inPosition.y * ubo.positionAndSize.w;
+
+    float rad = radians(ubo.rotationDegrees);
+    float cosR = cos(rad);
+    float sinR = sin(rad);
+    float cx = ubo.positionAndSize.x + ubo.positionAndSize.z * 0.5;
+    float cy = ubo.positionAndSize.y + ubo.positionAndSize.w * 0.5;
+    float rx = cx + (x - cx) * cosR - (y - cy) * sinR;
+    float ry = cy + (x - cx) * sinR + (y - cy) * cosR;
+
+    float ndcX = (rx / ubo.screenSize.x) * 2.0 - 1.0;
+    float ndcY = 1.0 - (ry / ubo.screenSize.y) * 2.0;
+
+    gl_Position = vec4(ndcX, ndcY, 0.0, 1.0);
+
+    fragTexCoord = ubo.uvRect.xy + inTexCoord * (ubo.uvRect.zw - ubo.uvRect.xy);
+    fragQuadPos = inPosition.xy;
+}
+
+@stage fragment
+
+@input fragTexCoord : location(0), vec2
+@input fragQuadPos : location(1), vec2
+
+@output outColor : location(0), vec4
+
+void main() {
+    vec4 texColor = texture(uiTexture, fragTexCoord);
+    outColor = texColor * ubo.colorTint;
+
+    float r = ubo.cornerRadius;
+    if (r > 0.0) {
+        vec2 elemSize = ubo.positionAndSize.zw;
+        vec2 pixelPos = fragQuadPos * elemSize;
+        vec2 halfSize = elemSize * 0.5;
+        vec2 d = abs(pixelPos - halfSize) - halfSize + vec2(r);
+        float dist = length(max(d, vec2(0.0))) + min(max(d.x, d.y), 0.0) - r;
+        float alpha = 1.0 - smoothstep(-1.0, 1.0, dist);
+        outColor.a *= alpha;
+        if (outColor.a < 0.01) discard;
+    }
+}

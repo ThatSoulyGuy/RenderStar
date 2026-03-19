@@ -65,7 +65,9 @@ namespace RenderStar::Client::Render::Vulkan
         uint32_t h = description.height;
         VkDeviceSize imageSize = static_cast<VkDeviceSize>(w) * h * 4;
 
-        uint32_t mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(w, h)))) + 1;
+        uint32_t mipLevels = description.generateMipmaps
+            ? static_cast<uint32_t>(std::floor(std::log2(std::max(w, h)))) + 1
+            : 1;
 
         VkBufferCreateInfo bufferInfo{};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

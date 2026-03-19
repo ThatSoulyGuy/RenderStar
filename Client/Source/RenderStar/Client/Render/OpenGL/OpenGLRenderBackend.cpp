@@ -199,21 +199,86 @@ namespace RenderStar::Client::Render::OpenGL
 
     void OpenGLRenderBackend::SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, const int32_t frameIndex, IMesh* mesh)
     {
-        drawCommands.push_back(OpenGLDrawCommand{ shader, uniformBinding, frameIndex, mesh });
+        OpenGLDrawCommand cmd;
+        cmd.type = OpenGLDrawCommand::Type::Draw;
+        cmd.shader = shader;
+        cmd.uniformBinding = uniformBinding;
+        cmd.frameIndex = frameIndex;
+        cmd.mesh = mesh;
+        drawCommands.push_back(cmd);
+    }
+
+    void OpenGLRenderBackend::BeginOverlayPass()
+    {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+    }
+
+    void OpenGLRenderBackend::EndOverlayPass()
+    {
+        glDisable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
+    }
+
+    void OpenGLRenderBackend::SetScissorRect(int32_t x, int32_t y, uint32_t w, uint32_t h)
+    {
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(x, static_cast<int>(height) - y - static_cast<int>(h), static_cast<int>(w), static_cast<int>(h));
+    }
+
+    void OpenGLRenderBackend::ClearScissorRect()
+    {
+        glDisable(GL_SCISSOR_TEST);
+    }
+
+    void OpenGLRenderBackend::SubmitSetScissor(int32_t x, int32_t y, uint32_t w, uint32_t h)
+    {
+        OpenGLDrawCommand cmd;
+        cmd.type = OpenGLDrawCommand::Type::SetScissor;
+        cmd.scissorX = x;
+        cmd.scissorY = y;
+        cmd.scissorW = w;
+        cmd.scissorH = h;
+        drawCommands.push_back(cmd);
+    }
+
+    void OpenGLRenderBackend::SubmitClearScissor()
+    {
+        OpenGLDrawCommand cmd;
+        cmd.type = OpenGLDrawCommand::Type::ClearScissor;
+        drawCommands.push_back(cmd);
     }
 
     void OpenGLRenderBackend::ExecuteDrawCommands()
     {
-        for (const auto& [shader, uniformBinding, frameIndex, mesh] : drawCommands)
+        for (const auto& cmd : drawCommands)
         {
-            auto* glShader = dynamic_cast<OpenGLShaderProgram*>(shader);
-            auto* glMesh = dynamic_cast<OpenGLMeshAdapter*>(mesh);
+            if (cmd.type == OpenGLDrawCommand::Type::SetScissor)
+            {
+                glEnable(GL_SCISSOR_TEST);
+                glScissor(cmd.scissorX,
+                    static_cast<int>(height) - cmd.scissorY - static_cast<int>(cmd.scissorH),
+                    static_cast<int>(cmd.scissorW), static_cast<int>(cmd.scissorH));
+                continue;
+            }
+
+            if (cmd.type == OpenGLDrawCommand::Type::ClearScissor)
+            {
+                glDisable(GL_SCISSOR_TEST);
+                continue;
+            }
+
+            auto* glShader = dynamic_cast<OpenGLShaderProgram*>(cmd.shader);
+            auto* glMesh = dynamic_cast<OpenGLMeshAdapter*>(cmd.mesh);
 
             if (glShader)
                 glShader->Bind();
 
-            if (uniformBinding)
-                uniformBinding->Bind(frameIndex);
+            if (cmd.uniformBinding)
+                cmd.uniformBinding->Bind(cmd.frameIndex);
 
             if (glMesh && glMesh->IsValid())
             {

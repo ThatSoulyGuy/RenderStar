@@ -64,6 +64,15 @@ namespace RenderStar::Client::Render
         virtual void SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh) = 0;
         virtual void ExecuteDrawCommands() = 0;
 
+        virtual void BeginOverlayPass() = 0;
+        virtual void EndOverlayPass() = 0;
+
+        virtual void SetScissorRect(int32_t x, int32_t y, uint32_t w, uint32_t h) = 0;
+        virtual void ClearScissorRect() = 0;
+
+        virtual void SubmitSetScissor(int32_t x, int32_t y, uint32_t w, uint32_t h) = 0;
+        virtual void SubmitClearScissor() = 0;
+
         [[nodiscard]]
         virtual bool IsInitialized() const = 0;
     };

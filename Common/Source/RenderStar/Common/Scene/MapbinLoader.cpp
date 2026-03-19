@@ -1,4 +1,7 @@
 #include "RenderStar/Common/Scene/MapbinLoader.hpp"
+#include "RenderStar/Common/Asset/AssetModule.hpp"
+#include "RenderStar/Common/Asset/AssetLocation.hpp"
+#include "RenderStar/Common/Asset/IBinaryAsset.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -22,7 +25,17 @@ namespace RenderStar::Common::Scene
         }
     }
 
-    std::optional<MapbinScene> MapbinLoader::Load(std::span<const uint8_t> data)
+    std::optional<MapbinScene> MapbinLoader::Load(const Asset::AssetLocation& location, Asset::AssetModule& assetModule)
+    {
+        auto binaryAsset = assetModule.LoadBinary(location);
+
+        if (!binaryAsset.IsValid())
+            return std::nullopt;
+
+        return Parse(binaryAsset.Get()->GetDataView());
+    }
+
+    std::optional<MapbinScene> MapbinLoader::Parse(std::span<const uint8_t> data)
     {
         if (data.size() < HEADER_SIZE)
             return std::nullopt;

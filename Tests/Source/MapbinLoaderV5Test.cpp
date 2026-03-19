@@ -99,7 +99,7 @@ TEST(MapbinLoaderV4Test, EmptyWithGameObjects)
     WriteHeader(buf, 4, 0, 0);
     WriteUint32(buf, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     EXPECT_TRUE(result->materials.empty());
     EXPECT_TRUE(result->groups.empty());
@@ -113,7 +113,7 @@ TEST(MapbinLoaderV4Test, PlayerStartGameObject)
     WriteUint32(buf, 1);
     WriteV4GameObject(buf, 0, 5.0f, 10.0f, 15.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->gameObjects.size(), 1u);
 
@@ -134,7 +134,7 @@ TEST(MapbinLoaderV4Test, PointLightPositionOnly)
     WriteUint32(buf, 1);
     WriteV4GameObject(buf, 1, 3.0f, 7.0f, 11.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->gameObjects.size(), 1u);
 
@@ -154,7 +154,7 @@ TEST(MapbinLoaderV4Test, MultipleGameObjects)
     WriteV4GameObject(buf, 1, 4.0f, 5.0f, 6.0f);
     WriteV4GameObject(buf, 3, 7.0f, 8.0f, 9.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->gameObjects.size(), 3u);
     EXPECT_EQ(result->gameObjects[0].type, GameObjectType::PLAYER_START);
@@ -169,7 +169,7 @@ TEST(MapbinLoaderV4Test, TruncatedGameObjectTable)
     WriteUint32(buf, 2);
     WriteV4GameObject(buf, 0, 1.0f, 2.0f, 3.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -184,7 +184,7 @@ TEST(MapbinLoaderV4Test, MaterialsAndGroupsStillParse)
 
     WriteUint32(buf, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 1u);
     EXPECT_EQ(result->materials[0].materialId, 0);
@@ -198,7 +198,7 @@ TEST(MapbinLoaderV5Test, EmptyScene)
     WriteHeader(buf, 5, 0, 0);
     WriteUint32(buf, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     EXPECT_TRUE(result->gameObjects.empty());
 }
@@ -210,7 +210,7 @@ TEST(MapbinLoaderV5Test, PlayerStartWithRotation)
     WriteUint32(buf, 1);
     WriteV5GameObjectCommon(buf, 0, 5.0f, 0.0f, 10.0f, 0.0f, 90.0f, 0.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->gameObjects.size(), 1u);
 
@@ -229,7 +229,7 @@ TEST(MapbinLoaderV5Test, PointLight)
     WriteV5GameObjectCommon(buf, 1, 3.0f, 5.0f, 7.0f, 0.0f, 0.0f, 0.0f);
     WriteV5LightFields(buf, 1.0f, 0.8f, 0.6f, 2.5f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->gameObjects.size(), 1u);
 
@@ -253,7 +253,7 @@ TEST(MapbinLoaderV5Test, SpotLightWithCone)
     WriteV5LightFields(buf, 1.0f, 1.0f, 0.9f, 3.0f);
     WriteV5SpotFields(buf, 20.0f, 35.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->gameObjects.size(), 1u);
 
@@ -278,7 +278,7 @@ TEST(MapbinLoaderV5Test, SunLightWithRotation)
     WriteV5GameObjectCommon(buf, 3, 0.0f, 100.0f, 0.0f, -45.0f, 60.0f, 0.0f);
     WriteV5LightFields(buf, 1.0f, 0.95f, 0.8f, 1.2f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->gameObjects.size(), 1u);
 
@@ -308,7 +308,7 @@ TEST(MapbinLoaderV5Test, AllGameObjectTypes)
     WriteV5GameObjectCommon(buf, 3, 0.0f, 50.0f, 0.0f, -60.0f, 0.0f, 0.0f);
     WriteV5LightFields(buf, 1.0f, 1.0f, 0.9f, 1.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->gameObjects.size(), 4u);
 
@@ -329,7 +329,7 @@ TEST(MapbinLoaderV5Test, TruncatedCommonFields)
     WriteUint32(buf, 0);
     WriteFloat(buf, 1.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -342,7 +342,7 @@ TEST(MapbinLoaderV5Test, TruncatedLightFields)
     WriteFloat(buf, 1.0f);
     WriteFloat(buf, 1.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -355,7 +355,7 @@ TEST(MapbinLoaderV5Test, TruncatedSpotFields)
     WriteV5LightFields(buf, 1.0f, 1.0f, 1.0f, 1.0f);
     WriteFloat(buf, 20.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -372,7 +372,7 @@ TEST(MapbinLoaderV5Test, MaterialsAndGroupsStillParse)
     WriteV5GameObjectCommon(buf, 1, 1.0f, 2.0f, 3.0f, 0.0f, 0.0f, 0.0f);
     WriteV5LightFields(buf, 1.0f, 1.0f, 1.0f, 1.0f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 1u);
     EXPECT_EQ(result->materials[0].materialId, 42);

@@ -11,6 +11,6 @@ namespace RenderStar::Common::Asset
 
     std::vector<std::string> TextAssetLoader::GetSupportedExtensions() const
     {
-        return { ".txt", ".xml", ".json", ".glsl", ".vert", ".frag", ".comp", ".geom", ".tesc", ".tese" };
+        return { ".txt", ".xml", ".json", ".glsl", ".vert", ".frag", ".comp", ".geom", ".tesc", ".tese", ".rssl" };
     }
 }

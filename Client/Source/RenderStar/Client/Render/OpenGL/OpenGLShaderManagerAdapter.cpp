@@ -1,7 +1,6 @@
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderManagerAdapter.hpp"
 
 #include "RenderStar/Client/Render/OpenGL/OpenGLShaderProgram.hpp"
-#include "RenderStar/Client/Render/Shader/GlslTransformer.hpp"
 #include "RenderStar/Common/Asset/ITextAsset.hpp"
 #include "RenderStar/Common/Asset/IBinaryAsset.hpp"
 
@@ -16,12 +15,9 @@ namespace RenderStar::Client::Render::OpenGL
 
     std::unique_ptr<IShaderProgram> OpenGLShaderManagerAdapter::CreateFromSource(const ShaderSource& source)
     {
-        std::string vertexGlsl = Shader::GlslTransformer::Transform450To410(source.vertexSource, Shader::ShaderType::VERTEX);
-        std::string fragmentGlsl = Shader::GlslTransformer::Transform450To410(source.fragmentSource, Shader::ShaderType::FRAGMENT);
-
         auto program = std::make_unique<OpenGLShaderProgram>();
 
-        if (!program->CompileFromSource(vertexGlsl, fragmentGlsl))
+        if (!program->CompileFromSource(source.vertexSource, source.fragmentSource))
         {
             logger->error("Failed to compile shader from source");
             return nullptr;

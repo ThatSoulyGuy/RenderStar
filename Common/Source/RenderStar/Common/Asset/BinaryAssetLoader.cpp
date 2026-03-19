@@ -11,6 +11,6 @@ namespace RenderStar::Common::Asset
 
     std::vector<std::string> BinaryAssetLoader::GetSupportedExtensions() const
     {
-        return { ".spv", ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".dds", ".ktx", ".bin" };
+        return { ".spv", ".png", ".jpg", ".jpeg", ".bmp", ".tga", ".dds", ".ktx", ".bin", ".mapbin", ".uibin" };
     }
 }

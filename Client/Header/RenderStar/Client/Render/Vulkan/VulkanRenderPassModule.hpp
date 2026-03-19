@@ -19,9 +19,12 @@ namespace RenderStar::Client::Render::Vulkan
 
         VkRenderPass GetRenderPass() const;
 
+        VkRenderPass GetOverlayRenderPass() const;
+
     private:
 
         std::shared_ptr<spdlog::logger> logger;
         VkRenderPass renderPass;
+        VkRenderPass overlayRenderPass;
     };
 }

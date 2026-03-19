@@ -78,7 +78,7 @@ TEST(MapbinLoaderV3Test, EmptyScene)
     std::vector<uint8_t> buf;
     WriteV3Header(buf, 0, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     EXPECT_TRUE(result->materials.empty());
     EXPECT_TRUE(result->groups.empty());
@@ -90,7 +90,7 @@ TEST(MapbinLoaderV3Test, MaterialScalarValues)
     WriteV3Header(buf, 1, 0);
     WriteV3MaterialScalars(buf, 42, 0.8f, 0.3f, 0.9f, 0.7f, 2.0f, 0.5f, 0.6f, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 1u);
 
@@ -115,7 +115,7 @@ TEST(MapbinLoaderV3Test, SingleTextureSlot)
     std::vector<uint8_t> pixels = {0xFF, 0x00, 0xFF, 0xFF};
     WriteV3TextureSlot(buf, 0, 1, 1, 0x2901, 0x2901, 0x2601, 0x2601, pixels);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 1u);
     ASSERT_EQ(result->materials[0].textureSlots.size(), 1u);
@@ -142,7 +142,7 @@ TEST(MapbinLoaderV3Test, MultipleTextureSlots)
     WriteV3TextureSlot(buf, 1, 2, 2, 0, 0, 0, 0, std::vector<uint8_t>(16, 0xBB));
     WriteV3TextureSlot(buf, 2, 1, 1, 0, 0, 0, 0, std::vector<uint8_t>(4, 0xCC));
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials[0].textureSlots.size(), 3u);
     EXPECT_EQ(result->materials[0].textureSlots[0].slotType, TextureSlotType::BASE_COLOR);
@@ -166,7 +166,7 @@ TEST(MapbinLoaderV3Test, AllSlotTypes)
     WriteV3TextureSlot(buf, 9, 1, 1, 0, 0, 0, 0, px);
     WriteV3TextureSlot(buf, 6, 1, 1, 0, 0, 0, 0, px);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     auto& slots = result->materials[0].textureSlots;
     ASSERT_EQ(slots.size(), 6u);
@@ -185,7 +185,7 @@ TEST(MapbinLoaderV3Test, MultipleMaterials)
     WriteV3MaterialScalars(buf, 10, 1.0f, 0.2f, 0.8f, 0.5f, 1.0f, 0.0f, 1.0f, 0);
     WriteV3MaterialScalars(buf, 20, 0.5f, 0.9f, 0.1f, 0.3f, 3.0f, 1.0f, 0.5f, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 2u);
     EXPECT_EQ(result->materials[0].materialId, 10);
@@ -208,7 +208,7 @@ TEST(MapbinLoaderV3Test, VertexDataWithNormals)
     WriteV3Vertex(buf, 1.0f, 2.0f, 3.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.75f);
     WriteV3Vertex(buf, 4.0f, 5.0f, 6.0f, 0.0f, 0.0f, 1.0f, 0.25f, 0.5f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->groups.size(), 1u);
 
@@ -254,7 +254,7 @@ TEST(MapbinLoaderV3Test, NoWindingFlip)
     WriteUint32(buf, 1);
     WriteUint32(buf, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->groups[0].indices.size(), 6u);
     EXPECT_EQ(result->groups[0].indices[0], 0u);
@@ -286,7 +286,7 @@ TEST(MapbinLoaderV3Test, MaterialWithGroupCombined)
     WriteUint32(buf, 1);
     WriteUint32(buf, 2);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 1u);
     ASSERT_EQ(result->groups.size(), 1u);
@@ -301,7 +301,7 @@ TEST(MapbinLoaderV3Test, TruncatedMaterialReturnsNullopt)
     WriteV3Header(buf, 1, 0);
     buf.resize(buf.size() + 20, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -312,7 +312,7 @@ TEST(MapbinLoaderV3Test, TruncatedSlotReturnsNullopt)
     WriteV3MaterialScalars(buf, 1, 1.0f, 0.5f, 0.0f, 0.5f, 1.0f, 1.0f, 1.0f, 1);
     buf.resize(buf.size() + 16, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -331,7 +331,7 @@ TEST(MapbinLoaderV3Test, TruncatedSlotPixelsReturnsNullopt)
     WriteUint32(buf, 0);
     WriteUint32(buf, 9999);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -343,7 +343,7 @@ TEST(MapbinLoaderV3Test, TruncatedGroupVerticesReturnsNullopt)
     WriteUint32(buf, 100);
     WriteUint32(buf, 3);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -362,7 +362,7 @@ TEST(MapbinLoaderV3Test, GroupVertexCount)
     for (uint32_t idx : {0u, 1u, 2u, 0u, 2u, 3u})
         WriteUint32(buf, idx);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result->groups[0].vertexCount, 4);
     EXPECT_EQ(result->groups[0].vertexData.size(), 32u);

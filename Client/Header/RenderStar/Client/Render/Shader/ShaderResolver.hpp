@@ -2,7 +2,6 @@
 
 #include "RenderStar/Common/Utility/ResourcePath.hpp"
 #include "RenderStar/Client/Render/Backend/RenderBackend.hpp"
-#include "RenderStar/Client/Render/Shader/GlslTransformer.hpp"
 #include <string>
 #include <filesystem>
 #include <stdexcept>
@@ -28,12 +27,7 @@ namespace RenderStar::Client::Render::Shader
 
         static std::string Resolve(
             const ResourcePath& path,
-            RenderBackend backend,
-            ShaderType shaderType);
-
-        static std::string ResolveVertex(const ResourcePath& path, RenderBackend backend);
-
-        static std::string ResolveFragment(const ResourcePath& path, RenderBackend backend);
+            RenderBackend backend);
 
         static bool HasBackendOverride(const ResourcePath& path, RenderBackend backend);
 

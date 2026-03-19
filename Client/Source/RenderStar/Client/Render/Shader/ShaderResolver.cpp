@@ -1,5 +1,4 @@
 #include "RenderStar/Client/Render/Shader/ShaderResolver.hpp"
-#include "RenderStar/Client/Render/Shader/GlslTransformer.hpp"
 #include <fstream>
 #include <sstream>
 #include <spdlog/spdlog.h>
@@ -15,8 +14,7 @@ namespace RenderStar::Client::Render::Shader
 
     std::string ShaderResolver::Resolve(
         const ResourcePath& path,
-        RenderBackend backend,
-        ShaderType shaderType)
+        RenderBackend backend)
     {
         ResourcePath overridePath = GetBackendOverridePath(path, backend);
         std::string overrideSource = TryLoadResource(overridePath);
@@ -32,23 +30,7 @@ namespace RenderStar::Client::Render::Shader
         if (primarySource.empty())
             throw ShaderResolutionException("Failed to load shader: " + path.FullPath());
 
-        if (backend == RenderBackend::OPENGL && GlslTransformer::CanTransform(primarySource))
-        {
-            spdlog::debug("Transforming shader {} from GLSL 450 to GLSL 410 for OpenGL", path.localPath);
-            return GlslTransformer::Transform450To410(primarySource, shaderType);
-        }
-
         return primarySource;
-    }
-
-    std::string ShaderResolver::ResolveVertex(const ResourcePath& path, RenderBackend backend)
-    {
-        return Resolve(path, backend, ShaderType::VERTEX);
-    }
-
-    std::string ShaderResolver::ResolveFragment(const ResourcePath& path, RenderBackend backend)
-    {
-        return Resolve(path, backend, ShaderType::FRAGMENT);
     }
 
     bool ShaderResolver::HasBackendOverride(const ResourcePath& path, RenderBackend backend)

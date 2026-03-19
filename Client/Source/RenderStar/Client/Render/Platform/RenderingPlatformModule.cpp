@@ -188,7 +188,7 @@ namespace RenderStar::Client::Render::Platform
                 continue;
             }
 
-            auto compileResult = Shader::RsslCompiler::Compile(asset->GetContent());
+            auto compileResult = Shader::RsslCompiler::Compile(asset->GetContent(), platformBackend->GetRsslTarget());
 
             if (!compileResult.IsValid())
             {
@@ -319,6 +319,11 @@ namespace RenderStar::Client::Render::Platform
         return nullptr;
     }
 
+    Shader::RsslTarget RenderingPlatformModule::GetRsslTarget() const
+    {
+        return platformBackend ? platformBackend->GetRsslTarget() : Shader::RsslTarget::VULKAN_GLSL;
+    }
+
     bool RenderingPlatformModule::IsFrozen() const
     {
         return frozen;
@@ -371,6 +376,17 @@ namespace RenderStar::Client::Render::Platform
         }
 
         return platformBackend->CompileShaderForTarget(vertexGlsl, fragmentGlsl, target, vertexLayout);
+    }
+
+    std::unique_ptr<IShaderProgram> RenderingPlatformModule::CompileOverlayShader(
+        const std::string& vertexGlsl,
+        const std::string& fragmentGlsl,
+        const VertexLayout& vertexLayout)
+    {
+        if (!platformBackend)
+            return nullptr;
+
+        return platformBackend->CompileShaderForTarget(vertexGlsl, fragmentGlsl, nullptr, vertexLayout);
     }
 
     std::vector<std::type_index> RenderingPlatformModule::GetDependencies() const

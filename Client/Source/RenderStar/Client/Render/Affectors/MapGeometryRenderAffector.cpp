@@ -12,7 +12,6 @@
 #include "RenderStar/Client/Render/Resource/StandardUniforms.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Common/Asset/AssetLocation.hpp"
-#include "RenderStar/Common/Asset/IBinaryAsset.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Component/Components/MapGeometry.hpp"
 #include "RenderStar/Common/Component/Components/Transform.hpp"
@@ -110,41 +109,32 @@ namespace RenderStar::Client::Render::Affectors
             // Create physics collision meshes immediately (no render dependency)
             if (!physicsProcessedEntities.contains(entity.id) && physicsModule)
             {
-                auto binaryAsset = assetModule->LoadBinary(Common::Asset::AssetLocation::Parse(mapGeometry.assetPath));
+                auto scene = Common::Scene::MapbinLoader::Load(
+                    Common::Asset::AssetLocation::Parse(mapGeometry.assetPath), *assetModule);
 
-                if (binaryAsset.IsValid())
+                if (scene.has_value())
                 {
-                    auto scene = Common::Scene::MapbinLoader::Load(binaryAsset.Get()->GetDataView());
+                    constexpr float mapScale = 0.1f;
 
-                    if (scene.has_value())
+                    for (const auto& group : scene->groups)
                     {
-                        constexpr float mapScale = 0.1f;
+                        int32_t vertexCount = group.vertexCount;
+                        int32_t indexCount = static_cast<int32_t>(group.indices.size());
 
-                        for (const auto& group : scene->groups)
+                        if (vertexCount > 0 && indexCount > 0)
                         {
-                            int32_t vertexCount = group.vertexCount;
-                            int32_t indexCount = static_cast<int32_t>(group.indices.size());
-
-                            if (vertexCount > 0 && indexCount > 0)
-                            {
-                                physicsModule->CreateStaticTriangleMesh(
-                                    group.vertexData.data(), vertexCount, 8,
-                                    group.indices.data(), indexCount, mapScale);
-                            }
+                            physicsModule->CreateStaticTriangleMesh(
+                                group.vertexData.data(), vertexCount, 8,
+                                group.indices.data(), indexCount, mapScale);
                         }
+                    }
 
-                        // Only mark as processed after successful mesh creation
-                        physicsProcessedEntities.insert(entity.id);
-                        logger->info("Created {} client-side collision meshes", scene->groups.size());
-                    }
-                    else
-                    {
-                        logger->warn("Failed to parse mapbin for physics: {}", mapGeometry.assetPath);
-                    }
+                    physicsProcessedEntities.insert(entity.id);
+                    logger->info("Created {} client-side collision meshes", scene->groups.size());
                 }
                 else
                 {
-                    logger->warn("Physics mesh deferred: mapbin asset not yet available for '{}'", mapGeometry.assetPath);
+                    logger->warn("Failed to load/parse mapbin for physics: {}", mapGeometry.assetPath);
                 }
             }
 
@@ -157,19 +147,12 @@ namespace RenderStar::Client::Render::Affectors
 
             logger->info("CheckForNewMapGeometry: found new MapGeometry entity id={}, assetPath='{}'", entity.id, mapGeometry.assetPath);
 
-            auto binaryAsset = assetModule->LoadBinary(Common::Asset::AssetLocation::Parse(mapGeometry.assetPath));
-
-            if (!binaryAsset.IsValid())
-            {
-                logger->error("Failed to load mapbin asset: {}", mapGeometry.assetPath);
-                continue;
-            }
-
-            auto scene = Common::Scene::MapbinLoader::Load(binaryAsset.Get()->GetDataView());
+            auto scene = Common::Scene::MapbinLoader::Load(
+                Common::Asset::AssetLocation::Parse(mapGeometry.assetPath), *assetModule);
 
             if (!scene.has_value())
             {
-                logger->error("Failed to parse mapbin: {}", mapGeometry.assetPath);
+                logger->error("Failed to load/parse mapbin: {}", mapGeometry.assetPath);
                 continue;
             }
 

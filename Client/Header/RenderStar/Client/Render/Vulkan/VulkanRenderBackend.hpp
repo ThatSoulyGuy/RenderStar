@@ -29,10 +29,16 @@ namespace RenderStar::Client::Render::Vulkan
 {
     struct VulkanDrawCommand
     {
-        IShaderProgram* shader;
-        IUniformBindingHandle* uniformBinding;
-        int32_t frameIndex;
-        IMesh* mesh;
+        enum class Type { Draw, SetScissor, ClearScissor };
+        Type type = Type::Draw;
+
+        IShaderProgram* shader = nullptr;
+        IUniformBindingHandle* uniformBinding = nullptr;
+        int32_t frameIndex = 0;
+        IMesh* mesh = nullptr;
+
+        int32_t scissorX = 0, scissorY = 0;
+        uint32_t scissorW = 0, scissorH = 0;
     };
 
     class VulkanRenderBackend : public IRenderBackend
@@ -85,6 +91,15 @@ namespace RenderStar::Client::Render::Vulkan
 
         void SubmitDrawCommand(IShaderProgram* shader, IUniformBindingHandle* uniformBinding, int32_t frameIndex, IMesh* mesh) override;
         void ExecuteDrawCommands() override;
+
+        void BeginOverlayPass() override;
+        void EndOverlayPass() override;
+
+        void SetScissorRect(int32_t x, int32_t y, uint32_t w, uint32_t h) override;
+        void ClearScissorRect() override;
+
+        void SubmitSetScissor(int32_t x, int32_t y, uint32_t w, uint32_t h) override;
+        void SubmitClearScissor() override;
 
         bool IsInitialized() const override;
 

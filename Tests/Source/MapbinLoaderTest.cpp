@@ -75,14 +75,14 @@ namespace
 
 TEST(MapbinLoaderTest, EmptyDataReturnsNullopt)
 {
-    auto result = MapbinLoader::Load({});
+    auto result = MapbinLoader::Parse({});
     EXPECT_FALSE(result.has_value());
 }
 
 TEST(MapbinLoaderTest, TooSmallDataReturnsNullopt)
 {
     std::vector<uint8_t> data(8, 0);
-    auto result = MapbinLoader::Load(data);
+    auto result = MapbinLoader::Parse(data);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -94,7 +94,7 @@ TEST(MapbinLoaderTest, WrongMagicReturnsNullopt)
     WriteUint32(buf, 0);
     WriteUint32(buf, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -106,7 +106,7 @@ TEST(MapbinLoaderTest, WrongVersionReturnsNullopt)
     WriteUint32(buf, 0);
     WriteUint32(buf, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -115,7 +115,7 @@ TEST(MapbinLoaderTest, EmptyScene)
     std::vector<uint8_t> buf;
     WriteV2Header(buf, 0, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     EXPECT_TRUE(result->materials.empty());
     EXPECT_TRUE(result->groups.empty());
@@ -129,7 +129,7 @@ TEST(MapbinLoaderTest, V2TextureConvertedToMaterial)
     std::vector<uint8_t> pixels = {0xFF, 0x00, 0xFF, 0xFF};
     WriteV2Texture(buf, 5, 1, 1, 0x2901, 0x2901, 0x2601, 0x2601, pixels);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 1u);
 
@@ -166,7 +166,7 @@ TEST(MapbinLoaderTest, V2MultipleTexturesConvertedToMaterials)
     std::vector<uint8_t> pixels2(4, 0xBB);
     WriteV2Texture(buf, 2, 1, 1, 0x812F, 0x812F, 0x2601, 0x2600, pixels2);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 2u);
 
@@ -191,7 +191,7 @@ TEST(MapbinLoaderTest, SingleGroupNoTextures)
     WriteV2Header(buf, 0, 1);
     WriteV2Group(buf, 3, 3, {0, 1, 2});
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     EXPECT_TRUE(result->materials.empty());
     ASSERT_EQ(result->groups.size(), 1u);
@@ -209,7 +209,7 @@ TEST(MapbinLoaderTest, GroupMaterialIdPreserved)
     WriteV2Group(buf, 7, 3, {0, 1, 2});
     WriteV2Group(buf, 42, 3, {0, 1, 2});
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->groups.size(), 2u);
     EXPECT_EQ(result->groups[0].materialId, 7);
@@ -222,7 +222,7 @@ TEST(MapbinLoaderTest, V2WindingOrderSwapped)
     WriteV2Header(buf, 0, 1);
     WriteV2Group(buf, 0, 3, {0, 1, 2});
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->groups[0].indices.size(), 3u);
     EXPECT_EQ(result->groups[0].indices[0], 0u);
@@ -236,7 +236,7 @@ TEST(MapbinLoaderTest, V2WindingOrderSwappedMultipleTriangles)
     WriteV2Header(buf, 0, 1);
     WriteV2Group(buf, 0, 6, {0, 1, 2, 3, 4, 5});
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->groups[0].indices.size(), 6u);
     EXPECT_EQ(result->groups[0].indices[0], 0u);
@@ -258,7 +258,7 @@ TEST(MapbinLoaderTest, V2VertexPositionAndUV)
 
     WriteV2Vertex(buf, 1.0f, 2.0f, 3.0f, 0.6f, 0.8f, -0.2f, 0.5f, 0.75f);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->groups.size(), 1u);
 
@@ -291,7 +291,7 @@ TEST(MapbinLoaderTest, V2ComputedNormals)
     WriteUint32(buf, 2);
     WriteUint32(buf, 1);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->groups.size(), 1u);
 
@@ -318,7 +318,7 @@ TEST(MapbinLoaderTest, V2TextureAndGroupCombined)
     WriteV2Texture(buf, 10, 1, 1, 0x2901, 0x2901, 0x2601, 0x2601, pixels);
     WriteV2Group(buf, 10, 3, {0, 1, 2});
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 1u);
     ASSERT_EQ(result->groups.size(), 1u);
@@ -332,7 +332,7 @@ TEST(MapbinLoaderTest, TruncatedTextureHeaderReturnsNullopt)
     WriteV2Header(buf, 1, 0);
     buf.resize(buf.size() + 16, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -350,7 +350,7 @@ TEST(MapbinLoaderTest, TruncatedTexturePixelsReturnsNullopt)
     WriteUint32(buf, 0);
     WriteUint32(buf, 1000);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -360,7 +360,7 @@ TEST(MapbinLoaderTest, TruncatedGroupHeaderReturnsNullopt)
     WriteV2Header(buf, 0, 1);
     buf.resize(buf.size() + 4, 0);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -372,7 +372,7 @@ TEST(MapbinLoaderTest, TruncatedGroupVerticesReturnsNullopt)
     WriteUint32(buf, 100);
     WriteUint32(buf, 3);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     EXPECT_FALSE(result.has_value());
 }
 
@@ -386,7 +386,7 @@ TEST(MapbinLoaderTest, V2LargeTexturePixelData)
     std::vector<uint8_t> pixels(width * height * 4, 0x80);
     WriteV2Texture(buf, 0, width, height, 0x2901, 0x2901, 0x2601, 0x2601, pixels);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 1u);
     ASSERT_EQ(result->materials[0].textureSlots.size(), 1u);
@@ -403,7 +403,7 @@ TEST(MapbinLoaderTest, V2ZeroSizeTexturePixelData)
     std::vector<uint8_t> pixels;
     WriteV2Texture(buf, 0, 0, 0, 0, 0, 0, 0, pixels);
 
-    auto result = MapbinLoader::Load(buf);
+    auto result = MapbinLoader::Parse(buf);
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result->materials.size(), 1u);
     ASSERT_EQ(result->materials[0].textureSlots.size(), 1u);

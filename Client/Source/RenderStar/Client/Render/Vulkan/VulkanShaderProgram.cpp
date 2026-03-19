@@ -98,7 +98,8 @@ namespace RenderStar::Client::Render::Vulkan
         const VertexLayout& vertexLayout,
         VkDescriptorSetLayout externalLayout,
         IGraphicsResourceManager& manager,
-        VkSampleCountFlagBits msaaSamples)
+        VkSampleCountFlagBits msaaSamples,
+        bool overlay)
     {
         device = vulkanDevice;
         shaderModule = module;
@@ -107,7 +108,7 @@ namespace RenderStar::Client::Render::Vulkan
         isCompute = false;
         sampleCount = msaaSamples;
 
-        BuildPipelineWithLayout(renderPass, vertexLayout, externalLayout);
+        BuildPipelineWithLayout(renderPass, vertexLayout, externalLayout, overlay);
         valid = (pipeline != VK_NULL_HANDLE);
 
         manager.Track(this);
@@ -251,7 +252,7 @@ namespace RenderStar::Client::Render::Vulkan
         logger->info("Created Vulkan graphics pipeline");
     }
 
-    void VulkanShaderProgram::BuildPipelineWithLayout(VkRenderPass renderPass, const VertexLayout& vertexLayout, VkDescriptorSetLayout layout)
+    void VulkanShaderProgram::BuildPipelineWithLayout(VkRenderPass renderPass, const VertexLayout& vertexLayout, VkDescriptorSetLayout layout, bool overlay)
     {
         descriptorSetLayout = layout;
 
@@ -314,8 +315,8 @@ namespace RenderStar::Client::Render::Vulkan
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
         depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthStencil.depthTestEnable = vertexLayout.attributes.empty() ? VK_FALSE : VK_TRUE;
-        depthStencil.depthWriteEnable = vertexLayout.attributes.empty() ? VK_FALSE : VK_TRUE;
+        depthStencil.depthTestEnable = (overlay || vertexLayout.attributes.empty()) ? VK_FALSE : VK_TRUE;
+        depthStencil.depthWriteEnable = (overlay || vertexLayout.attributes.empty()) ? VK_FALSE : VK_TRUE;
         depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
         depthStencil.depthBoundsTestEnable = VK_FALSE;
         depthStencil.stencilTestEnable = VK_FALSE;
@@ -323,7 +324,21 @@ namespace RenderStar::Client::Render::Vulkan
         VkPipelineColorBlendAttachmentState colorBlendAttachment{};
         colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                                                VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_FALSE;
+
+        if (overlay)
+        {
+            colorBlendAttachment.blendEnable = VK_TRUE;
+            colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+            colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        }
+        else
+        {
+            colorBlendAttachment.blendEnable = VK_FALSE;
+        }
 
         VkPipelineColorBlendStateCreateInfo colorBlending{};
         colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;

@@ -6,6 +6,7 @@
 #include "RenderStar/Client/Render/Resource/IUniformBindingHandle.hpp"
 #include "RenderStar/Client/Render/Resource/IMesh.hpp"
 #include "RenderStar/Client/Render/Resource/VertexLayout.hpp"
+#include "RenderStar/Client/Render/Shader/RsslTypes.hpp"
 #include <memory>
 #include <vector>
 
@@ -25,6 +26,8 @@ namespace RenderStar::Client::Render::Platform
     public:
 
         virtual ~IRenderingPlatformBackend() = default;
+
+        virtual Shader::RsslTarget GetRsslTarget() const = 0;
 
         virtual std::unique_ptr<IRenderTarget> CreateRenderTarget(
             const RenderTargetDescription& description) = 0;

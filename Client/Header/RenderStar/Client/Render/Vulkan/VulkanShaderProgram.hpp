@@ -37,7 +37,8 @@ namespace RenderStar::Client::Render::Vulkan
             const VertexLayout& vertexLayout,
             VkDescriptorSetLayout externalLayout,
             IGraphicsResourceManager& resourceManager,
-            VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT);
+            VkSampleCountFlagBits sampleCount = VK_SAMPLE_COUNT_1_BIT,
+            bool overlay = false);
 
         void InitializeCompute(
             VulkanShaderModule* shaderModule,
@@ -65,7 +66,7 @@ namespace RenderStar::Client::Render::Vulkan
     private:
 
         void BuildPipeline(VkRenderPass renderPass, const VertexLayout& vertexLayout);
-        void BuildPipelineWithLayout(VkRenderPass renderPass, const VertexLayout& vertexLayout, VkDescriptorSetLayout layout);
+        void BuildPipelineWithLayout(VkRenderPass renderPass, const VertexLayout& vertexLayout, VkDescriptorSetLayout layout, bool overlay = false);
         void DestroyPipeline();
 
         VkFormat GetVulkanFormat(VertexAttributeType type) const;

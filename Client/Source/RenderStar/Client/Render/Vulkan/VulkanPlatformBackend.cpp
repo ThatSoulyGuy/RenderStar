@@ -210,6 +210,8 @@ namespace RenderStar::Client::Render::Vulkan
             }
         }
 
+        bool overlay = (target == nullptr);
+
         auto program = std::make_unique<VulkanShaderProgram>();
         program->InitializeWithLayout(
             backend->GetDevice(),
@@ -220,7 +222,8 @@ namespace RenderStar::Client::Render::Vulkan
             vertexLayout,
             layout,
             backend->GetResourceManagerRef(),
-            samples);
+            samples,
+            overlay);
 
         return program;
     }

@@ -1,19 +1,22 @@
 #include "RenderStar/Client/Core/ClientLifecycleModule.hpp"
+
 #include "RenderStar/Client/Core/ClientSceneModule.hpp"
 #include "RenderStar/Client/Core/ClientWindowModule.hpp"
-#include "RenderStar/Client/Gameplay/ClientPlayerModule.hpp"
-#include "RenderStar/Client/Gameplay/PlayerControllerAffector.hpp"
-#include "RenderStar/Client/Input/ClientInputModule.hpp"
 #include "RenderStar/Client/Event/Buses/ClientCoreEventBus.hpp"
 #include "RenderStar/Client/Event/Buses/ClientRenderEventBus.hpp"
 #include "RenderStar/Client/Event/Events/ClientEvents.hpp"
+#include "RenderStar/Client/Gameplay/ClientPlayerModule.hpp"
+#include "RenderStar/Client/Gameplay/PlayerControllerAffector.hpp"
+#include "RenderStar/Client/Input/ClientInputModule.hpp"
+#include "RenderStar/Client/Network/ClientNetworkModule.hpp"
+#include "RenderStar/Client/Render/Affectors/AdaptiveVolumeAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/CameraAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/MapGeometryRenderAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/PlayerRenderAffector.hpp"
-#include "RenderStar/Client/Render/Affectors/AdaptiveVolumeAffector.hpp"
 #include "RenderStar/Client/Render/Affectors/SkyboxRenderAffector.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
 #include "RenderStar/Client/Render/Components/Camera.hpp"
+#include "RenderStar/Client/Render/Framework/LitVertex.hpp"
 #include "RenderStar/Client/Render/Framework/PostProcessData.hpp"
 #include "RenderStar/Client/Render/Framework/RenderingFrameworkModule.hpp"
 #include "RenderStar/Client/Render/Platform/FullscreenStage.hpp"
@@ -24,8 +27,9 @@
 #include "RenderStar/Client/Render/Resource/ITextureManager.hpp"
 #include "RenderStar/Client/Render/Resource/IUniformManager.hpp"
 #include "RenderStar/Client/Render/Shader/RsslCompiler.hpp"
-#include "RenderStar/Client/Render/Framework/LitVertex.hpp"
-#include "RenderStar/Client/Network/ClientNetworkModule.hpp"
+#include "RenderStar/Client/UI/UIStackModule.hpp"
+#include "RenderStar/Client/UI/UIVertex.hpp"
+#include "RenderStar/Client/UI/UibinLoader.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Component/Components/Transform.hpp"
@@ -72,6 +76,12 @@ namespace RenderStar::Client::Core
             frameworkModule = nullptr;
         }
 
+        if (uiStackModule)
+        {
+            uiStackModule->Cleanup();
+            uiStackModule = nullptr;
+        }
+
         cachedBufferManager = nullptr;
         cachedUniformManager = nullptr;
         cachedTextureManager = nullptr;
@@ -95,13 +105,17 @@ namespace RenderStar::Client::Core
         if (!shaderManager || !bufferManager || !uniformManager)
             return Common::Event::EventResult::Failure("Failed to get managers from renderer backent");
 
+        Render::Shader::RsslTarget rsslTarget = (backend->GetType() == Render::RenderBackend::OPENGL)
+            ? Render::Shader::RsslTarget::OPENGL_GLSL
+            : Render::Shader::RsslTarget::VULKAN_GLSL;
+
         const auto rsslAsset = assetModule->get().LoadText(
             Common::Asset::AssetLocation::Parse("renderstar:shader/scene_geometry.rssl"));
 
         if (!rsslAsset.IsValid())
             return Common::Event::EventResult::Failure("Failed to load scene_geometry.rssl asset");
 
-        auto compiled = Render::Shader::RsslCompiler::Compile(rsslAsset.Get()->GetContent());
+        auto compiled = Render::Shader::RsslCompiler::Compile(rsslAsset.Get()->GetContent(), rsslTarget);
 
         if (!compiled.IsValid())
             return Common::Event::EventResult::Failure("Failed to compile scene_geometry.rssl");
@@ -146,7 +160,7 @@ namespace RenderStar::Client::Core
 
             if (shadowRsslAsset.IsValid() && platformModule && platformModule->IsEnabled())
             {
-                auto shadowCompiled = Render::Shader::RsslCompiler::Compile(shadowRsslAsset.Get()->GetContent());
+                auto shadowCompiled = Render::Shader::RsslCompiler::Compile(shadowRsslAsset.Get()->GetContent(), rsslTarget);
 
                 if (shadowCompiled.IsValid())
                 {
@@ -192,7 +206,7 @@ namespace RenderStar::Client::Core
 
             if (skyRsslAsset.IsValid())
             {
-                auto skyCompiled = Render::Shader::RsslCompiler::Compile(skyRsslAsset.Get()->GetContent());
+                auto skyCompiled = Render::Shader::RsslCompiler::Compile(skyRsslAsset.Get()->GetContent(), rsslTarget);
 
                 if (skyCompiled.IsValid())
                 {
@@ -238,6 +252,66 @@ namespace RenderStar::Client::Core
                         logger->info("PostProcess UBO bound to tonemap stage at binding 3");
                     }
                 }
+            }
+        }
+
+        if (auto uiOpt = context.GetModule<UI::UIStackModule>(); uiOpt.has_value())
+        {
+            uiStackModule = &uiOpt->get();
+            uiStackModule->SetupRenderState(bufferManager, uniformManager, cachedTextureManager);
+
+            const auto fontAsset = assetModule->get().LoadBinary(
+                Common::Asset::AssetLocation::Parse("renderstar:font/times.ttf"));
+
+            if (fontAsset.IsValid())
+            {
+                uiStackModule->SetDefaultFont(fontAsset.Get()->GetData());
+            }
+            else
+            {
+                logger->warn("Default font renderstar:font/times.ttf not found");
+            }
+
+            const auto uiRsslAsset = assetModule->get().LoadText(
+                Common::Asset::AssetLocation::Parse("renderstar:shader/ui.rssl"));
+
+            if (uiRsslAsset.IsValid())
+            {
+                auto uiCompiled = Render::Shader::RsslCompiler::Compile(uiRsslAsset.Get()->GetContent(), rsslTarget);
+
+                if (uiCompiled.IsValid())
+                {
+                    std::unique_ptr<Render::IShaderProgram> uiShader;
+
+                    if (platformModule && platformModule->IsEnabled())
+                    {
+                        uiShader = platformModule->CompileOverlayShader(
+                            uiCompiled.vertexGlsl, uiCompiled.fragmentGlsl, UI::UIVertex::LAYOUT);
+                    }
+                    else
+                    {
+                        uiShader = shaderManager->CreateFromSource(
+                            Render::ShaderSource{uiCompiled.vertexGlsl, uiCompiled.fragmentGlsl, {}});
+                    }
+
+                    if (uiShader && uiShader->IsValid())
+                    {
+                        uiStackModule->SetShader(std::move(uiShader));
+                        logger->info("UI shader compiled and assigned");
+                    }
+                    else
+                    {
+                        logger->error("Failed to create UI shader program");
+                    }
+                }
+                else
+                {
+                    logger->error("Failed to compile ui.rssl");
+                }
+            }
+            else
+            {
+                logger->warn("ui.rssl asset not found");
             }
         }
 
@@ -351,6 +425,9 @@ namespace RenderStar::Client::Core
             backend->ExecuteDrawCommands();
         }
 
+        if (uiStackModule)
+            uiStackModule->Render(backend);
+
         backend->EndFrame();
 
         return Common::Event::EventResult::Success();
@@ -388,6 +465,26 @@ namespace RenderStar::Client::Core
 
         if (auto cameraAffector = context.GetModule<Render::Affectors::CameraAffector>(); cameraAffector.has_value())
             cameraAffector->get().SetViewportSize(static_cast<int32_t>(windowModule.GetWidth()), static_cast<int32_t>(windowModule.GetHeight()));
+
+        auto& assetModule = context.GetDependency<Common::Asset::AssetModule>();
+
+        const auto uiModule = context.GetModule<UI::UIStackModule>();
+
+        if (uiModule.has_value())
+        {
+            auto scene = UI::UibinLoader::Load(
+                Common::Asset::AssetLocation::Parse("renderstar:ui/test.uibin"), assetModule);
+
+            if (scene.has_value())
+            {
+                uiModule->get().PushLayer(std::move(*scene));
+                logger->info("Loaded test.uibin UI scene");
+            }
+            else
+            {
+                logger->error("Failed to load test.uibin");
+            }
+        }
 
         logger->info("Gameplay logic set up, waiting for player entity from server");
     }
@@ -431,10 +528,16 @@ namespace RenderStar::Client::Core
         auto mapGeometryOpt = context->GetModule<Render::Affectors::MapGeometryRenderAffector>();
         Render::Affectors::MapGeometryRenderAffector* mapGeometryAffector = mapGeometryOpt.has_value() ? &mapGeometryOpt->get() : nullptr;
 
+        auto uiModuleOpt = context->GetModule<UI::UIStackModule>();
+        UI::UIStackModule* uiModule = uiModuleOpt.has_value() ? &uiModuleOpt->get() : nullptr;
+
         coreEventBus->get().SetTickHandler([=, &coreEventBus = coreEventBus->get(), &renderEventBus = renderEventBus->get()]
         {
             windowModule->Tick();
             inputModule->Tick();
+
+            if (uiModule)
+                uiModule->ProcessInput(inputModule);
 
             if (windowModule->ShouldClose())
             {
@@ -486,6 +589,7 @@ namespace RenderStar::Client::Core
             Common::Time::TimeModule,
             Gameplay::ClientPlayerModule,
             Network::ClientNetworkModule,
-            ClientSceneModule>();
+            ClientSceneModule,
+            UI::UIStackModule>();
     }
 }

@@ -1,7 +1,6 @@
 #include "RenderStar/Server/Core/ServerLifecycleModule.hpp"
 #include "RenderStar/Common/Asset/AssetModule.hpp"
 #include "RenderStar/Common/Asset/AssetLocation.hpp"
-#include "RenderStar/Common/Asset/IBinaryAsset.hpp"
 #include "RenderStar/Common/Component/ComponentModule.hpp"
 #include "RenderStar/Common/Component/Components/MapGeometry.hpp"
 #include "RenderStar/Common/Component/EntityAuthority.hpp"
@@ -48,51 +47,40 @@ namespace RenderStar::Server::Core
             logger->info("Created MapRoot entity with asset path: {}", sceneFile);
 
             // Load mapbin for collision meshes and spawn points
-            auto binaryAsset = assetModule.LoadBinary(Common::Asset::AssetLocation::Parse(sceneFile));
+            auto scene = Common::Scene::MapbinLoader::Load(
+                Common::Asset::AssetLocation::Parse(sceneFile), assetModule);
 
-            if (binaryAsset.IsValid())
+            if (scene.has_value())
             {
-                auto scene = Common::Scene::MapbinLoader::Load(binaryAsset.Get()->GetDataView());
+                constexpr float mapScale = 0.1f;
 
-                if (scene.has_value())
+                for (const auto& group : scene->groups)
                 {
-                    constexpr float mapScale = 0.1f;
+                    int32_t vertexCount = group.vertexCount;
+                    int32_t indexCount = static_cast<int32_t>(group.indices.size());
 
-                    // Create collision meshes from geometry groups
-                    for (const auto& group : scene->groups)
+                    if (vertexCount > 0 && indexCount > 0)
                     {
-                        int32_t vertexCount = group.vertexCount;
-                        int32_t indexCount = static_cast<int32_t>(group.indices.size());
-
-                        if (vertexCount > 0 && indexCount > 0)
-                        {
-                            // vertexData has 8 floats per vertex (pos x3, normal x3, uv x2), stride = 8
-                            physicsModule.CreateStaticTriangleMesh(
-                                group.vertexData.data(), vertexCount, 8,
-                                group.indices.data(), indexCount, mapScale);
-                        }
-                    }
-
-                    logger->info("Created {} collision meshes from mapbin", scene->groups.size());
-
-                    // Extract PLAYER_START spawn points
-                    for (const auto& obj : scene->gameObjects)
-                    {
-                        if (obj.type == Common::Scene::GameObjectType::PLAYER_START)
-                        {
-                            glm::vec3 spawnPos = glm::vec3(obj.posX, obj.posY, obj.posZ) * mapScale;
-                            serverPhysicsModule->AddSpawnPoint(spawnPos, obj.rotY);
-                        }
+                        physicsModule.CreateStaticTriangleMesh(
+                            group.vertexData.data(), vertexCount, 8,
+                            group.indices.data(), indexCount, mapScale);
                     }
                 }
-                else
+
+                logger->info("Created {} collision meshes from mapbin", scene->groups.size());
+
+                for (const auto& obj : scene->gameObjects)
                 {
-                    logger->error("Failed to parse mapbin: {}", sceneFile);
+                    if (obj.type == Common::Scene::GameObjectType::PLAYER_START)
+                    {
+                        glm::vec3 spawnPos = glm::vec3(obj.posX, obj.posY, obj.posZ) * mapScale;
+                        serverPhysicsModule->AddSpawnPoint(spawnPos, obj.rotY);
+                    }
                 }
             }
             else
             {
-                logger->warn("Failed to load mapbin asset for collision: {}", sceneFile);
+                logger->error("Failed to load/parse mapbin: {}", sceneFile);
             }
         }
 

@@ -26,6 +26,8 @@ namespace RenderStar::Client::Render::Vulkan
         explicit VulkanPlatformBackend(VulkanRenderBackend* backend);
         ~VulkanPlatformBackend() override;
 
+        Shader::RsslTarget GetRsslTarget() const override { return Shader::RsslTarget::VULKAN_GLSL; }
+
         std::unique_ptr<Platform::IRenderTarget> CreateRenderTarget(
             const Platform::RenderTargetDescription& description) override;
 

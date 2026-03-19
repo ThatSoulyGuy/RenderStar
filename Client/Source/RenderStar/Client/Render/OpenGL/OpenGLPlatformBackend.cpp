@@ -2,7 +2,6 @@
 #include "RenderStar/Client/Render/OpenGL/OpenGLRenderTarget.hpp"
 #include "RenderStar/Client/Render/OpenGL/OpenGLTextureHandle.hpp"
 #include "RenderStar/Client/Render/Backend/IRenderBackend.hpp"
-#include "RenderStar/Client/Render/Shader/GlslTransformer.hpp"
 #include <glad/gl.h>
 
 namespace RenderStar::Client::Render::OpenGL
@@ -37,12 +36,9 @@ namespace RenderStar::Client::Render::OpenGL
         const std::string& vertexGlsl,
         const std::string& fragmentGlsl)
     {
-        std::string transformedVertex = Shader::GlslTransformer::Transform450To410(vertexGlsl, Shader::ShaderType::VERTEX);
-        std::string transformedFragment = Shader::GlslTransformer::Transform450To410(fragmentGlsl, Shader::ShaderType::FRAGMENT);
-
         ShaderSource source;
-        source.vertexSource = transformedVertex;
-        source.fragmentSource = transformedFragment;
+        source.vertexSource = vertexGlsl;
+        source.fragmentSource = fragmentGlsl;
 
         return backend->GetShaderManager()->CreateFromSource(source);
     }

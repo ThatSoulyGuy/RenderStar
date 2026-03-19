@@ -12,6 +12,8 @@ namespace RenderStar::Client::Render::OpenGL
 
         explicit OpenGLPlatformBackend(IRenderBackend* backend);
 
+        Shader::RsslTarget GetRsslTarget() const override { return Shader::RsslTarget::OPENGL_GLSL; }
+
         std::unique_ptr<Platform::IRenderTarget> CreateRenderTarget(
             const Platform::RenderTargetDescription& description) override;
 

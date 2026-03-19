@@ -19,6 +19,11 @@ namespace RenderStar::Client::Render::Affectors
     class SkyboxRenderAffector;
 }
 
+namespace RenderStar::Client::UI
+{
+    class UIStackModule;
+}
+
 namespace RenderStar::Client::Render::Platform
 {
     class RenderingPlatformModule;
@@ -65,6 +70,7 @@ namespace RenderStar::Client::Core
 
         Render::Platform::RenderingPlatformModule* platformModule = nullptr;
         Render::Framework::RenderingFrameworkModule* frameworkModule = nullptr;
+        UI::UIStackModule* uiStackModule = nullptr;
         std::unique_ptr<Render::IUniformBindingHandle> postProcessBinding;
     };
 }

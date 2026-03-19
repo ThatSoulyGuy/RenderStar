@@ -17,6 +17,8 @@ target_link_libraries(RenderStarClient PRIVATE
     Vulkan::Vulkan
     GPUOpen::VulkanMemoryAllocator
     asio
+    nlohmann_json::nlohmann_json
+    stb
 )
 
 if(WIN32)

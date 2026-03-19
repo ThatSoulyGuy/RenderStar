@@ -3,7 +3,7 @@
 
 namespace RenderStar::Client::Render::Vulkan
 {
-    VulkanRenderPassModule::VulkanRenderPassModule() : logger(spdlog::default_logger()), renderPass(VK_NULL_HANDLE) { }
+    VulkanRenderPassModule::VulkanRenderPassModule() : logger(spdlog::default_logger()), renderPass(VK_NULL_HANDLE), overlayRenderPass(VK_NULL_HANDLE) { }
 
     VulkanRenderPassModule::~VulkanRenderPassModule() = default;
 
@@ -75,14 +75,68 @@ namespace RenderStar::Client::Render::Vulkan
         }
 
         logger->info("Render pass created with depth attachment");
+
+        VkAttachmentDescription overlayColorAttachment{};
+
+        overlayColorAttachment.format = imageFormat;
+        overlayColorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        overlayColorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        overlayColorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        overlayColorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        overlayColorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        overlayColorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        overlayColorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        VkAttachmentDescription overlayDepthAttachment{};
+
+        overlayDepthAttachment.format = depthFormat;
+        overlayDepthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        overlayDepthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        overlayDepthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        overlayDepthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        overlayDepthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        overlayDepthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        overlayDepthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        const std::array overlayAttachments = { overlayColorAttachment, overlayDepthAttachment };
+
+        VkSubpassDependency overlayDependency{};
+        overlayDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        overlayDependency.dstSubpass = 0;
+        overlayDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        overlayDependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        overlayDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        overlayDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        VkRenderPassCreateInfo overlayRenderPassInfo{};
+        overlayRenderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        overlayRenderPassInfo.attachmentCount = static_cast<uint32_t>(overlayAttachments.size());
+        overlayRenderPassInfo.pAttachments = overlayAttachments.data();
+        overlayRenderPassInfo.subpassCount = 1;
+        overlayRenderPassInfo.pSubpasses = &subpass;
+        overlayRenderPassInfo.dependencyCount = 1;
+        overlayRenderPassInfo.pDependencies = &overlayDependency;
+
+        if (const VkResult result = vkCreateRenderPass(device, &overlayRenderPassInfo, nullptr, &overlayRenderPass); result != VK_SUCCESS)
+        {
+            logger->error("Failed to create overlay render pass: {}", static_cast<int>(result));
+            return;
+        }
+
+        logger->info("Overlay render pass created");
     }
 
     void VulkanRenderPassModule::Destroy(const VkDevice device)
     {
+        if (overlayRenderPass != VK_NULL_HANDLE)
+        {
+            vkDestroyRenderPass(device, overlayRenderPass, nullptr);
+            overlayRenderPass = VK_NULL_HANDLE;
+        }
+
         if (renderPass != VK_NULL_HANDLE)
         {
             vkDestroyRenderPass(device, renderPass, nullptr);
-
             renderPass = VK_NULL_HANDLE;
             logger->info("Render pass destroyed");
         }
@@ -91,5 +145,10 @@ namespace RenderStar::Client::Render::Vulkan
     VkRenderPass VulkanRenderPassModule::GetRenderPass() const
     {
         return renderPass;
+    }
+
+    VkRenderPass VulkanRenderPassModule::GetOverlayRenderPass() const
+    {
+        return overlayRenderPass;
     }
 }

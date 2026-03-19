@@ -11,15 +11,31 @@ namespace RenderStar::Client::Render::Shader
 
         static RsslParseResult Parse(const std::string& source);
 
-        static RsslCompileResult Compile(const std::string& source);
+        static RsslParseResult Parse(
+            const std::string& source,
+            const IncludeResolver& resolver,
+            const std::string& fileName = "<source>");
 
-        static RsslCompileResult Compile(const RsslParseResult& parsed);
+        static RsslCompileResult Compile(
+            const std::string& source,
+            RsslTarget target = RsslTarget::VULKAN_GLSL);
+
+        static RsslCompileResult Compile(
+            const std::string& source,
+            const IncludeResolver& resolver,
+            const std::string& fileName = "<source>",
+            RsslTarget target = RsslTarget::VULKAN_GLSL);
+
+        static RsslCompileResult Compile(
+            const RsslParseResult& parsed,
+            RsslTarget target = RsslTarget::VULKAN_GLSL);
 
     private:
 
         static std::string EmitStageGlsl(
             const RsslParseResult& parsed,
-            const RsslStageSection& stage);
+            const RsslStageSection& stage,
+            RsslTarget target);
 
         static std::string EmitSharedDeclarations(const RsslParseResult& parsed);
 
